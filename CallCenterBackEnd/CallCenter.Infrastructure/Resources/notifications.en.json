@@ -1,0 +1,12 @@
+{
+  "notification.ticket.assigned": "New ticket assigned to you #{ticketNumber}",
+  "notification.ticket.sla_breach": "Warning: Ticket #{ticketNumber} has breached SLA",
+  "notification.ticket.status_changed": "Ticket #{ticketNumber} status changed from {oldStatus} to {newStatus}",
+  "notification.ticket.high_priority": "Urgent ticket: #{ticketNumber} - {subject}",
+  "notification.shift.reminder": "Reminder: Your shift starts at {startTime}",
+  "notification.shift.starting_soon": "Your shift starts in {minutes} minutes",
+  "notification.qa.evaluation_completed": "Performance evaluation completed by {evaluatorName} - Score: {score}%",
+  "notification.qa.coaching_scheduled": "Coaching session scheduled on {sessionDate} with {coachName}",
+  "notification.customer.satisfaction_received": "New customer feedback from {customerName}: {score}/5",
+  "notification.system.maintenance_scheduled": "System maintenance scheduled at {maintenanceTime}"
+}

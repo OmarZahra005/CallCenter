@@ -1,0 +1,12 @@
+{
+  "notification.ticket.assigned": "تم تعيين تذكرة جديدة لك #{ticketNumber}",
+  "notification.ticket.sla_breach": "تحذير: التذكرة #{ticketNumber} تجاوزت وقت الاستجابة المحدد",
+  "notification.ticket.status_changed": "تم تغيير حالة التذكرة #{ticketNumber} من {oldStatus} إلى {newStatus}",
+  "notification.ticket.high_priority": "تذكرة عاجلة: #{ticketNumber} - {subject}",
+  "notification.shift.reminder": "تذكير: وردية العمل تبدأ في {startTime}",
+  "notification.shift.starting_soon": "وردية العمل تبدأ خلال {minutes} دقيقة",
+  "notification.qa.evaluation_completed": "تم تقييم أدائك من قبل {evaluatorName} - النتيجة: {score}%",
+  "notification.qa.coaching_scheduled": "تم جدولة جلسة تدريبية معك في {sessionDate} مع {coachName}",
+  "notification.customer.satisfaction_received": "تقييم جديد من العميل {customerName}: {score}/5",
+  "notification.system.maintenance_scheduled": "صيانة مجدولة للنظام في {maintenanceTime}"
+}

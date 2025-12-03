@@ -89,6 +89,9 @@ public static class DependencyInjection
         // Mock CTI Services
         services.AddScoped<IMockCtiService, MockCtiService>();
 
+        // Call Log Services
+        services.AddScoped<ICallLogService, CallLogService>();
+
         // WhatsApp Services
         var whatsAppSection = configuration.GetSection("WhatsApp");
         var useMockData = bool.Parse(whatsAppSection["UseMockData"] ?? "true");

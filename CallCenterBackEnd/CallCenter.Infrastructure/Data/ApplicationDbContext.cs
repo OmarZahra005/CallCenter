@@ -108,7 +108,7 @@ public class ApplicationDbContext : DbContext
             EmployeeId = "EMP000001",
             Name = "Admin User",
             Email = "admin@callcenter.com",
-            PasswordHash = "$2a$11$rBnfPfVhNrxZDGLQqL5Yqu5D5QZvQZvQZvQZvQZvQZvQZvQZvQZvS", // Admin123!
+            PasswordHash = "AQAAAAIAAYagAAAAEOJxuO92MLN7XE7EPQ3Bue31LffoINetW58iZIf3CjeP5alHxX5ikZGiDJ5qpAQpng==", // Qwerty12345_
             Phone = "+1234567890",
             TeamId = teamId,
             Role = Domain.Enums.AgentRole.Supervisor,

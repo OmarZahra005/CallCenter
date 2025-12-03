@@ -116,7 +116,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             EmployeeId = "EMP000001",
                             HireDate = new DateOnly(2024, 1, 1),
                             Name = "Admin User",
-                            PasswordHash = "$2a$11$rBnfPfVhNrxZDGLQqL5Yqu5D5QZvQZvQZvQZvQZvQZvQZvQZvQZvS",
+                            PasswordHash = "AQAAAAIAAYagAAAAEOJxuO92MLN7XE7EPQ3Bue31LffoINetW58iZIf3CjeP5alHxX5ikZGiDJ5qpAQpng==",
                             Phone = "+1234567890",
                             Role = 1,
                             SkillLevel = 1,

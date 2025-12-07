@@ -11,9 +11,12 @@ interface CallCenterState {
   history: CallSummary[];
   selectedCall: CallSummary | null;
   incomingRingingCall: CallSummary | null;
+  activeCall: CallSummary | null;
+  callStartTime: Date | null;
   twilioReady: boolean;
   isAnswering: boolean;
   isMuted: boolean;
+  isOnHold: boolean;
   agentIdentity: string;
   isLoading: boolean;
   error: string | null;
@@ -28,6 +31,7 @@ interface CallCenterActions {
   rejectIncoming: () => void;
   hangupCurrent: () => void;
   toggleMute: () => void;
+  toggleHold: () => void;
   setAgentIdentity: (id: string) => Promise<void>;
 }
 
@@ -40,10 +44,13 @@ type Action =
   | { type: 'SET_HISTORY'; payload: CallSummary[] }
   | { type: 'SET_SELECTED_CALL'; payload: CallSummary | null }
   | { type: 'SET_INCOMING_RINGING_CALL'; payload: CallSummary | null }
+  | { type: 'SET_ACTIVE_CALL'; payload: CallSummary | null }
+  | { type: 'SET_CALL_START_TIME'; payload: Date | null }
   | { type: 'SET_INCOMING_TWILIO_CALL'; payload: Call | null }
   | { type: 'SET_TWILIO_READY'; payload: boolean }
   | { type: 'SET_IS_ANSWERING'; payload: boolean }
   | { type: 'SET_IS_MUTED'; payload: boolean }
+  | { type: 'SET_IS_ON_HOLD'; payload: boolean }
   | { type: 'SET_AGENT_IDENTITY'; payload: string }
   | { type: 'SET_IS_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -55,9 +62,12 @@ const initialState: CallCenterState = {
   history: [],
   selectedCall: null,
   incomingRingingCall: null,
+  activeCall: null,
+  callStartTime: null,
   twilioReady: false,
   isAnswering: false,
   isMuted: false,
+  isOnHold: false,
   agentIdentity: '',
   isLoading: false,
   error: null,
@@ -74,6 +84,10 @@ const reducer = (state: CallCenterState, action: Action): CallCenterState => {
       return { ...state, selectedCall: action.payload };
     case 'SET_INCOMING_RINGING_CALL':
       return { ...state, incomingRingingCall: action.payload };
+    case 'SET_ACTIVE_CALL':
+      return { ...state, activeCall: action.payload };
+    case 'SET_CALL_START_TIME':
+      return { ...state, callStartTime: action.payload };
     case 'SET_INCOMING_TWILIO_CALL':
       return { ...state, incomingTwilioCall: action.payload };
     case 'SET_TWILIO_READY':
@@ -82,6 +96,8 @@ const reducer = (state: CallCenterState, action: Action): CallCenterState => {
       return { ...state, isAnswering: action.payload };
     case 'SET_IS_MUTED':
       return { ...state, isMuted: action.payload };
+    case 'SET_IS_ON_HOLD':
+      return { ...state, isOnHold: action.payload };
     case 'SET_AGENT_IDENTITY':
       return { ...state, agentIdentity: action.payload };
     case 'SET_IS_LOADING':
@@ -162,9 +178,16 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const acceptIncoming = useCallback(() => {
     dispatch({ type: 'SET_IS_ANSWERING', payload: true });
     twilioDeviceManager.answer(state.incomingTwilioCall || undefined);
+
+    // Move the call to active state
+    if (state.incomingRingingCall) {
+      dispatch({ type: 'SET_ACTIVE_CALL', payload: state.incomingRingingCall });
+      dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
+    }
+
     dispatch({ type: 'SET_INCOMING_RINGING_CALL', payload: null });
     dispatch({ type: 'SET_IS_ANSWERING', payload: false });
-  }, [state.incomingTwilioCall]);
+  }, [state.incomingTwilioCall, state.incomingRingingCall]);
 
   const rejectIncoming = useCallback(() => {
     twilioDeviceManager.reject();
@@ -176,6 +199,10 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     twilioDeviceManager.hangup();
     dispatch({ type: 'SET_INCOMING_RINGING_CALL', payload: null });
     dispatch({ type: 'SET_INCOMING_TWILIO_CALL', payload: null });
+    dispatch({ type: 'SET_ACTIVE_CALL', payload: null });
+    dispatch({ type: 'SET_CALL_START_TIME', payload: null });
+    dispatch({ type: 'SET_IS_MUTED', payload: false });
+    dispatch({ type: 'SET_IS_ON_HOLD', payload: false });
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -183,6 +210,13 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     twilioDeviceManager.mute(newMuteState);
     dispatch({ type: 'SET_IS_MUTED', payload: newMuteState });
   }, [state.isMuted]);
+
+  const toggleHold = useCallback(() => {
+    const newHoldState = !state.isOnHold;
+    // Note: Twilio hold is implemented by muting both input and output
+    // For now, we'll track the state but actual hold implementation may vary
+    dispatch({ type: 'SET_IS_ON_HOLD', payload: newHoldState });
+  }, [state.isOnHold]);
 
   const setAgentIdentity = useCallback(async (identity: string) => {
     try {
@@ -211,7 +245,10 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         console.log('Call disconnected');
         dispatch({ type: 'SET_INCOMING_RINGING_CALL', payload: null });
         dispatch({ type: 'SET_INCOMING_TWILIO_CALL', payload: null });
+        dispatch({ type: 'SET_ACTIVE_CALL', payload: null });
+        dispatch({ type: 'SET_CALL_START_TIME', payload: null });
         dispatch({ type: 'SET_IS_MUTED', payload: false });
+        dispatch({ type: 'SET_IS_ON_HOLD', payload: false });
       });
 
       dispatch({ type: 'SET_IS_LOADING', payload: false });
@@ -268,6 +305,7 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     rejectIncoming,
     hangupCurrent,
     toggleMute,
+    toggleHold,
     setAgentIdentity,
   };
 

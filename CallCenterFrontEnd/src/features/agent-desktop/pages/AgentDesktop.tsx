@@ -1,18 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, Badge, Button, Avatar } from '../../../components/ui';
-import { SoftphoneControls, CallDurationTimer, LiveIndicator, SLATimer, ConversationItem } from '../../../components/ui';
+import { SLATimer, ConversationItem } from '../../../components/ui';
 import { useAgentDesktop, type ConversationInfo } from '../hooks/useAgentDesktop';
 import TransferDialog from '../components/TransferDialog';
+import { AgentControlBar } from '../components/AgentControlBar';
+import { CallInfoPanel } from '../components/CallInfoPanel';
 import { IncomingCallBanner } from '../../../components/call-center';
 import { CallCenterProvider, useCallCenter } from '../../../context/CallCenterContext';
 import { useAuthStore } from '../../../store/authStore';
-
-type AgentState = 'available' | 'busy' | 'break' | 'acw' | 'offline';
+import apiClient from '../../../api/client';
 
 const AgentDesktopContent = () => {
   const { t } = useTranslation();
-  const { setAgentIdentity, twilioReady } = useCallCenter();
+  const {
+    setAgentIdentity,
+    twilioReady,
+    activeCall: twilioActiveCall,
+    callStartTime: twilioCallStartTime,
+    isMuted: twilioIsMuted,
+    isOnHold: twilioIsOnHold,
+    toggleMute: twilioToggleMute,
+    toggleHold: twilioToggleHold,
+    hangupCurrent: twilioHangup,
+  } = useCallCenter();
   const user = useAuthStore((state) => state.user);
 
   // Auto-initialize Twilio Device with current user's email
@@ -21,6 +33,51 @@ const AgentDesktopContent = () => {
       setAgentIdentity(user.email);
     }
   }, [user?.email, twilioReady, setAgentIdentity]);
+
+  // Lookup customer when Twilio call becomes active
+  useEffect(() => {
+    const lookupCustomer = async () => {
+      if (twilioActiveCall && twilioActiveCall.fromNumber) {
+        try {
+          // Try to find customer by phone number
+          const normalizedPhone = twilioActiveCall.fromNumber.replace(/[\s\-\(\)]/g, '');
+          const encodedPhone = encodeURIComponent(normalizedPhone);
+          const response = await fetch(`/api/customers/phone/${encodedPhone}`);
+          if (response.ok) {
+            const customerData = await response.json();
+            if (customerData?.id) {
+              setCurrentCustomerId(customerData.id);
+            }
+          }
+        } catch (error) {
+          console.error('Error looking up customer:', error);
+        }
+      }
+    };
+
+    lookupCustomer();
+  }, [twilioActiveCall]);
+
+  // Clear customer when call ends
+  useEffect(() => {
+    if (!twilioActiveCall) {
+      setCurrentCustomerId(null);
+    }
+  }, [twilioActiveCall]);
+
+  // Customer lookup state
+  const [currentCustomerId, setCurrentCustomerId] = useState<string | null>(null);
+
+  // Fetch customer data
+  const { data: twilioCustomer, isLoading: twilioCustomerLoading } = useQuery({
+    queryKey: ['customers', currentCustomerId],
+    queryFn: async () => {
+      if (!currentCustomerId) return null;
+      const response = await apiClient.get(`/customers/${currentCustomerId}`);
+      return response.data;
+    },
+    enabled: !!currentCustomerId,
+  });
 
   // Ticket form state
   const [ticketSubject, setTicketSubject] = useState('');
@@ -36,9 +93,6 @@ const AgentDesktopContent = () => {
   const {
     callState,
     agentState,
-    isMuted,
-    isOnHold,
-    callStartTime,
     currentCall,
     currentAgent,
     currentCustomer,
@@ -47,32 +101,20 @@ const AgentDesktopContent = () => {
     isConnected,
     isLoading,
     customerLoading,
-    handleAnswer,
-    handleReject,
-    handleHangup,
-    handleHold,
-    handleResume,
-    handleMute,
     handleTransfer,
     handleChangeAgentState,
     createTicket,
     isCreatingTicket,
   } = useAgentDesktop();
 
-  const agentStateColors: Record<AgentState, string> = {
-    available: 'bg-green-500',
-    busy: 'bg-blue-500',
-    break: 'bg-yellow-500',
-    acw: 'bg-purple-500',
-    offline: 'bg-gray-500',
-  };
-
   // Get display name and info
   const agentName = currentAgent?.name || 'Agent';
-  const customerName = currentCustomer?.name || currentCall?.callerName || 'Unknown Caller';
-  const customerPhone = currentCustomer?.phone || currentCall?.callerNumber || '';
-  const customerEmail = currentCustomer?.email || '';
-  const customerType = currentCustomer?.type || 'Standard';
+  // Prioritize Twilio customer data over mock data
+  const displayCustomer = twilioCustomer || currentCustomer;
+  const customerName = displayCustomer?.name || twilioActiveCall?.fromNumber || currentCall?.callerName || 'Unknown Caller';
+  const customerPhone = displayCustomer?.phone || twilioActiveCall?.fromNumber || currentCall?.callerNumber || '';
+  const customerEmail = displayCustomer?.email || '';
+  const customerType = displayCustomer?.type || 'Standard';
 
   const handleCreateTicket = async () => {
     if (!ticketSubject.trim()) return;
@@ -83,7 +125,7 @@ const AgentDesktopContent = () => {
         description: ticketDescription,
         priority: ticketPriority,
         category: ticketCategory,
-        customerId: currentCustomer?.id,
+        customerId: currentCustomerId || currentCustomer?.id,
       });
 
       // Clear form on success
@@ -145,91 +187,39 @@ const AgentDesktopContent = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col gap-4">
-        {/* Softphone Panel */}
-        <Card variant="bordered" className="flex-shrink-0">
-          <CardContent>
-            <div className="flex items-center justify-between">
-              {/* Agent Status */}
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Avatar name={agentName} size="lg" />
-                  <span className={`absolute bottom-0 end-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${agentStateColors[agentState]}`} />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{agentName}</p>
-                  <select
-                    value={agentState}
-                    onChange={(e) => handleChangeAgentState(e.target.value as AgentState)}
-                    disabled={callState === 'active' || callState === 'ringing'}
-                    className={`text-sm border-0 bg-transparent p-0 pr-6 focus:ring-0 cursor-pointer ${
-                      callState === 'active' || callState === 'ringing'
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <option value="available">{t('agentState.available')}</option>
-                    <option value="busy">{t('agentState.busy')}</option>
-                    <option value="break">{t('agentState.break')}</option>
-                    <option value="acw">{t('agentState.acw')}</option>
-                    <option value="offline">{t('agentState.offline')}</option>
-                  </select>
-                </div>
-              </div>
+        {/* Agent Control Bar - Always visible */}
+        <AgentControlBar
+          agentName={agentName}
+          agentState={agentState}
+          onChangeAgentState={handleChangeAgentState}
+          isCallActive={callState === 'active' || callState === 'ringing'}
+        />
 
-              {/* Call Info */}
-              <div className="flex-1 mx-8 text-center">
-                {callState === 'ringing' && (
-                  <div className="animate-pulse">
-                    <LiveIndicator variant="live" label={t('agentDesktop.incomingCall')} />
-                    <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{customerName}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{customerPhone}</p>
-                    {currentCall?.queueName && (
-                      <p className="text-xs text-gray-400 mt-1">{t('agentDesktop.queue')}: {currentCall.queueName}</p>
-                    )}
-                  </div>
-                )}
-                {callState === 'active' && callStartTime && (
-                  <div>
-                    <LiveIndicator variant="live" />
-                    <div className="mt-2">
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{customerName}</p>
-                      <CallDurationTimer startTime={callStartTime} size="lg" />
-                    </div>
-                    {isOnHold && <Badge variant="warning" className="mt-2">{t('agentDesktop.onHold')}</Badge>}
-                  </div>
-                )}
-                {callState === 'onhold' && callStartTime && (
-                  <div>
-                    <LiveIndicator variant="paused" label={t('agentDesktop.onHold')} />
-                    <div className="mt-2">
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{customerName}</p>
-                      <CallDurationTimer startTime={callStartTime} size="lg" />
-                    </div>
-                  </div>
-                )}
-                {callState === 'idle' && (
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t('agentDesktop.noActiveCall')}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Call Controls */}
-              <SoftphoneControls
-                callState={callState}
-                onAnswer={handleAnswer}
-                onReject={handleReject}
-                onHangup={handleHangup}
-                onHold={handleHold}
-                onResume={handleResume}
-                onMute={handleMute}
-                onTransfer={() => setIsTransferDialogOpen(true)}
-                isMuted={isMuted}
-                isOnHold={isOnHold}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Call Info Panel - Only when active call exists */}
+        {twilioActiveCall && twilioCallStartTime && (
+          <CallInfoPanel
+            callInfo={{
+              callId: twilioActiveCall.id,
+              callerNumber: twilioActiveCall.fromNumber,
+              callerName: twilioCustomer?.name,
+              customerId: currentCustomerId || undefined,
+              direction: twilioActiveCall.direction as 'Inbound' | 'Outbound' | 'Transfer',
+              queueName: undefined,
+              waitTimeSeconds: undefined,
+              startTime: new Date(twilioActiveCall.startedAtUtc),
+            }}
+            customer={twilioCustomer}
+            callState={twilioIsOnHold ? 'onhold' : 'active'}
+            callStartTime={twilioCallStartTime}
+            isMuted={twilioIsMuted}
+            isOnHold={twilioIsOnHold}
+            onMute={twilioToggleMute}
+            onHold={() => twilioToggleHold()}
+            onResume={() => twilioToggleHold()}
+            onTransfer={() => setIsTransferDialogOpen(true)}
+            onHangup={twilioHangup}
+          />
+        )}
 
         {/* Content Panels */}
         <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
@@ -239,11 +229,11 @@ const AgentDesktopContent = () => {
               <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.customer360')}</h3>
             </div>
             <CardContent className="flex-1 overflow-y-auto">
-              {customerLoading ? (
+              {(customerLoading || twilioCustomerLoading) ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                 </div>
-              ) : currentCustomer || currentCall ? (
+              ) : displayCustomer || twilioActiveCall || currentCall ? (
                 <>
                   <div className="flex items-center gap-4 mb-4">
                     <Avatar name={customerName} size="xl" />
@@ -274,7 +264,7 @@ const AgentDesktopContent = () => {
                     )}
                   </div>
 
-                  {currentCustomer && (
+                  {displayCustomer && (
                     <>
                       <div className="mt-6">
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.statistics')}</h5>

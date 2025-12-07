@@ -69,6 +69,7 @@ public static class DependencyInjection
 
         // Phase 5 Services
         services.AddScoped<ICallRecordingService, CallRecordingService>();
+        services.AddScoped<IRecordingStorageService, RecordingStorageService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IReportService, ReportService>();
 

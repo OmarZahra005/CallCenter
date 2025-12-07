@@ -70,10 +70,17 @@ export const useAgentDesktop = () => {
   // Lookup customer by phone number
   const lookupCustomerByPhone = useCallback(async (phone: string): Promise<string | null> => {
     try {
-      // Normalize phone number (remove spaces, dashes)
-      const normalizedPhone = phone.replace(/[\s\-\(\)]/g, '');
-      const encodedPhone = encodeURIComponent(normalizedPhone);
-      const response = await apiClient.get(`/customers/phone/${encodedPhone}`);
+      // Normalize phone number to local format (0546652410)
+      let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '');
+
+      // Convert +966XXXXXXXXX or 966XXXXXXXXX to 0XXXXXXXXX
+      if (normalizedPhone.startsWith('+966')) {
+        normalizedPhone = '0' + normalizedPhone.substring(4);
+      } else if (normalizedPhone.startsWith('966') && normalizedPhone.length >= 12) {
+        normalizedPhone = '0' + normalizedPhone.substring(3);
+      }
+
+      const response = await apiClient.get(`/customers/phone/${normalizedPhone}`);
       if (response.data?.id) {
         return response.data.id;
       }

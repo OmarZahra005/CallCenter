@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useCallCenter } from '../../context/CallCenterContext';
 import type { CallSummary } from '../../types/callTypes';
 
 export const CallHistoryList: React.FC = () => {
   const { history } = useCallCenter();
+  const [selectedRecording, setSelectedRecording] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -35,6 +38,40 @@ export const CallHistoryList: React.FC = () => {
     }
   };
 
+  const handlePlayRecording = async (callSid: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+
+      // Get recording by CallSid
+      const recordingResponse = await fetch(`/api/recordings/call-sid/${callSid}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!recordingResponse.ok) return;
+
+      const recording = await recordingResponse.json();
+
+      // Stream recording
+      const streamResponse = await fetch(`/api/recordings/${recording.id}/stream`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (streamResponse.ok) {
+        const blob = await streamResponse.blob();
+        const url = URL.createObjectURL(blob);
+
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          audioRef.current.play();
+          setIsPlaying(true);
+          setSelectedRecording(callSid);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to play recording:', error);
+    }
+  };
+
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Call History ({history.length})</h2>
@@ -49,6 +86,7 @@ export const CallHistoryList: React.FC = () => {
                 <th style={styles.th}>To</th>
                 <th style={styles.th}>Direction</th>
                 <th style={styles.th}>Status</th>
+                <th style={styles.th}>Recording</th>
                 <th style={styles.th}>Started</th>
                 <th style={styles.th}>Duration</th>
               </tr>
@@ -62,12 +100,27 @@ export const CallHistoryList: React.FC = () => {
                   <td style={{ ...styles.td, color: getStatusColor(call.status) }}>
                     {call.status}
                   </td>
+                  <td style={styles.td}>
+                    {call.recordingUrl && (
+                      <button
+                        onClick={() => handlePlayRecording(call.providerCallId)}
+                        style={styles.playButton}
+                      >
+                        {selectedRecording === call.providerCallId && isPlaying ? 'Pause' : 'Play'}
+                      </button>
+                    )}
+                  </td>
                   <td style={styles.td}>{formatDate(call.startedAtUtc)}</td>
                   <td style={styles.td}>{calculateDuration(call)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <audio
+            ref={audioRef}
+            onEnded={() => setIsPlaying(false)}
+            style={{ display: 'none' }}
+          />
         </div>
       )}
     </div>
@@ -112,5 +165,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   td: {
     padding: '10px',
+  },
+  playButton: {
+    padding: '4px 12px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px',
   },
 };

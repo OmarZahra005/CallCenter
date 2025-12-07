@@ -20,6 +20,7 @@ public class TwilioVoiceController : ControllerBase
     private readonly ILogger<TwilioVoiceController> _logger;
     private readonly TwilioOptions _twilioOptions;
     private readonly IAgentRoutingService _agentRoutingService;
+    private readonly IRecordingStorageService _recordingStorageService;
 
     public TwilioVoiceController(
         ITwilioVoiceService twilioVoiceService,
@@ -27,7 +28,8 @@ public class TwilioVoiceController : ControllerBase
         IHubContext<CallCenterHub> hubContext,
         ILogger<TwilioVoiceController> logger,
         IOptions<TwilioOptions> twilioOptions,
-        IAgentRoutingService agentRoutingService)
+        IAgentRoutingService agentRoutingService,
+        IRecordingStorageService recordingStorageService)
     {
         _twilioVoiceService = twilioVoiceService;
         _callLogService = callLogService;
@@ -35,6 +37,7 @@ public class TwilioVoiceController : ControllerBase
         _logger = logger;
         _twilioOptions = twilioOptions.Value;
         _agentRoutingService = agentRoutingService;
+        _recordingStorageService = recordingStorageService;
     }
 
     private async System.Threading.Tasks.Task LogToFileAsync(string message)
@@ -180,7 +183,10 @@ public class TwilioVoiceController : ControllerBase
                 {
                     Timeout = 30,  // Ring for 30 seconds
                     Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/dial-status"),
-                    Method = Twilio.Http.HttpMethod.Post  // Explicitly set POST method
+                    Method = Twilio.Http.HttpMethod.Post,  // Explicitly set POST method
+                    Record = Twilio.TwiML.Voice.Dial.RecordEnum.RecordFromAnswerDual,  // Enable dual-channel recording
+                    RecordingStatusCallback = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/recording-status-callback"),
+                    RecordingStatusCallbackMethod = Twilio.Http.HttpMethod.Post
                 };
                 dial.Client(selectedAgent.Email);  // Use email as Twilio Client identity
                 response.Append(dial);
@@ -409,7 +415,10 @@ public class TwilioVoiceController : ControllerBase
                     var dial = new Dial
                     {
                         Timeout = 30,
-                        Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/dial-status")
+                        Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/dial-status"),
+                        Record = Twilio.TwiML.Voice.Dial.RecordEnum.RecordFromAnswerDual,  // Enable dual-channel recording
+                        RecordingStatusCallback = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/recording-status-callback"),
+                        RecordingStatusCallbackMethod = Twilio.Http.HttpMethod.Post
                     };
                     dial.Client(selectedAgent.Email);
                     response.Append(dial);
@@ -489,6 +498,83 @@ public class TwilioVoiceController : ControllerBase
         {
             _logger.LogError(ex, "Error processing voicemail");
             await LogToFileAsync($"ERROR: Exception in Voicemail - {ex.Message}");
+            await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Twilio webhook for recording completion
+    /// </summary>
+    [HttpPost("recording-status-callback")]
+    [Consumes("application/x-www-form-urlencoded")]
+    public async Task<IActionResult> RecordingStatusCallback()
+    {
+        await LogToFileAsync("=== RecordingStatusCallback Started ===");
+
+        try
+        {
+            // Log request headers
+            await LogToFileAsync("--- Request Headers ---");
+            foreach (var header in Request.Headers)
+            {
+                await LogToFileAsync($"{header.Key}: {header.Value}");
+            }
+
+            // Log request body
+            await LogToFileAsync("--- Request Body ---");
+            foreach (var formField in Request.Form)
+            {
+                await LogToFileAsync($"{formField.Key}: {formField.Value}");
+            }
+            await LogToFileAsync("--- End Request Data ---");
+
+            // Validate Twilio signature
+            var signature = Request.Headers["X-Twilio-Signature"].ToString();
+            var url = $"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}";
+            var parameters = Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString());
+
+            if (!_twilioVoiceService.ValidateSignature(signature, url, parameters))
+            {
+                _logger.LogWarning("Invalid Twilio signature for recording callback");
+                await LogToFileAsync("ERROR: Invalid Twilio signature for recording callback");
+                return Unauthorized("Invalid signature");
+            }
+
+            // Extract recording data
+            var callSid = Request.Form["CallSid"].ToString();
+            var recordingSid = Request.Form["RecordingSid"].ToString();
+            var recordingUrl = Request.Form["RecordingUrl"].ToString();
+            var recordingStatus = Request.Form["RecordingStatus"].ToString();
+            var recordingDuration = int.TryParse(Request.Form["RecordingDuration"].ToString(), out var duration) ? duration : 0;
+            var recordingChannels = Request.Form["RecordingChannels"].ToString();
+
+            await LogToFileAsync($"Recording callback - CallSid: {callSid}, RecordingSid: {recordingSid}, Status: {recordingStatus}, Duration: {duration}s, Channels: {recordingChannels}");
+
+            // Process completed recordings
+            if (recordingStatus == "completed")
+            {
+                await LogToFileAsync($"Processing completed recording for CallSid: {callSid}");
+                await _recordingStorageService.ProcessRecordingAsync(
+                    callSid,
+                    recordingSid,
+                    recordingUrl,
+                    duration,
+                    recordingChannels
+                );
+            }
+            else
+            {
+                await LogToFileAsync($"Recording status is '{recordingStatus}', skipping processing");
+            }
+
+            await LogToFileAsync("=== RecordingStatusCallback Completed Successfully ===");
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing recording callback");
+            await LogToFileAsync($"ERROR: Exception in RecordingStatusCallback - {ex.Message}");
             await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
             return StatusCode(500, "Internal server error");
         }

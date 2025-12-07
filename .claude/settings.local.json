@@ -13,7 +13,10 @@
       "Bash(dotnet ef database update:*)",
       "Bash(npm run build:*)",
       "Bash(dotnet publish:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(taskkill:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

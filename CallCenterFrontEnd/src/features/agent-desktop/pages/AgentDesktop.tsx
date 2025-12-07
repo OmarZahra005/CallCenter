@@ -39,15 +39,19 @@ const AgentDesktopContent = () => {
     const lookupCustomer = async () => {
       if (twilioActiveCall && twilioActiveCall.fromNumber) {
         try {
-          // Try to find customer by phone number
-          const normalizedPhone = twilioActiveCall.fromNumber.replace(/[\s\-\(\)]/g, '');
-          const encodedPhone = encodeURIComponent(normalizedPhone);
-          const response = await fetch(`/api/customers/phone/${encodedPhone}`);
-          if (response.ok) {
-            const customerData = await response.json();
-            if (customerData?.id) {
-              setCurrentCustomerId(customerData.id);
-            }
+          // Normalize phone number to local format (0546652410)
+          let phone = twilioActiveCall.fromNumber.replace(/[\s\-\(\)]/g, '');
+
+          // Convert +966XXXXXXXXX or 966XXXXXXXXX to 0XXXXXXXXX
+          if (phone.startsWith('+966')) {
+            phone = '0' + phone.substring(4);
+          } else if (phone.startsWith('966') && phone.length >= 12) {
+            phone = '0' + phone.substring(3);
+          }
+
+          const response = await apiClient.get(`/customers/phone/${phone}`);
+          if (response.data?.id) {
+            setCurrentCustomerId(response.data.id);
           }
         } catch (error) {
           console.error('Error looking up customer:', error);

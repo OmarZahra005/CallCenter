@@ -1,8 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Volume2, Download, Star, MessageSquare, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, Button, Badge, Select, Textarea } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
+
+interface CallLog {
+  id: string;
+  providerCallId: string;
+  fromNumber: string;
+  toNumber: string;
+  direction: string;
+  status: string;
+  startedAtUtc: string;
+  endedAtUtc: string | null;
+  recordingUrl: string | null;
+}
 
 interface Recording {
   id: string;
@@ -12,6 +24,8 @@ interface Recording {
   date: string;
   score?: number;
   status: 'pending' | 'reviewed' | 'flagged';
+  callRecordingId?: string;
+  providerCallId?: string;
 }
 
 interface ScoreCategory {
@@ -24,15 +38,60 @@ interface ScoreCategory {
 const QualityAssurance = () => {
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackPosition, _setPlaybackPosition] = useState(30);
-  void _setPlaybackPosition; // Available for future use
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const recordings: Recording[] = [
-    { id: '1', agentName: 'John Smith', customerId: 'C-1234', duration: '5:32', date: '2024-01-18 10:30', score: 92, status: 'reviewed' },
-    { id: '2', agentName: 'Sarah Johnson', customerId: 'C-5678', duration: '8:15', date: '2024-01-18 11:45', status: 'pending' },
-    { id: '3', agentName: 'Mike Brown', customerId: 'C-9012', duration: '3:48', date: '2024-01-18 14:20', score: 78, status: 'flagged' },
-    { id: '4', agentName: 'Emily Davis', customerId: 'C-3456', duration: '6:22', date: '2024-01-18 15:10', score: 88, status: 'reviewed' },
-  ];
+  // Fetch call logs with recordings from API
+  useEffect(() => {
+    const fetchCallLogs = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/api/call-logs/recent', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const callLogs: CallLog[] = await response.json();
+
+          // Convert to Recording format and filter only calls with recordings
+          const callsWithRecordings = callLogs
+            .filter(call => call.recordingUrl)
+            .map(call => ({
+              id: call.id,
+              agentName: call.direction === 'inbound' ? 'Agent' : 'Outbound',
+              customerId: call.fromNumber,
+              duration: calculateDuration(call),
+              date: new Date(call.startedAtUtc).toLocaleString(),
+              status: 'pending' as const,
+              callRecordingId: call.recordingUrl || undefined,
+              providerCallId: call.providerCallId,
+            }));
+
+          setRecordings(callsWithRecordings);
+        }
+      } catch (error) {
+        console.error('Failed to fetch call logs:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCallLogs();
+  }, []);
+
+  const calculateDuration = (call: CallLog): string => {
+    if (!call.endedAtUtc) return 'N/A';
+    const start = new Date(call.startedAtUtc).getTime();
+    const end = new Date(call.endedAtUtc).getTime();
+    const durationSeconds = Math.floor((end - start) / 1000);
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const scoreCategories: ScoreCategory[] = [
     { id: '1', name: 'Greeting & Introduction', maxScore: 10, score: 9 },
@@ -45,6 +104,51 @@ const QualityAssurance = () => {
 
   const totalScore = scoreCategories.reduce((sum, cat) => sum + cat.score, 0);
   const maxScore = scoreCategories.reduce((sum, cat) => sum + cat.maxScore, 0);
+
+  const loadRecording = async (providerCallId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+
+      // First, get the recording by CallSid
+      const recordingResponse = await fetch(`/api/recordings/call-sid/${providerCallId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!recordingResponse.ok) {
+        console.error('Recording not found for call:', providerCallId);
+        return;
+      }
+
+      const recording = await recordingResponse.json();
+
+      // Then stream the actual recording file
+      const streamResponse = await fetch(`/api/recordings/${recording.id}/stream`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (streamResponse.ok) {
+        const blob = await streamResponse.blob();
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
+      }
+    } catch (error) {
+      console.error('Failed to load recording:', error);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleRecordingSelect = (recording: Recording) => {
+    setSelectedRecording(recording);
+    if (recording.providerCallId) {
+      loadRecording(recording.providerCallId);
+    }
+  };
 
   return (
     <motion.div
@@ -80,16 +184,25 @@ const QualityAssurance = () => {
               <h2 className="font-semibold">Recordings</h2>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {recordings.map((recording) => (
-                  <motion.button
-                    key={recording.id}
-                    whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
-                    onClick={() => setSelectedRecording(recording)}
-                    className={`w-full p-4 text-start transition-colors ${
-                      selectedRecording?.id === recording.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
-                    }`}
-                  >
+              {isLoading ? (
+                <div className="p-8 text-center text-gray-500">
+                  Loading recordings...
+                </div>
+              ) : recordings.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No recordings found. Make test calls to see them here.
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {recordings.map((recording) => (
+                    <motion.button
+                      key={recording.id}
+                      whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
+                      onClick={() => handleRecordingSelect(recording)}
+                      className={`w-full p-4 text-start transition-colors ${
+                        selectedRecording?.id === recording.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                      }`}
+                    >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium text-gray-900 dark:text-white">{recording.agentName}</span>
                       <Badge
@@ -112,7 +225,8 @@ const QualityAssurance = () => {
                     )}
                   </motion.button>
                 ))}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -124,58 +238,104 @@ const QualityAssurance = () => {
             <CardContent className="p-6">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Recording Playback</h3>
 
-              {/* Waveform Visualization */}
-              <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
-                <div className="flex items-end gap-0.5 h-16">
-                  {Array.from({ length: 60 }).map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ height: '20%' }}
-                      animate={{
-                        height: `${20 + Math.random() * 80}%`,
-                        opacity: i < playbackPosition ? 1 : 0.3
-                      }}
-                      transition={{ duration: 0.1 }}
-                      className={`w-1 rounded-full ${
-                        i < playbackPosition ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
+              {audioUrl ? (
+                <>
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onTimeUpdate={() => {
+                      if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
+                    }}
+                    onLoadedMetadata={() => {
+                      if (audioRef.current) setDuration(audioRef.current.duration);
+                    }}
+                    onEnded={() => setIsPlaying(false)}
+                  />
 
-              {/* Progress Bar */}
-              <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-4">
-                <motion.div
-                  className="h-full bg-primary-500 rounded-full"
-                  style={{ width: `${(playbackPosition / 60) * 100}%` }}
-                />
-              </div>
+                  {/* Waveform Visualization */}
+                  <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                    <div className="flex items-end gap-0.5 h-16">
+                      {Array.from({ length: 60 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{
+                            height: `${20 + Math.random() * 80}%`,
+                            opacity: i < (currentTime / duration) * 60 ? 1 : 0.3
+                          }}
+                          transition={{ duration: 0.1 }}
+                          className={`w-1 rounded-full ${
+                            i < (currentTime / duration) * 60 ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Controls */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">1:32</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
-                    <SkipBack className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="w-10 h-10 rounded-full"
+                  {/* Progress Bar */}
+                  <div
+                    className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 cursor-pointer"
+                    onClick={(e) => {
+                      if (audioRef.current) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const percent = (e.clientX - rect.left) / rect.width;
+                        audioRef.current.currentTime = percent * duration;
+                      }
+                    }}
                   >
-                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <SkipForward className="w-4 h-4" />
-                  </Button>
+                    <motion.div
+                      className="h-full bg-primary-500 rounded-full"
+                      style={{ width: `${(currentTime / duration) * 100}%` }}
+                    />
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      {formatTime(currentTime)} / {formatTime(duration)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        if (audioRef.current) audioRef.current.currentTime = Math.max(0, currentTime - 10);
+                      }}>
+                        <SkipBack className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (audioRef.current) {
+                            isPlaying ? audioRef.current.pause() : audioRef.current.play();
+                            setIsPlaying(!isPlaying);
+                          }
+                        }}
+                        className="w-10 h-10 rounded-full"
+                      >
+                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        if (audioRef.current) audioRef.current.currentTime = Math.min(duration, currentTime + 10);
+                      }}>
+                        <SkipForward className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="w-4 h-4 text-gray-400" />
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        if (audioUrl) {
+                          const a = document.createElement('a');
+                          a.href = audioUrl;
+                          a.download = `recording-${selectedRecording?.id}.wav`;
+                          a.click();
+                        }
+                      }}>
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  Select a recording to play
                 </div>
-                <div className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-gray-400" />
-                  <Button variant="ghost" size="sm">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

@@ -1,10 +1,15 @@
 using CallCenter.Application.Services;
+using CallCenter.API.Authorization;
+using CallCenter.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CallCenter.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+[RoleAuthorize(AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
 public class QaController : ControllerBase
 {
     private readonly IQaService _qaService;

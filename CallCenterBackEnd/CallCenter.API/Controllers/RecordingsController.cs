@@ -1,6 +1,8 @@
 using CallCenter.Application.DTOs.Common;
 using CallCenter.Application.DTOs.Recordings;
 using CallCenter.Application.Services;
+using CallCenter.API.Authorization;
+using CallCenter.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,13 +11,18 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RoleAuthorize(AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
 public class RecordingsController : ControllerBase
 {
     private readonly ICallRecordingService _recordingService;
+    private readonly IRecordingStorageService _recordingStorageService;
 
-    public RecordingsController(ICallRecordingService recordingService)
+    public RecordingsController(
+        ICallRecordingService recordingService,
+        IRecordingStorageService recordingStorageService)
     {
         _recordingService = recordingService;
+        _recordingStorageService = recordingStorageService;
     }
 
     [HttpGet]
@@ -52,6 +59,31 @@ public class RecordingsController : ControllerBase
     {
         var result = await _recordingService.GetByConversationIdAsync(conversationId);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Stream recording audio file
+    /// </summary>
+    [HttpGet("{id:guid}/stream")]
+    public async Task<IActionResult> StreamRecording(Guid id)
+    {
+        var stream = await _recordingStorageService.GetRecordingStreamAsync(id);
+        if (stream == null)
+            return NotFound();
+
+        return File(stream, "audio/wav", enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Get recording by CallSid
+    /// </summary>
+    [HttpGet("call-sid/{callSid}")]
+    public async Task<ActionResult<CallRecordingDto>> GetByCallSid(string callSid)
+    {
+        var recordings = await _recordingService.GetByCallIdAsync(callSid);
+        var recording = recordings.FirstOrDefault();
+
+        return recording == null ? NotFound() : Ok(recording);
     }
 
     [HttpDelete("{id:guid}")]

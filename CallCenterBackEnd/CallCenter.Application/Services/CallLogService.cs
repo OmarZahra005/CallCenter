@@ -11,7 +11,7 @@ public interface ICallLogService
 {
     Task<object> LogCallDataAsync(object request);
     Task<CallLog> CreateIncomingAsync(string providerCallId, string from, string to, string direction);
-    Task<CallLog?> UpdateStatusAsync(string providerCallId, string status, DateTimeOffset? endedAtUtc = null, string? recordingUrl = null);
+    Task<CallLog?> UpdateStatusAsync(string providerCallId, string? status = null, DateTimeOffset? endedAtUtc = null, string? recordingUrl = null);
     Task<CallLog> AssignToAgentAsync(string providerCallId, Guid agentId, string agentIdentity);
     Task<CallLog?> GetByProviderIdAsync(string providerCallId);
     Task<CallLog?> GetByIdAsync(Guid id);
@@ -56,7 +56,7 @@ public class CallLogService : ICallLogService
         return callLog;
     }
 
-    public async Task<CallLog?> UpdateStatusAsync(string providerCallId, string status, DateTimeOffset? endedAtUtc = null, string? recordingUrl = null)
+    public async Task<CallLog?> UpdateStatusAsync(string providerCallId, string? status = null, DateTimeOffset? endedAtUtc = null, string? recordingUrl = null)
     {
         var callLog = await _callLogRepository.GetByProviderIdAsync(providerCallId);
 
@@ -66,7 +66,10 @@ public class CallLogService : ICallLogService
             return null;
         }
 
-        callLog.Status = status;
+        if (!string.IsNullOrEmpty(status))
+        {
+            callLog.Status = status;
+        }
         if (endedAtUtc.HasValue)
         {
             callLog.EndedAtUtc = endedAtUtc.Value;
@@ -79,7 +82,7 @@ public class CallLogService : ICallLogService
         _callLogRepository.Update(callLog);
         await _callLogRepository.SaveChangesAsync();
 
-        _logger.LogInformation("Updated call log {CallLogId} status to {Status}", callLog.Id, status);
+        _logger.LogInformation("Updated call log {CallLogId} status to {Status}", callLog.Id, status ?? callLog.Status);
         return callLog;
     }
 

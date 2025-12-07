@@ -65,7 +65,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5175")
+        policy.WithOrigins(
+                  "http://localhost:5173",   // Vite dev server (HTTP)
+                  "http://localhost:5175",   // Vite dev server alternate port
+                  "https://localhost:5173",  // Vite dev server (HTTPS)
+                  "https://localhost:5175")  // Vite dev server alternate port (HTTPS)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -73,7 +77,7 @@ builder.Services.AddCors(options =>
 });
 
 // Add Clean Architecture layers
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add SignalR

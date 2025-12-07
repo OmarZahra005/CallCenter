@@ -20,6 +20,7 @@ const TicketsKanban = lazy(() => import('./features/tickets/pages/TicketsKanban'
 const UnifiedInbox = lazy(() => import('./features/communications/pages/UnifiedInbox'));
 const QualityAssurance = lazy(() => import('./features/qa/pages/QualityAssurance'));
 const WorkforceManagement = lazy(() => import('./features/wfm/pages/WorkforceManagement'));
+const CallCenter = lazy(() => import('./pages/CallCenterPage').then(m => ({ default: m.CallCenterPage })));
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -186,6 +187,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoader />}>
             <WorkforceManagement />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'call-center',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <CallCenter />
           </Suspense>
         ),
       },

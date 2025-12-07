@@ -81,6 +81,9 @@ public class ApplicationDbContext : DbContext
     // Auth
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    // Call Logs
+    public DbSet<CallLog> CallLogs => Set<CallLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -3,6 +3,7 @@ using CallCenter.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using CallCenter.API.Hubs;
+using CallCenter.Application.DTOs.CallLog;
 
 namespace CallCenter.API.Controllers;
 
@@ -12,13 +13,16 @@ public class CallControlController : ControllerBase
 {
     private readonly ICtiService _ctiService;
     private readonly IHubContext<CallCenterHub> _hubContext;
+    private readonly ICallLogService _callLogService;
 
     public CallControlController(
         ICtiService ctiService,
-        IHubContext<CallCenterHub> hubContext)
+        IHubContext<CallCenterHub> hubContext,
+        ICallLogService callLogService)
     {
         _ctiService = ctiService;
         _hubContext = hubContext;
+        _callLogService = callLogService;
     }
 
     /// <summary>
@@ -219,6 +223,149 @@ public class CallControlController : ControllerBase
             Message = request.IsMuted ? "Call muted" : "Call unmuted"
         });
     }
+
+    /// <summary>
+    /// Log call data (accepts any dynamic data)
+    /// </summary>
+    [HttpPost("log")]
+    public async Task<ActionResult<CallLogDto>> LogCallData([FromForm] object request)
+    {
+        var result = await _callLogService.LogCallDataAsync(request);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get call log by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<ActionResult<CallSummaryDto>> GetCallById(Guid id)
+    {
+        var callLog = await _callLogService.GetByIdAsync(id);
+
+        if (callLog == null)
+        {
+            return NotFound(new { message = "Call log not found" });
+        }
+
+        return Ok(MapToDto(callLog));
+    }
+
+    /// <summary>
+    /// Get all active calls (ringing or in-progress)
+    /// </summary>
+    [HttpGet("active")]
+    public async Task<ActionResult<List<CallSummaryDto>>> GetActiveCalls()
+    {
+        var activeCalls = await _callLogService.GetActiveCallsAsync();
+        var callSummaries = activeCalls.Select(MapToDto).ToList();
+
+        return Ok(callSummaries);
+    }
+
+    /// <summary>
+    /// Get recent call history
+    /// </summary>
+    [HttpGet("history")]
+    public async Task<ActionResult<List<CallSummaryDto>>> GetRecentHistory([FromQuery] int take = 50)
+    {
+        var recentCalls = await _callLogService.GetRecentHistoryAsync(take);
+        var callSummaries = recentCalls.Select(MapToDto).ToList();
+
+        return Ok(callSummaries);
+    }
+
+    /// <summary>
+    /// Simulate incoming call logging (internal endpoint for testing)
+    /// </summary>
+    [HttpPost("simulate-incoming-log")]
+    public async Task<ActionResult<CallSummaryDto>> SimulateIncomingCallLog([FromBody] CallLogCreateRequest request)
+    {
+        var callLog = await _callLogService.CreateIncomingAsync(
+            request.ProviderCallId,
+            request.From,
+            request.To,
+            request.Direction);
+
+        var callSummary = MapToDto(callLog);
+
+        // Broadcast to all connected clients via SignalR
+        await _hubContext.Clients.All.SendAsync("IncomingCall", callSummary);
+
+        return Ok(callSummary);
+    }
+
+    /// <summary>
+    /// Simulate call status update (internal endpoint for testing)
+    /// </summary>
+    [HttpPost("simulate-status-update")]
+    public async Task<ActionResult<CallSummaryDto>> SimulateCallStatusUpdate([FromBody] CallLogStatusUpdateRequest request)
+    {
+        var callLog = await _callLogService.UpdateStatusAsync(
+            request.ProviderCallId,
+            request.Status,
+            request.EndedAtUtc,
+            request.RecordingUrl);
+
+        if (callLog == null)
+        {
+            return NotFound(new { message = "Call log not found" });
+        }
+
+        var callSummary = MapToDto(callLog);
+
+        // Broadcast to all connected clients via SignalR based on status
+        if (callLog.Status == "completed" || callLog.Status == "failed" || callLog.Status == "no-answer")
+        {
+            await _hubContext.Clients.All.SendAsync("CallEnded", callSummary);
+        }
+        else
+        {
+            await _hubContext.Clients.All.SendAsync("CallStatusUpdated", callSummary);
+        }
+
+        return Ok(callSummary);
+    }
+
+    /// <summary>
+    /// Maps a CallLog entity to CallSummaryDto
+    /// </summary>
+    private static CallSummaryDto MapToDto(Domain.Entities.CallLog call)
+    {
+        return new CallSummaryDto
+        {
+            Id = call.Id,
+            ProviderCallId = call.ProviderCallId,
+            FromNumber = call.FromNumber,
+            ToNumber = call.ToNumber,
+            Direction = call.Direction,
+            Status = call.Status,
+            StartedAtUtc = call.StartedAtUtc,
+            EndedAtUtc = call.EndedAtUtc,
+            RecordingUrl = call.RecordingUrl
+        };
+    }
+
+    ///// <summary>
+    ///// Get all call logs
+    ///// </summary>
+    //[HttpGet("logs")]
+    //public async Task<ActionResult<List<CallLogDto>>> GetAllLogs()
+    //{
+    //    var logs = await _callLogService.GetAllLogsAsync();
+    //    return Ok(logs);
+    //}
+
+    ///// <summary>
+    ///// Get call log by ID
+    ///// </summary>
+    //[HttpGet("logs/{id}")]
+    //public async Task<ActionResult<CallLogDto>> GetLogById(Guid id)
+    //{
+    //    var log = await _callLogService.GetLogByIdAsync(id);
+    //    if (log == null)
+    //        return NotFound();
+    //    return Ok(log);
+    //}
 }
 
 // Request/Response DTOs
@@ -261,4 +408,28 @@ public record CallActionResult
     public string CallId { get; init; } = string.Empty;
     public string Action { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
+}
+
+public record CallLogCreateRequest
+{
+    public string ProviderCallId { get; init; } = string.Empty;
+    public string From { get; init; } = string.Empty;
+    public string To { get; init; } = string.Empty;
+    public string Direction { get; init; } = "inbound";
+}
+
+public record CallLogCreateResponse
+{
+    public Guid Id { get; init; }
+    public string ProviderCallId { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public DateTimeOffset StartedAtUtc { get; init; }
+}
+
+public record CallLogStatusUpdateRequest
+{
+    public string ProviderCallId { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public DateTimeOffset? EndedAtUtc { get; init; }
+    public string? RecordingUrl { get; init; }
 }

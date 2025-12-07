@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ISlaRuleRepository, SlaRuleRepository>();
         services.AddScoped<ICoachingSessionRepository, CoachingSessionRepository>();
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();
+        services.AddScoped<ICallLogRepository, CallLogRepository>();
 
         // Services
         services.AddSingleton<ILocalizationService, LocalizationService>();
@@ -88,9 +89,6 @@ public static class DependencyInjection
 
         // Mock CTI Services
         services.AddScoped<IMockCtiService, MockCtiService>();
-
-        // Call Log Services
-        services.AddScoped<ICallLogService, CallLogService>();
 
         // WhatsApp Services
         var whatsAppSection = configuration.GetSection("WhatsApp");

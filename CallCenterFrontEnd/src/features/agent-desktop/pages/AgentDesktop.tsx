@@ -43,7 +43,6 @@ const AgentDesktop = () => {
     handleMute,
     handleTransfer,
     handleChangeAgentState,
-    simulateIncomingCall,
     createTicket,
     isCreatingTicket,
   } = useAgentDesktop();
@@ -80,10 +79,10 @@ const AgentDesktop = () => {
       setTicketDescription('');
       setTicketPriority('Medium');
       setTicketCategory('General');
-      alert('Ticket created successfully!');
+      alert(t('agentDesktop.ticketCreated'));
     } catch (error) {
       console.error('Error creating ticket:', error);
-      alert('Failed to create ticket');
+      alert(t('agentDesktop.ticketFailed'));
     }
   };
 
@@ -92,7 +91,7 @@ const AgentDesktop = () => {
       <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading agent desktop...</p>
+          <p className="mt-4 text-gray-500">{t('agentDesktop.loadingAgentDesktop')}</p>
         </div>
       </div>
     );
@@ -103,18 +102,18 @@ const AgentDesktop = () => {
       {/* Left Sidebar - Conversation List */}
       <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 dark:text-white">Conversations</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.conversations')}</h2>
           {isConnected && (
             <span className="flex items-center gap-1 text-xs text-green-600">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              Live
+              {t('agentDesktop.live')}
             </span>
           )}
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
             <div className="p-4 text-center text-gray-500 text-sm">
-              No active conversations
+              {t('agentDesktop.noActiveConversations')}
             </div>
           ) : (
             conversations.map((conv) => (
@@ -152,11 +151,11 @@ const AgentDesktop = () => {
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
-                    <option value="available">Available</option>
-                    <option value="busy">Busy</option>
-                    <option value="break">Break</option>
-                    <option value="acw">After Call Work</option>
-                    <option value="offline">Offline</option>
+                    <option value="available">{t('agentState.available')}</option>
+                    <option value="busy">{t('agentState.busy')}</option>
+                    <option value="break">{t('agentState.break')}</option>
+                    <option value="acw">{t('agentState.acw')}</option>
+                    <option value="offline">{t('agentState.offline')}</option>
                   </select>
                 </div>
               </div>
@@ -165,11 +164,11 @@ const AgentDesktop = () => {
               <div className="flex-1 mx-8 text-center">
                 {callState === 'ringing' && (
                   <div className="animate-pulse">
-                    <LiveIndicator variant="live" label="Incoming Call" />
+                    <LiveIndicator variant="live" label={t('agentDesktop.incomingCall')} />
                     <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{customerName}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{customerPhone}</p>
                     {currentCall?.queueName && (
-                      <p className="text-xs text-gray-400 mt-1">Queue: {currentCall.queueName}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('agentDesktop.queue')}: {currentCall.queueName}</p>
                     )}
                   </div>
                 )}
@@ -180,12 +179,12 @@ const AgentDesktop = () => {
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">{customerName}</p>
                       <CallDurationTimer startTime={callStartTime} size="lg" />
                     </div>
-                    {isOnHold && <Badge variant="warning" className="mt-2">On Hold</Badge>}
+                    {isOnHold && <Badge variant="warning" className="mt-2">{t('agentDesktop.onHold')}</Badge>}
                   </div>
                 )}
                 {callState === 'onhold' && callStartTime && (
                   <div>
-                    <LiveIndicator variant="paused" label="On Hold" />
+                    <LiveIndicator variant="paused" label={t('agentDesktop.onHold')} />
                     <div className="mt-2">
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">{customerName}</p>
                       <CallDurationTimer startTime={callStartTime} size="lg" />
@@ -194,10 +193,7 @@ const AgentDesktop = () => {
                 )}
                 {callState === 'idle' && (
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">No active call</p>
-                    <Button variant="outline" size="sm" className="mt-2" onClick={simulateIncomingCall}>
-                      Simulate Incoming Call
-                    </Button>
+                    <p className="text-gray-500 dark:text-gray-400">{t('agentDesktop.noActiveCall')}</p>
                   </div>
                 )}
               </div>
@@ -224,7 +220,7 @@ const AgentDesktop = () => {
           {/* Customer 360 View */}
           <Card variant="bordered" className="overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Customer 360</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.customer360')}</h3>
             </div>
             <CardContent className="flex-1 overflow-y-auto">
               {customerLoading ? (
@@ -238,7 +234,7 @@ const AgentDesktop = () => {
                     <div>
                       <h4 className="font-semibold text-lg text-gray-900 dark:text-white">{customerName}</h4>
                       <Badge variant={customerType === 'Premium' || customerType === 'VIP' ? 'success' : 'default'}>
-                        {customerType}
+                        {t(`customerType.${customerType.toLowerCase()}`)}
                       </Badge>
                     </div>
                   </div>
@@ -265,27 +261,27 @@ const AgentDesktop = () => {
                   {currentCustomer && (
                     <>
                       <div className="mt-6">
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Statistics</h5>
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.statistics')}</h5>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                             <p className="text-2xl font-bold text-gray-900 dark:text-white">
                               {customerInteractions.filter(i => i.type === 'Call').length}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Total Calls</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('agentDesktop.totalCalls')}</p>
                           </div>
                           <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                             <p className="text-2xl font-bold text-gray-900 dark:text-white">
                               {customerInteractions.filter(i => i.type === 'Ticket').length}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Tickets</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('nav.tickets')}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-6">
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recent Interactions</h5>
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.recentInteractions')}</h5>
                         {customerInteractions.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-2">No interactions found</p>
+                          <p className="text-sm text-gray-500 text-center py-2">{t('agentDesktop.noInteractionsFound')}</p>
                         ) : (
                           <div className="space-y-2">
                             {customerInteractions.map((interaction) => (
@@ -310,7 +306,7 @@ const AgentDesktop = () => {
                 </>
               ) : (
                 <div className="flex items-center justify-center h-32 text-gray-500">
-                  <p>No customer data available</p>
+                  <p>{t('agentDesktop.noCustomerData')}</p>
                 </div>
               )}
             </CardContent>
@@ -319,26 +315,26 @@ const AgentDesktop = () => {
           {/* Ticket / Notes Panel */}
           <Card variant="bordered" className="overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Quick Ticket</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.quickTicket')}</h3>
               <SLATimer deadline={new Date(Date.now() + 10 * 60 * 1000)} />
             </div>
             <CardContent className="flex-1 overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('agentDesktop.subject')}</label>
                   <input
                     type="text"
-                    placeholder="Enter ticket subject"
+                    placeholder={t('agentDesktop.enterTicketSubject')}
                     value={ticketSubject}
                     onChange={(e) => setTicketSubject(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('agentDesktop.description')}</label>
                   <textarea
                     rows={4}
-                    placeholder="Describe the issue..."
+                    placeholder={t('agentDesktop.describeIssue')}
                     value={ticketDescription}
                     onChange={(e) => setTicketDescription(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
@@ -346,29 +342,29 @@ const AgentDesktop = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('agentDesktop.priority')}</label>
                     <select
                       value={ticketPriority}
                       onChange={(e) => setTicketPriority(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Critical">Critical</option>
+                      <option value="Low">{t('priority.low')}</option>
+                      <option value="Medium">{t('priority.medium')}</option>
+                      <option value="High">{t('priority.high')}</option>
+                      <option value="Critical">{t('priority.critical')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('agentDesktop.category')}</label>
                     <select
                       value={ticketCategory}
                       onChange={(e) => setTicketCategory(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="General">General</option>
-                      <option value="Billing">Billing</option>
-                      <option value="Technical">Technical</option>
-                      <option value="Sales">Sales</option>
+                      <option value="General">{t('category.general')}</option>
+                      <option value="Billing">{t('category.billing')}</option>
+                      <option value="Technical">{t('category.technical')}</option>
+                      <option value="Sales">{t('category.sales')}</option>
                     </select>
                   </div>
                 </div>
@@ -377,15 +373,15 @@ const AgentDesktop = () => {
                   onClick={handleCreateTicket}
                   disabled={isCreatingTicket || !ticketSubject.trim()}
                 >
-                  {isCreatingTicket ? 'Creating...' : 'Create Ticket'}
+                  {isCreatingTicket ? t('agentDesktop.creating') : t('agentDesktop.createTicket')}
                 </Button>
               </div>
 
               <div className="mt-6">
-                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Call Notes</h5>
+                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.callNotes')}</h5>
                 <textarea
                   rows={3}
-                  placeholder="Add notes about this call..."
+                  placeholder={t('agentDesktop.addCallNotes')}
                   value={callNotes}
                   onChange={(e) => setCallNotes(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"

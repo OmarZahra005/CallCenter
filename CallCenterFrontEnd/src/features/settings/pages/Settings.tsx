@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, Button, Switch, Select, Input } from '../../../components/ui';
+import { Card, CardContent, CardHeader, Button, Switch, Select } from '../../../components/ui';
 import { useThemeStore } from '../../../hooks/useTheme';
 
 const Settings = () => {

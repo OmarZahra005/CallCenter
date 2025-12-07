@@ -108,13 +108,20 @@ const reducer = (state: CallCenterState, action: Action): CallCenterState => {
       const newCall = action.payload;
       const callExists = state.history.some(c => c.id === newCall.id);
 
+      // Case-insensitive comparison for status and direction
+      const status = newCall.status?.toLowerCase();
+      const direction = newCall.direction?.toLowerCase();
+      const isRinging = status === 'ringing';
+      const isInProgress = status === 'inprogress' || status === 'in-progress';
+      const isInbound = direction === 'inbound';
+
       return {
         ...state,
-        activeCalls: newCall.status === 'Ringing' || newCall.status === 'InProgress'
+        activeCalls: isRinging || isInProgress
           ? [newCall, ...state.activeCalls]
           : state.activeCalls,
         history: callExists ? state.history : [newCall, ...state.history],
-        incomingRingingCall: newCall.status === 'Ringing' && newCall.direction === 'Inbound'
+        incomingRingingCall: isRinging && isInbound
           ? newCall
           : state.incomingRingingCall,
       };

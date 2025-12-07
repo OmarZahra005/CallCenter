@@ -121,15 +121,19 @@ export const MessageBubble = ({
 
 // Conversation list item for inbox
 interface ConversationItemProps {
-  id: string;
+  id?: string;
   customerName: string;
-  lastMessage: string;
-  timestamp: Date;
+  lastMessage?: string;
+  timestamp?: Date | string;
   channel: 'voice' | 'whatsapp' | 'email' | 'sms' | 'chat';
   unreadCount?: number;
   isActive?: boolean;
   onClick?: () => void;
   className?: string;
+  // Additional props from ConversationInfo
+  customerId?: string;
+  state?: string;
+  startedAt?: string;
 }
 
 export const ConversationItem = ({
@@ -158,19 +162,21 @@ export const ConversationItem = ({
     chat: 'text-cyan-500',
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (date: Date | string | undefined) => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const diff = now.getTime() - d.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
     if (days === 0) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     } else if (days === 1) {
       return 'Yesterday';
     } else if (days < 7) {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
+      return d.toLocaleDateString('en-US', { weekday: 'short' });
     }
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   return (
@@ -207,7 +213,7 @@ export const ConversationItem = ({
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <p className={cn('text-sm truncate', unreadCount > 0 ? 'text-gray-700 dark:text-gray-300 font-medium' : 'text-gray-500 dark:text-gray-400')}>
-            {lastMessage}
+            {lastMessage || 'No messages yet'}
           </p>
           {unreadCount > 0 && (
             <span className="flex-shrink-0 ms-2 w-5 h-5 bg-primary-600 text-white text-xs font-medium rounded-full flex items-center justify-center">

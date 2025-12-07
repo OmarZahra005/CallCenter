@@ -61,7 +61,8 @@ export const useAgentDesktop = () => {
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [currentCall, setCurrentCall] = useState<CallInfo | null>(null);
   const [currentCustomerId, setCurrentCustomerId] = useState<string | null>(null);
-  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
+  const [_customerPhone, setCustomerPhone] = useState<string | null>(null);
+  void _customerPhone; // Available for future use
 
   // Get current agent ID (from auth or first agent for demo)
   const agentId = user?.id || '';

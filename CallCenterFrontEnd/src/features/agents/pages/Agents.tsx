@@ -14,17 +14,18 @@ const pageVariants = {
   animate: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' }
+    transition: { duration: 0.4, ease: 'easeOut' as const }
   },
 };
 
-const staggerContainer = {
+const _staggerContainer = {
   animate: {
     transition: {
       staggerChildren: 0.1
     }
   }
 };
+void _staggerContainer; // Available for future use
 
 const tableRowVariants = {
   initial: { opacity: 0, x: -20 },

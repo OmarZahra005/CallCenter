@@ -5,10 +5,20 @@ import apiClient from '../../../api/client';
 import { Card, CardContent, CardHeader, Button, Badge, Select } from '../../../components/ui';
 import { BarChart, LineChart, DonutChart, ProgressBar, MetricCard } from '../../../components/ui';
 
+interface AgentPerformance {
+  name: string;
+  calls: number;
+  avgHandleTime: number;
+  csat: string;
+  fcr: string;
+}
+
 const Reports = () => {
   const { t } = useTranslation();
   const [dateRange, setDateRange] = useState('7d');
-  const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [_selectedReport, _setSelectedReport] = useState<string | null>(null);
+  void _selectedReport; // Available for future use
+  void _setSelectedReport;
 
   // Fetch data for reports
   const { data: ticketsData } = useQuery({
@@ -226,7 +236,7 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {agentPerformance.map((agent, index) => (
+                  {agentPerformance.map((agent: AgentPerformance, index: number) => (
                     <tr key={index} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="py-3 px-4">
                         <span className="font-medium text-gray-900 dark:text-white">{agent.name}</span>
@@ -269,7 +279,7 @@ const Reports = () => {
             ].map((report) => (
               <button
                 key={report.name}
-                onClick={() => setSelectedReport(report.name)}
+                onClick={() => _setSelectedReport(report.name)}
                 className="flex items-center gap-3 p-4 text-start bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center">

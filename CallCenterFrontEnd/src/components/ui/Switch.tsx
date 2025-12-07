@@ -1,13 +1,14 @@
-import { forwardRef, InputHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '../../utils/cn';
 
-interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
   label?: string;
   description?: string;
+  onChange?: (checked: boolean) => void;
 }
 
 const Switch = forwardRef<HTMLInputElement, SwitchProps>(
-  ({ className, label, description, id, checked, ...props }, ref) => {
+  ({ className, label, description, id, checked, onChange, ...props }, ref) => {
     return (
       <div className="flex items-start">
         <button
@@ -39,6 +40,7 @@ const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           id={id}
           type="checkbox"
           checked={checked}
+          onChange={(e) => onChange?.(e.target.checked)}
           className="sr-only"
           {...props}
         />

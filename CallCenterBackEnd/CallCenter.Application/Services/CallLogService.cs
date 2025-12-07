@@ -12,6 +12,7 @@ public interface ICallLogService
     Task<object> LogCallDataAsync(object request);
     Task<CallLog> CreateIncomingAsync(string providerCallId, string from, string to, string direction);
     Task<CallLog?> UpdateStatusAsync(string providerCallId, string status, DateTimeOffset? endedAtUtc = null, string? recordingUrl = null);
+    Task<CallLog> AssignToAgentAsync(string providerCallId, Guid agentId, string agentIdentity);
     Task<CallLog?> GetByProviderIdAsync(string providerCallId);
     Task<CallLog?> GetByIdAsync(Guid id);
     Task<List<CallLog>> GetActiveCallsAsync();
@@ -79,6 +80,25 @@ public class CallLogService : ICallLogService
         await _callLogRepository.SaveChangesAsync();
 
         _logger.LogInformation("Updated call log {CallLogId} status to {Status}", callLog.Id, status);
+        return callLog;
+    }
+
+    public async Task<CallLog> AssignToAgentAsync(string providerCallId, Guid agentId, string agentIdentity)
+    {
+        var callLog = await _callLogRepository.GetByProviderIdAsync(providerCallId);
+
+        if (callLog == null)
+        {
+            throw new InvalidOperationException($"Call log not found for provider call {providerCallId}");
+        }
+
+        callLog.AssignedAgentId = agentId;
+        callLog.AssignedAgentIdentity = agentIdentity;
+
+        _callLogRepository.Update(callLog);
+        await _callLogRepository.SaveChangesAsync();
+
+        _logger.LogInformation("Assigned call {CallLogId} to agent {AgentId} ({AgentIdentity})", callLog.Id, agentId, agentIdentity);
         return callLog;
     }
 

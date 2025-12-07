@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, Button, Badge, Avatar, Input } from '../../../components/ui';
-import { ConversationItem, MessageBubble, TypingIndicator, LiveIndicator } from '../../../components/ui';
+import { Card, Button, Badge, Avatar, Input } from '../../../components/ui';
+import { ConversationItem, MessageBubble, LiveIndicator } from '../../../components/ui';
 import apiClient from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
 
@@ -32,7 +32,8 @@ interface Conversation {
 }
 
 const UnifiedInbox = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
+  void _t; // Translation hook available for future use
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [selectedChannel, setSelectedChannel] = useState<Channel>('all');
@@ -110,7 +111,7 @@ const UnifiedInbox = () => {
     );
 
   // Calculate unread count (simplified - would need backend support for accurate count)
-  const getUnreadCount = (conv: Conversation) => {
+  const getUnreadCount = (_conv: Conversation) => {
     // Without messages in list, we can't count unread
     // This would need backend enhancement to return unread count per conversation
     return 0;

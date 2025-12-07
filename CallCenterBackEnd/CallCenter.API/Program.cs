@@ -86,6 +86,9 @@ builder.Services.AddSignalR();
 // Register HubNotificationService
 builder.Services.AddScoped<CallCenter.Application.Interfaces.IHubNotificationService, CallCenter.API.Services.HubNotificationService>();
 
+// Register AgentRoutingService
+builder.Services.AddScoped<IAgentRoutingService, AgentRoutingService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -1,8 +1,10 @@
-import { HTMLAttributes, forwardRef } from 'react';
+import { type HTMLAttributes, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/cn';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
+type MotionConflictProps = 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd';
+
+interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, MotionConflictProps> {
   variant?: 'default' | 'bordered' | 'elevated' | 'glass' | 'gradient' | 'flat';
   hover?: boolean | 'lift' | 'glow' | 'border';
   padding?: 'none' | 'sm' | 'md' | 'lg';

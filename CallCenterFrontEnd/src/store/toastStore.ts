@@ -46,5 +46,6 @@ export const useToast = () => {
     error: (message: string) => addToast({ type: 'error', message }),
     warning: (message: string) => addToast({ type: 'warning', message }),
     info: (message: string) => addToast({ type: 'info', message }),
+    showToast: (message: string, type: Toast['type'] = 'info') => addToast({ type, message }),
   };
 };

@@ -5,7 +5,15 @@
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet run)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(npm run build:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

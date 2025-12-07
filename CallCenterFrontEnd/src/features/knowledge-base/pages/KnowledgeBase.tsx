@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Book, FileText, Video, HelpCircle, ChevronRight, Star, Clock, Eye } from 'lucide-react';
-import { Card, CardContent, Input, Badge } from '../../../components/ui';
+import { Badge } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
 
 interface Article {
@@ -117,7 +117,7 @@ const KnowledgeBase = () => {
                       {article.excerpt}
                     </p>
                     <div className="flex items-center gap-4 mt-2">
-                      <Badge variant="secondary" size="sm">{article.category}</Badge>
+                      <Badge variant="default" size="sm">{article.category}</Badge>
                       <span className="flex items-center gap-1 text-xs text-gray-400">
                         <Eye className="w-3 h-3" />
                         {article.views}

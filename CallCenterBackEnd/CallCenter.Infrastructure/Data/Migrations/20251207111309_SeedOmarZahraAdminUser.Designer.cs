@@ -4,6 +4,7 @@ using CallCenter.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CallCenter.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251207111309_SeedOmarZahraAdminUser")]
+    partial class SeedOmarZahraAdminUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -635,14 +638,6 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
-                    b.Property<Guid?>("AssignedAgentId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("assigned_agent_id");
-
-                    b.Property<string>("AssignedAgentIdentity")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("assigned_agent_identity");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
@@ -708,9 +703,6 @@ namespace CallCenter.Infrastructure.Data.Migrations
 
                     b.HasKey("Id")
                         .HasName("p_k_call_logs");
-
-                    b.HasIndex("AssignedAgentId")
-                        .HasDatabaseName("i_x_call_logs_assigned_agent_id");
 
                     b.HasIndex("ProviderCallId")
                         .IsUnique()
@@ -2649,16 +2641,6 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Agent");
 
                     b.Navigation("Article");
-                });
-
-            modelBuilder.Entity("CallCenter.Domain.Entities.CallLog", b =>
-                {
-                    b.HasOne("CallCenter.Domain.Entities.Agent", "AssignedAgent")
-                        .WithMany()
-                        .HasForeignKey("AssignedAgentId")
-                        .HasConstraintName("f_k_call_logs_agents_assigned_agent_id");
-
-                    b.Navigation("AssignedAgent");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.CallRecording", b =>

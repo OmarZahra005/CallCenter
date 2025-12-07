@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, Badge, Button, Avatar } from '../../../components/ui';
 import { SoftphoneControls, CallDurationTimer, LiveIndicator, SLATimer, ConversationItem } from '../../../components/ui';
-import { useAgentDesktop } from '../hooks/useAgentDesktop';
+import { useAgentDesktop, type ConversationInfo } from '../hooks/useAgentDesktop';
 import TransferDialog from '../components/TransferDialog';
+import { IncomingCallBanner } from '../../../components/call-center';
+import { CallCenterProvider, useCallCenter } from '../../../context/CallCenterContext';
+import { useAuthStore } from '../../../store/authStore';
 
 type AgentState = 'available' | 'busy' | 'break' | 'acw' | 'offline';
 
-const AgentDesktop = () => {
+const AgentDesktopContent = () => {
   const { t } = useTranslation();
+  const { setAgentIdentity, twilioReady } = useCallCenter();
+  const user = useAuthStore((state) => state.user);
+
+  // Auto-initialize Twilio Device with current user's email
+  useEffect(() => {
+    if (user?.email && !twilioReady) {
+      setAgentIdentity(user.email);
+    }
+  }, [user?.email, twilioReady, setAgentIdentity]);
 
   // Ticket form state
   const [ticketSubject, setTicketSubject] = useState('');
@@ -98,9 +110,13 @@ const AgentDesktop = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex gap-4">
-      {/* Left Sidebar - Conversation List */}
-      <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="h-[calc(100vh-8rem)] flex flex-col gap-4">
+      {/* Incoming Call Banner */}
+      <IncomingCallBanner />
+
+      <div className="flex-1 flex gap-4">
+        {/* Left Sidebar - Conversation List */}
+        <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.conversations')}</h2>
           {isConnected && (
@@ -116,7 +132,7 @@ const AgentDesktop = () => {
               {t('agentDesktop.noActiveConversations')}
             </div>
           ) : (
-            conversations.map((conv) => (
+            conversations.map((conv: ConversationInfo) => (
               <ConversationItem
                 key={conv.id}
                 {...conv}
@@ -400,6 +416,15 @@ const AgentDesktop = () => {
         currentAgentId={currentAgent?.id}
       />
     </div>
+    </div>
+  );
+};
+
+const AgentDesktop = () => {
+  return (
+    <CallCenterProvider>
+      <AgentDesktopContent />
+    </CallCenterProvider>
   );
 };
 

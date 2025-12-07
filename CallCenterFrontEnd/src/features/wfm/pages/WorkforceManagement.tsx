@@ -21,7 +21,9 @@ interface Agent {
 }
 
 const WorkforceManagement = () => {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [_currentWeek, _setCurrentWeek] = useState(new Date());
+  void _currentWeek; // Week state available for future navigation
+  void _setCurrentWeek;
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
 

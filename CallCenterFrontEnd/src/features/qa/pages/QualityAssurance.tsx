@@ -24,7 +24,8 @@ interface ScoreCategory {
 const QualityAssurance = () => {
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackPosition, setPlaybackPosition] = useState(30);
+  const [playbackPosition, _setPlaybackPosition] = useState(30);
+  void _setPlaybackPosition; // Available for future use
 
   const recordings: Recording[] = [
     { id: '1', agentName: 'John Smith', customerId: 'C-1234', duration: '5:32', date: '2024-01-18 10:30', score: 92, status: 'reviewed' },
@@ -92,7 +93,7 @@ const QualityAssurance = () => {
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium text-gray-900 dark:text-white">{recording.agentName}</span>
                       <Badge
-                        variant={recording.status === 'reviewed' ? 'success' : recording.status === 'flagged' ? 'danger' : 'secondary'}
+                        variant={recording.status === 'reviewed' ? 'success' : recording.status === 'flagged' ? 'danger' : 'default'}
                         size="sm"
                       >
                         {recording.status}

@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { cn } from '../../utils/cn';
 
 interface SearchHighlightProps {
   text: string;

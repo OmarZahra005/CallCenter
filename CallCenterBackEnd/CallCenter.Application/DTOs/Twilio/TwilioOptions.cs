@@ -8,4 +8,10 @@ public class TwilioOptions
     public string VoiceTwimlAppSid { get; set; } = string.Empty;
     public string CallerId { get; set; } = string.Empty;
     public string WebhookAuthToken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Set to true to bypass signature validation (for local development ONLY)
+    /// WARNING: Never enable this in production!
+    /// </summary>
+    public bool BypassSignatureValidation { get; set; } = false;
 }

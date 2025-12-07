@@ -1,4 +1,4 @@
-import { useRef, useState, DragEvent } from 'react';
+import { useRef, useState, type DragEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, File, Image, FileText, Music, Video } from 'lucide-react';
 import { cn } from '../../utils/cn';

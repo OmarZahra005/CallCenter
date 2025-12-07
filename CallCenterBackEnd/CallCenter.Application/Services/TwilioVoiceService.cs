@@ -49,12 +49,30 @@ public class TwilioVoiceService : ITwilioVoiceService
     {
         try
         {
+            // Check if signature validation is bypassed (for local development only)
+            if (_options.BypassSignatureValidation)
+            {
+                _logger.LogWarning("⚠️  SIGNATURE VALIDATION BYPASSED - This should ONLY be used for local development!");
+                return true;
+            }
+
             var validator = new Twilio.Security.RequestValidator(_options.WebhookAuthToken);
             var isValid = validator.Validate(url, parameters, signature);
 
             if (!isValid)
             {
-                _logger.LogWarning("Invalid Twilio webhook signature for URL: {Url}", url);
+                _logger.LogWarning("❌ Invalid Twilio webhook signature");
+                _logger.LogWarning("URL being validated: {Url}", url);
+                _logger.LogWarning("Signature received: {Signature}", signature);
+                _logger.LogWarning("Auth Token (first 8 chars): {TokenStart}...", _options.WebhookAuthToken?.Substring(0, Math.Min(8, _options.WebhookAuthToken?.Length ?? 0)));
+                _logger.LogWarning("Parameters count: {Count}", parameters.Count);
+
+                // Log parameter keys (but not values for security)
+                _logger.LogWarning("Parameter keys: {Keys}", string.Join(", ", parameters.Keys));
+            }
+            else
+            {
+                _logger.LogInformation("✅ Twilio signature validation successful");
             }
 
             return isValid;

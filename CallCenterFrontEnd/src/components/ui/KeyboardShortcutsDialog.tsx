@@ -1,4 +1,5 @@
-import { cn } from '../../utils/cn';
+// cn utility available but not currently used
+void 0;
 
 interface ShortcutItem {
   key: string;

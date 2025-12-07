@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import apiClient from '../../../api/client';
 import { Card, CardContent, Badge } from '../../../components/ui';
 import { SkeletonCard, MetricCard, QueueMonitor, AgentStatusGrid } from '../../../components/ui';
@@ -24,7 +24,7 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 300,
       damping: 24,
     },
@@ -37,7 +37,7 @@ const cardVariants = {
     opacity: 1,
     scale: 1,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 300,
       damping: 25,
     },
@@ -313,7 +313,7 @@ const Dashboard = () => {
             <CardContent>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Agent States</h2>
               <div className="space-y-4">
-                {agentStates.map((item, index) => (
+                {agentStates.map((item: { state: string; count: number; color: string }, index: number) => (
                   <motion.div
                     key={item.state}
                     className="flex items-center justify-between"

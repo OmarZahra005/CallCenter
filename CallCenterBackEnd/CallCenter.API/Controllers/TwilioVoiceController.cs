@@ -19,19 +19,22 @@ public class TwilioVoiceController : ControllerBase
     private readonly IHubContext<CallCenterHub> _hubContext;
     private readonly ILogger<TwilioVoiceController> _logger;
     private readonly TwilioOptions _twilioOptions;
+    private readonly IAgentRoutingService _agentRoutingService;
 
     public TwilioVoiceController(
         ITwilioVoiceService twilioVoiceService,
         ICallLogService callLogService,
         IHubContext<CallCenterHub> hubContext,
         ILogger<TwilioVoiceController> logger,
-        IOptions<TwilioOptions> twilioOptions)
+        IOptions<TwilioOptions> twilioOptions,
+        IAgentRoutingService agentRoutingService)
     {
         _twilioVoiceService = twilioVoiceService;
         _callLogService = callLogService;
         _hubContext = hubContext;
         _logger = logger;
         _twilioOptions = twilioOptions.Value;
+        _agentRoutingService = agentRoutingService;
     }
 
     private async System.Threading.Tasks.Task LogToFileAsync(string message)
@@ -160,11 +163,51 @@ public class TwilioVoiceController : ControllerBase
             await LogToFileAsync($"Broadcasting CallCreated event via SignalR for CallSid: {callSid}");
             await _hubContext.Clients.All.SendAsync("CallCreated", callSummary);
 
-            // Generate TwiML response - Enqueue the call
-            var response = new VoiceResponse();
-            response.Enqueue("support-queue");
+            // Try to find an available agent using round-robin
+            await LogToFileAsync("Selecting available agent for call routing...");
+            var selectedAgent = await _agentRoutingService.SelectNextAvailableAgentAsync();
 
-            await LogToFileAsync($"Returning TwiML response - enqueuing call to support-queue");
+            var response = new VoiceResponse();
+
+            if (selectedAgent != null)
+            {
+                // Assign call to agent in database
+                await _callLogService.AssignToAgentAsync(callSid, selectedAgent.Id, selectedAgent.Email);
+                await LogToFileAsync($"Assigned call to agent: {selectedAgent.Name} ({selectedAgent.Email})");
+
+                // Dial the agent's browser using Twilio Client
+                var dial = new Dial
+                {
+                    Timeout = 30,  // Ring for 30 seconds
+                    Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/dial-status"),
+                    Method = Twilio.Http.HttpMethod.Post  // Explicitly set POST method
+                };
+                dial.Client(selectedAgent.Email);  // Use email as Twilio Client identity
+                response.Append(dial);
+
+                await LogToFileAsync($"Returning TwiML response - dialing agent's browser at {selectedAgent.Email}");
+
+                // Notify the specific agent via SignalR
+                await _hubContext.Clients.User(selectedAgent.Id.ToString())
+                    .SendAsync("IncomingCall", new { CallSid = callSid, From = from, To = to });
+                await LogToFileAsync($"Sent IncomingCall notification to agent {selectedAgent.Id}");
+            }
+            else
+            {
+                // No agents available - play message and record voicemail
+                await LogToFileAsync("No available agents - routing to voicemail");
+                response.Say("All agents are currently busy. Please leave a message after the tone.");
+
+                var record = new Record
+                {
+                    MaxLength = 60,
+                    Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/voicemail")
+                };
+                response.Append(record);
+
+                await LogToFileAsync("Returning TwiML response - voicemail recording");
+            }
+
             await LogToFileAsync("=== IncomingCall Method Completed Successfully ===");
 
             return Content(response.ToString(), "application/xml");
@@ -182,6 +225,7 @@ public class TwilioVoiceController : ControllerBase
     /// Twilio webhook for call status updates
     /// </summary>
     [HttpPost("status-callback")]
+    [HttpGet("status-callback")]  // Accept both GET and POST
     [Consumes("application/x-www-form-urlencoded")]
     public async Task<IActionResult> StatusCallback()
     {
@@ -298,6 +342,153 @@ public class TwilioVoiceController : ControllerBase
         {
             _logger.LogError(ex, "Error processing status callback webhook");
             await LogToFileAsync($"ERROR: Exception in StatusCallback - {ex.Message}");
+            await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Twilio webhook for dial status (agent answered, busy, no-answer, etc.)
+    /// </summary>
+    [HttpPost("dial-status")]
+    [HttpGet("dial-status")]  // Accept both GET and POST
+    [Consumes("application/x-www-form-urlencoded")]
+    public async Task<IActionResult> DialStatus()
+    {
+        await LogToFileAsync("=== DialStatus Method Started ===");
+
+        try
+        {
+            // Log request headers
+            await LogToFileAsync("--- Request Headers ---");
+            foreach (var header in Request.Headers)
+            {
+                await LogToFileAsync($"{header.Key}: {header.Value}");
+            }
+
+            // Log request body
+            await LogToFileAsync("--- Request Body ---");
+            foreach (var formField in Request.Form)
+            {
+                await LogToFileAsync($"{formField.Key}: {formField.Value}");
+            }
+            await LogToFileAsync("--- End Request Data ---");
+
+            // Validate Twilio signature
+            var signature = Request.Headers["X-Twilio-Signature"].ToString();
+            var url = $"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}";
+            var parameters = Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString());
+
+            if (!_twilioVoiceService.ValidateSignature(signature, url, parameters))
+            {
+                _logger.LogWarning("Invalid Twilio signature for dial status");
+                await LogToFileAsync("ERROR: Invalid Twilio signature for dial status");
+                return Unauthorized("Invalid signature");
+            }
+
+            var callSid = Request.Form["CallSid"].ToString();
+            var dialCallStatus = Request.Form["DialCallStatus"].ToString();
+
+            await LogToFileAsync($"Dial status for CallSid {callSid}: {dialCallStatus}");
+
+            // DialCallStatus values: "completed", "answered", "busy", "no-answer", "failed", "canceled"
+            if (dialCallStatus == "no-answer" || dialCallStatus == "busy" || dialCallStatus == "failed")
+            {
+                // Agent didn't answer - try next agent or send to voicemail
+                await LogToFileAsync($"Agent didn't answer (status: {dialCallStatus}), trying next agent");
+
+                var selectedAgent = await _agentRoutingService.SelectNextAvailableAgentAsync();
+
+                var response = new VoiceResponse();
+
+                if (selectedAgent != null)
+                {
+                    await _callLogService.AssignToAgentAsync(callSid, selectedAgent.Id, selectedAgent.Email);
+                    await LogToFileAsync($"Rerouted to agent: {selectedAgent.Name} ({selectedAgent.Email})");
+
+                    var dial = new Dial
+                    {
+                        Timeout = 30,
+                        Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/dial-status")
+                    };
+                    dial.Client(selectedAgent.Email);
+                    response.Append(dial);
+                }
+                else
+                {
+                    // No more agents available - send to voicemail
+                    await LogToFileAsync("No more agents available - routing to voicemail");
+                    response.Say("All agents are currently unavailable. Please leave a message after the tone.");
+
+                    var record = new Record
+                    {
+                        MaxLength = 60,
+                        Action = new Uri($"{Request.Scheme}://{Request.Host}/api/twilio/voice/voicemail")
+                    };
+                    response.Append(record);
+                }
+
+                await LogToFileAsync("=== DialStatus Method Completed - Returning TwiML ===");
+                return Content(response.ToString(), "application/xml");
+            }
+
+            // If answered or completed, just return empty response (call continues)
+            await LogToFileAsync($"Dial status {dialCallStatus} - call proceeding normally");
+            await LogToFileAsync("=== DialStatus Method Completed Successfully ===");
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing dial status callback");
+            await LogToFileAsync($"ERROR: Exception in DialStatus - {ex.Message}");
+            await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Twilio webhook for voicemail recording
+    /// </summary>
+    [HttpPost("voicemail")]
+    [Consumes("application/x-www-form-urlencoded")]
+    public async Task<IActionResult> Voicemail()
+    {
+        await LogToFileAsync("=== Voicemail Method Started ===");
+
+        try
+        {
+            // Log request body
+            await LogToFileAsync("--- Request Body ---");
+            foreach (var formField in Request.Form)
+            {
+                await LogToFileAsync($"{formField.Key}: {formField.Value}");
+            }
+            await LogToFileAsync("--- End Request Data ---");
+
+            var callSid = Request.Form["CallSid"].ToString();
+            var recordingUrl = Request.Form["RecordingUrl"].ToString();
+
+            await LogToFileAsync($"Voicemail recorded for CallSid {callSid}: {recordingUrl}");
+
+            // Update call log with voicemail recording URL and status
+            await _callLogService.UpdateStatusAsync(
+                callSid,
+                "voicemail",
+                DateTimeOffset.UtcNow,
+                recordingUrl
+            );
+
+            var response = new VoiceResponse();
+            response.Say("Thank you for your message. Goodbye.");
+            response.Hangup();
+
+            await LogToFileAsync("=== Voicemail Method Completed Successfully ===");
+            return Content(response.ToString(), "application/xml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing voicemail");
+            await LogToFileAsync($"ERROR: Exception in Voicemail - {ex.Message}");
             await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
             return StatusCode(500, "Internal server error");
         }

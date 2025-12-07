@@ -35,12 +35,13 @@ export const GlobalSearch = ({
 
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    return [
+    const items: SearchResult[] = [
       { id: '1', title: `Ticket: ${q}`, subtitle: 'Open - High Priority', type: 'ticket', url: '/tickets/1' },
       { id: '2', title: `Customer: ${q}`, subtitle: 'john@example.com', type: 'customer', url: '/customers/1' },
       { id: '3', title: `Agent: ${q}`, subtitle: 'Available', type: 'agent', url: '/agents/1' },
       { id: '4', title: `KB: How to ${q}`, subtitle: 'Knowledge Base', type: 'article', url: '/knowledge-base/1' },
-    ].filter(r => r.title.toLowerCase().includes(q.toLowerCase()));
+    ];
+    return items.filter(r => r.title.toLowerCase().includes(q.toLowerCase()));
   };
 
   useEffect(() => {

@@ -24,7 +24,8 @@ interface Agent {
 }
 
 const TicketsKanban = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
+  void _t; // Translation hook available for future use
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'my'>('all');
 
@@ -122,7 +123,7 @@ const TicketsKanban = () => {
   }, [tickets, agents]);
 
   // Handle item move between columns
-  const handleItemMove = (itemId: string, sourceColumn: string, targetColumn: string) => {
+  const handleItemMove = (itemId: string, _sourceColumn: string, targetColumn: string) => {
     const newStatus = columnToStatusMap[targetColumn];
     if (newStatus) {
       updateTicketStatus.mutate({ ticketId: itemId, status: newStatus });

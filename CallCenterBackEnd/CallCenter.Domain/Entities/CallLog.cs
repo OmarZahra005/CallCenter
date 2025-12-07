@@ -13,4 +13,11 @@ public class CallLog : Entity
     public DateTimeOffset? EndedAtUtc { get; set; }
     public string? RecordingUrl { get; set; }
     public string? Notes { get; set; }
+
+    // Agent assignment fields
+    public Guid? AssignedAgentId { get; set; }
+    public string? AssignedAgentIdentity { get; set; }
+
+    // Navigation properties
+    public virtual Agent? AssignedAgent { get; set; }
 }

@@ -1,8 +1,10 @@
-import { HTMLAttributes, forwardRef } from 'react';
+import { type HTMLAttributes, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/cn';
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+type MotionConflictProps = 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd';
+
+interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, MotionConflictProps> {
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'primary';
   size?: 'sm' | 'md' | 'lg';
   shape?: 'rounded' | 'pill' | 'square';

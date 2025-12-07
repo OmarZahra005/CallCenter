@@ -1,7 +1,7 @@
 import { cn } from '../../utils/cn';
 
 interface LiveIndicatorProps {
-  variant?: 'live' | 'recording' | 'typing' | 'connecting';
+  variant?: 'live' | 'recording' | 'typing' | 'connecting' | 'paused';
   label?: string;
   className?: string;
 }
@@ -31,6 +31,12 @@ export const LiveIndicator = ({ variant = 'live', label, className }: LiveIndica
       ping: 'bg-yellow-400',
       text: 'text-yellow-600 dark:text-yellow-400',
       label: label || 'Connecting',
+    },
+    paused: {
+      dot: 'bg-orange-500',
+      ping: 'bg-orange-400',
+      text: 'text-orange-600 dark:text-orange-400',
+      label: label || 'Paused',
     },
   };
 

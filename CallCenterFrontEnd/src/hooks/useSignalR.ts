@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { useAuthStore } from '../store/authStore';
+import { API_BASE_URL } from '../config/apiConfig';
 
-const HUB_URL = 'http://localhost:5045/hubs/callcenter';
+const HUB_URL = `${API_BASE_URL}/hubs/callcenter`;
 
 interface Notification {
   id: string;
@@ -28,7 +29,7 @@ export const useSignalR = (): UseSignalRReturn => {
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [agentStates, setAgentStates] = useState<Record<string, string>>({});
-  const { token, isAuthenticated } = useAuthStore();
+  const { accessToken: token, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     if (!isAuthenticated) {

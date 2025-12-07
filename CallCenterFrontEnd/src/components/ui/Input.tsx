@@ -1,8 +1,10 @@
-import { forwardRef, InputHTMLAttributes, useState } from 'react';
+import { forwardRef, type InputHTMLAttributes, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/cn';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+type MotionConflictProps = 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd' | 'size';
+
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, MotionConflictProps> {
   label?: string;
   error?: string;
   helperText?: string;

@@ -22,7 +22,11 @@
       "Bash(grep:*)",
       "Bash(dotnet tool restore:*)",
       "Bash(dotnet ef migrations:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(findstr:*)",
+      "Bash(Get-Content \"C:\\MyFiles\\MoreWorks\\CallCenter\\TwilioVoice_2025-12-13.log\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-String -Pattern \"recording\")",
+      "Bash(Select-Object -Last 30)"
     ],
     "deny": [],
     "ask": []

@@ -21,10 +21,12 @@ class TwilioDeviceManager {
     this.device = new Device(token, {
       codecPreferences: [Call.Codec.Opus, Call.Codec.PCMU],
       enableImprovedSignalingErrorPrecision: true,
+      logLevel: 1, // Enable debug logging
     });
 
-    this.device.on('ready', () => {
-      console.log('Twilio Device is ready');
+    // Use 'registered' event (modern SDK) with fallback to 'ready' (older SDK)
+    this.device.on('registered', () => {
+      console.log('Twilio Device is registered and ready');
       this.readyHandlers.forEach(handler => handler());
     });
 
@@ -33,9 +35,24 @@ class TwilioDeviceManager {
       this.errorHandlers.forEach(handler => handler(error));
     });
 
+    this.device.on('unregistered', () => {
+      console.log('Twilio Device unregistered');
+    });
+
     this.device.on('incoming', (call: Call) => {
-      console.log('Incoming call from:', call.parameters.From);
+      console.log('Incoming call received:', {
+        from: call.parameters.From,
+        to: call.parameters.To,
+        callSid: call.parameters.CallSid,
+        direction: call.direction,
+        status: call.status(),
+      });
       this.currentCall = call;
+
+      // Listen to call events for debugging
+      call.on('accept', () => {
+        console.log('Call accepted by agent');
+      });
 
       call.on('disconnect', () => {
         console.log('Call disconnected');
@@ -44,15 +61,19 @@ class TwilioDeviceManager {
       });
 
       call.on('cancel', () => {
-        console.log('Call cancelled');
+        console.log('Call cancelled by caller');
         this.currentCall = null;
         this.disconnectedHandlers.forEach(handler => handler());
       });
 
       call.on('reject', () => {
-        console.log('Call rejected');
+        console.log('Call rejected by agent');
         this.currentCall = null;
         this.disconnectedHandlers.forEach(handler => handler());
+      });
+
+      call.on('error', (error: Error) => {
+        console.error('Call error:', error);
       });
 
       this.incomingHandlers.forEach(handler => handler(call));
@@ -80,10 +101,21 @@ class TwilioDeviceManager {
   answer(call?: Call): void {
     const callToAnswer = call || this.currentCall;
     if (callToAnswer) {
-      callToAnswer.accept();
-      this.currentCall = callToAnswer;
+      console.log('Answering call:', {
+        callSid: callToAnswer.parameters.CallSid,
+        from: callToAnswer.parameters.From,
+        status: callToAnswer.status(),
+      });
+
+      try {
+        callToAnswer.accept();
+        this.currentCall = callToAnswer;
+        console.log('Call accepted successfully, new status:', callToAnswer.status());
+      } catch (error) {
+        console.error('Error accepting call:', error);
+      }
     } else {
-      console.warn('No call to answer');
+      console.warn('No call to answer - currentCall is null');
     }
   }
 

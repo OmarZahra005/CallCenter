@@ -54,21 +54,32 @@ const getCustomerTypeBadge = (type: string) => {
 };
 
 export const IncomingCallBanner: React.FC = () => {
-  const { incomingRingingCall, acceptIncoming, rejectIncoming, isAnswering } = useCallCenter();
+  const { incomingRingingCall, incomingTwilioCall, acceptIncoming, rejectIncoming, isAnswering } = useCallCenter();
   const [customer, setCustomer] = useState<CustomerInfo | null>(null);
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(false);
+
+  // Debug: Log when incoming calls are detected
+  useEffect(() => {
+    console.log('IncomingCallBanner state:', {
+      hasIncomingRingingCall: !!incomingRingingCall,
+      hasIncomingTwilioCall: !!incomingTwilioCall,
+      twilioCallStatus: incomingTwilioCall?.status?.(),
+      twilioCallFrom: incomingTwilioCall?.parameters?.From,
+    });
+  }, [incomingRingingCall, incomingTwilioCall]);
 
   // Fetch customer data when incoming call arrives
   useEffect(() => {
     const fetchCustomer = async () => {
-      if (!incomingRingingCall?.fromNumber) {
+      const phoneNumber = incomingRingingCall?.fromNumber || incomingTwilioCall?.parameters?.From;
+      if (!phoneNumber) {
         setCustomer(null);
         return;
       }
 
       setIsLoadingCustomer(true);
       try {
-        const normalizedPhone = normalizePhone(incomingRingingCall.fromNumber);
+        const normalizedPhone = normalizePhone(phoneNumber);
         const response = await apiClient.get(`/customers/phone/${normalizedPhone}`);
 
         // Fetch additional stats
@@ -89,7 +100,7 @@ export const IncomingCallBanner: React.FC = () => {
           totalTickets: ticketCount,
         });
       } catch (error) {
-        console.log('Customer not found for phone:', incomingRingingCall.fromNumber);
+        console.log('Customer not found for phone:', phoneNumber);
         setCustomer(null);
       } finally {
         setIsLoadingCustomer(false);
@@ -97,21 +108,26 @@ export const IncomingCallBanner: React.FC = () => {
     };
 
     fetchCustomer();
-  }, [incomingRingingCall?.fromNumber]);
+  }, [incomingRingingCall?.fromNumber, incomingTwilioCall?.parameters?.From]);
 
   // Clear customer when call ends
   useEffect(() => {
-    if (!incomingRingingCall) {
+    if (!incomingRingingCall && !incomingTwilioCall) {
       setCustomer(null);
     }
-  }, [incomingRingingCall]);
+  }, [incomingRingingCall, incomingTwilioCall]);
 
   const customerBadge = customer ? getCustomerTypeBadge(customer.type) : null;
   const BadgeIcon = customerBadge?.icon || UserCircle;
 
+  // Show banner ONLY when Twilio Device receives the call (after IVR completes)
+  // This ensures the banner doesn't show during the IVR intro message
+  const hasIncomingCall = incomingTwilioCall;
+  const callerNumber = incomingTwilioCall?.parameters?.From || incomingRingingCall?.fromNumber || 'Unknown';
+
   return (
     <AnimatePresence>
-      {incomingRingingCall && (
+      {hasIncomingCall && (
         <motion.div
           initial={{ opacity: 0, y: -100, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -199,7 +215,7 @@ export const IncomingCallBanner: React.FC = () => {
                             {customer.name}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {incomingRingingCall.fromNumber}
+                            {callerNumber}
                           </p>
                         </>
                       ) : (
@@ -208,7 +224,7 @@ export const IncomingCallBanner: React.FC = () => {
                             Unknown Caller
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {incomingRingingCall.fromNumber}
+                            {callerNumber}
                           </p>
                         </>
                       )}

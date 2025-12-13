@@ -201,7 +201,9 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
     }
 
+    // Clear the incoming call states to close the banner
     dispatch({ type: 'SET_INCOMING_RINGING_CALL', payload: null });
+    dispatch({ type: 'SET_INCOMING_TWILIO_CALL', payload: null });
     dispatch({ type: 'SET_IS_ANSWERING', payload: false });
   }, [state.incomingTwilioCall, state.incomingRingingCall, state.agentIdentity]);
 

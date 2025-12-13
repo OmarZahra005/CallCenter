@@ -1,6 +1,8 @@
 using CallCenter.Application.DTOs.Recordings;
+using CallCenter.Application.DTOs.Twilio;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Net.Http;
 
 namespace CallCenter.Application.Services;
@@ -12,24 +14,24 @@ public class RecordingStorageService : IRecordingStorageService
 {
     private readonly ICallRecordingService _recordingService;
     private readonly ICallLogService _callLogService;
-    private readonly ITranscriptionService _transcriptionService;
     private readonly ILogger<RecordingStorageService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly TwilioOptions _twilioOptions;
     private readonly HttpClient _httpClient;
     private readonly string _storageBasePath;
 
     public RecordingStorageService(
         ICallRecordingService recordingService,
         ICallLogService callLogService,
-        ITranscriptionService transcriptionService,
         ILogger<RecordingStorageService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IOptions<TwilioOptions> twilioOptions)
     {
         _recordingService = recordingService;
         _callLogService = callLogService;
-        _transcriptionService = transcriptionService;
         _logger = logger;
         _configuration = configuration;
+        _twilioOptions = twilioOptions.Value;
         _httpClient = new HttpClient();
 
         // Get storage path from configuration or use default
@@ -41,26 +43,50 @@ public class RecordingStorageService : IRecordingStorageService
     }
 
     /// <summary>
+    /// Log to the same file as TwilioVoiceController for unified debugging
+    /// </summary>
+    private async Task LogToFileAsync(string message)
+    {
+        try
+        {
+            var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+            Directory.CreateDirectory(logDirectory);
+            var logFilePath = Path.Combine(logDirectory, $"TwilioVoice_{DateTime.UtcNow:yyyy-MM-dd}.log");
+            var logEntry = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] [RecordingStorage] {message}{Environment.NewLine}";
+            await File.AppendAllTextAsync(logFilePath, logEntry);
+        }
+        catch
+        {
+            // Ignore logging failures - don't let them affect recording processing
+        }
+    }
+
+    /// <summary>
     /// Process a completed recording: download from Twilio, store locally, create metadata
     /// </summary>
     public async Task ProcessRecordingAsync(string callSid, string recordingSid, string recordingUrl, int durationSeconds, string channels)
     {
         try
         {
+            await LogToFileAsync($"=== ProcessRecordingAsync Started for CallSid: {callSid}, RecordingSid: {recordingSid} ===");
             _logger.LogInformation("Processing recording for CallSid: {CallSid}, RecordingSid: {RecordingSid}", callSid, recordingSid);
 
             // 1. Download recording from Twilio
+            await LogToFileAsync($"Attempting to download recording from Twilio: {recordingUrl}");
             var recordingBytes = await DownloadRecordingAsync(recordingUrl);
             if (recordingBytes == null || recordingBytes.Length == 0)
             {
+                await LogToFileAsync($"ERROR: Failed to download recording from Twilio for CallSid: {callSid}");
                 _logger.LogError("Failed to download recording from Twilio for CallSid: {CallSid}", callSid);
                 return;
             }
+            await LogToFileAsync($"Downloaded {recordingBytes.Length} bytes from Twilio");
 
             // 2. Generate file path (organized by year-month)
             var fileName = $"{callSid}_{recordingSid}_{DateTime.UtcNow:yyyyMMddHHmmss}.wav";
             var relativePath = Path.Combine(DateTime.UtcNow.ToString("yyyy-MM"), fileName);
             var fullPath = Path.Combine(_storageBasePath, relativePath);
+            await LogToFileAsync($"Generated file path: {fullPath}");
 
             // Ensure subdirectory exists
             var directory = Path.GetDirectoryName(fullPath);
@@ -71,9 +97,11 @@ public class RecordingStorageService : IRecordingStorageService
 
             // 3. Save to disk
             await File.WriteAllBytesAsync(fullPath, recordingBytes);
+            await LogToFileAsync($"Recording saved to disk: {fullPath}, Size: {recordingBytes.Length} bytes");
             _logger.LogInformation("Recording saved to disk: {Path}, Size: {Size} bytes", fullPath, recordingBytes.Length);
 
             // 4. Create CallRecording entity in database
+            await LogToFileAsync($"Creating CallRecording entity in database for CallSid: {callSid}");
             var recording = await _recordingService.CreateRecordingAsync(new CreateRecordingRequest
             {
                 CallId = callSid,
@@ -85,29 +113,20 @@ public class RecordingStorageService : IRecordingStorageService
                 IsEncrypted = false, // Not encrypted at rest (can be enabled later)
                 RetentionUntil = CalculateRetentionDate()
             });
+            await LogToFileAsync($"CallRecording created with ID: {recording.Id}");
 
             // 5. Update CallLog with recording reference
+            await LogToFileAsync($"Updating CallLog with recording path for CallSid: {callSid}");
             await _callLogService.UpdateStatusAsync(callSid, null, null, relativePath);
+            await LogToFileAsync($"CallLog updated successfully");
 
-            _logger.LogInformation("Recording processing completed for CallSid: {CallSid}, RecordingId: {RecordingId}", callSid, recording.Id);
-
-            // 6. Trigger automatic transcription and analysis
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    _logger.LogInformation("Starting automatic transcription for recording: {RecordingId}", recording.Id);
-                    await _transcriptionService.ProcessTranscriptionAsync(recording.Id, fullPath);
-                    _logger.LogInformation("Automatic transcription completed for recording: {RecordingId}", recording.Id);
-                }
-                catch (Exception transcriptionEx)
-                {
-                    _logger.LogError(transcriptionEx, "Error during automatic transcription for recording: {RecordingId}", recording.Id);
-                }
-            });
+            await LogToFileAsync($"=== ProcessRecordingAsync Completed Successfully for CallSid: {callSid} ===");
+            _logger.LogInformation("Recording saved successfully for CallSid: {CallSid}, RecordingId: {RecordingId}. Transcription can be triggered on-demand from QA screen.", callSid, recording.Id);
         }
         catch (Exception ex)
         {
+            await LogToFileAsync($"ERROR: Exception in ProcessRecordingAsync for CallSid: {callSid} - {ex.Message}");
+            await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
             _logger.LogError(ex, "Error processing recording for CallSid: {CallSid}", callSid);
             // Don't throw - we don't want to fail the Twilio webhook
         }
@@ -123,17 +142,29 @@ public class RecordingStorageService : IRecordingStorageService
             // Twilio recording URLs need .wav extension for WAV format
             var downloadUrl = $"{recordingUrl}.wav";
 
+            await LogToFileAsync($"Starting download from Twilio: {downloadUrl}");
             _logger.LogInformation("Downloading recording from Twilio: {Url}", recordingUrl);
 
-            // Get Twilio credentials from configuration
-            var accountSid = _configuration["Twilio:AccountSid"];
-            var authToken = _configuration["Twilio:WebhookAuthToken"];
+            // Get Twilio credentials from injected options
+            // AuthToken is the main Twilio Auth Token for API calls
+            // WebhookAuthToken is a fallback (often the same token)
+            var accountSid = _twilioOptions.AccountSid;
+            var authToken = !string.IsNullOrEmpty(_twilioOptions.AuthToken)
+                ? _twilioOptions.AuthToken
+                : _twilioOptions.WebhookAuthToken;
+
+            var usingAuthToken = !string.IsNullOrEmpty(_twilioOptions.AuthToken) ? "AuthToken" : "WebhookAuthToken";
+            await LogToFileAsync($"Using credentials - AccountSid: {(accountSid?.Length > 6 ? accountSid.Substring(0, 6) + "..." : "[empty]")}, TokenSource: {usingAuthToken}");
 
             if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
             {
-                _logger.LogError("Twilio credentials not configured");
+                await LogToFileAsync($"ERROR: Twilio credentials not configured. AccountSid present: {!string.IsNullOrEmpty(accountSid)}, AuthToken present: {!string.IsNullOrEmpty(authToken)}");
+                _logger.LogError("Twilio credentials not configured. AccountSid: {HasAccountSid}, AuthToken: {HasAuthToken}",
+                    !string.IsNullOrEmpty(accountSid), !string.IsNullOrEmpty(authToken));
                 return null;
             }
+
+            _logger.LogInformation("Using AccountSid: {AccountSid} for recording download", accountSid.Substring(0, 6) + "...");
 
             // Create request with Basic Authentication
             var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
@@ -143,10 +174,20 @@ public class RecordingStorageService : IRecordingStorageService
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
 
             // Download the recording
+            await LogToFileAsync($"Sending HTTP GET request...");
             var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                await LogToFileAsync($"ERROR: Download failed. Status: {(int)response.StatusCode} {response.StatusCode}, Response: {responseContent}");
+                _logger.LogError("Failed to download recording. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, responseContent);
+                return null;
+            }
 
             var bytes = await response.Content.ReadAsByteArrayAsync();
+            await LogToFileAsync($"Download successful: {bytes.Length} bytes received");
             _logger.LogInformation("Downloaded {Size} bytes from Twilio", bytes.Length);
 
             return bytes;

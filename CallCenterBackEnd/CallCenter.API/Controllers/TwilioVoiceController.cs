@@ -67,6 +67,58 @@ public class TwilioVoiceController : ControllerBase
         return;
     }
 
+    /// <summary>
+    /// Log call errors with structured format including CallSid, CallerNumber, Service, Error, and Timestamp
+    /// </summary>
+    private async System.Threading.Tasks.Task LogCallErrorAsync(string callSid, string callerNumber, string serviceName, string errorMessage)
+    {
+        var timestamp = DateTime.UtcNow;
+        var logEntry = $"[CALL_ERROR] CallSid: {callSid}, Caller: {callerNumber}, " +
+                       $"Service: {serviceName}, Error: {errorMessage}, Time: {timestamp:O}";
+
+        _logger.LogError(logEntry);
+        await LogToFileAsync(logEntry);
+    }
+
+    /// <summary>
+    /// Safely execute an async operation that returns a value, catching and logging any errors
+    /// </summary>
+    private async System.Threading.Tasks.Task<T?> SafeExecuteAsync<T>(
+        Func<System.Threading.Tasks.Task<T>> action,
+        string serviceName,
+        string callSid,
+        string callerNumber) where T : class
+    {
+        try
+        {
+            return await action();
+        }
+        catch (Exception ex)
+        {
+            await LogCallErrorAsync(callSid, callerNumber, serviceName, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Safely execute an async operation without return value, catching and logging any errors
+    /// </summary>
+    private async System.Threading.Tasks.Task SafeExecuteAsync(
+        Func<System.Threading.Tasks.Task> action,
+        string serviceName,
+        string callSid,
+        string callerNumber)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            await LogCallErrorAsync(callSid, callerNumber, serviceName, ex.Message);
+        }
+    }
+
     private string MaskSensitiveData(string data)
     {
         if (string.IsNullOrEmpty(data))
@@ -146,7 +198,7 @@ public class TwilioVoiceController : ControllerBase
             await LogToFileAsync($"Incoming call - From: {from}, To: {to}, CallSid: {callSid}, Status: {callStatus}");
             _logger.LogInformation("Incoming call from {From} to {To}, CallSid: {CallSid}", from, to, callSid);
 
-            // Create call log in database
+            // CRITICAL: Create call log in database - this must succeed for call tracking
             await LogToFileAsync($"Creating call log in database for CallSid: {callSid}");
             var callLog = await _callLogService.CreateIncomingAsync(
                 callSid,
@@ -156,42 +208,65 @@ public class TwilioVoiceController : ControllerBase
             );
             await LogToFileAsync($"Call log created with ID: {callLog.Id}");
 
-            // Create voice conversation (auto-creates customer if not found)
+            // SECONDARY: Create voice conversation (auto-creates customer if not found)
+            // Call continues even if this fails
             await LogToFileAsync($"Creating voice conversation for phone: {from}");
-            var conversation = await _conversationService.CreateVoiceConversationAsync(from);
-            await LogToFileAsync($"Conversation created with ID: {conversation.Id}");
+            var conversation = await SafeExecuteAsync(
+                () => _conversationService.CreateVoiceConversationAsync(from),
+                "ConversationService.CreateVoiceConversation",
+                callSid, from);
 
-            // Link CallLog to Conversation
-            var linkedCallLog = await _callLogService.LinkToConversationAsync(callSid, conversation.Id);
-            if (linkedCallLog != null)
+            if (conversation != null)
             {
-                await LogToFileAsync($"CallLog linked to Conversation: {conversation.Id}");
+                await LogToFileAsync($"Conversation created with ID: {conversation.Id}");
+
+                // SECONDARY: Link CallLog to Conversation
+                await SafeExecuteAsync(
+                    async () =>
+                    {
+                        var linkedCallLog = await _callLogService.LinkToConversationAsync(callSid, conversation.Id);
+                        if (linkedCallLog != null)
+                        {
+                            await LogToFileAsync($"CallLog linked to Conversation: {conversation.Id}");
+                        }
+                    },
+                    "CallLogService.LinkToConversation",
+                    callSid, from);
+
+                // SECONDARY: Broadcast ConversationCreated event via SignalR
+                var conversationDto = await SafeExecuteAsync(
+                    () => _conversationService.GetConversationDtoByIdAsync(conversation.Id),
+                    "ConversationService.GetConversationDtoById",
+                    callSid, from);
+
+                if (conversationDto != null)
+                {
+                    await SafeExecuteAsync(
+                        () => _hubNotificationService.NotifyConversationCreatedAsync(conversationDto),
+                        "HubNotificationService.NotifyConversationCreated",
+                        callSid, from);
+                    await LogToFileAsync($"Broadcast ConversationCreated event for Conversation: {conversation.Id}");
+
+                    // SECONDARY: Broadcast TimelineEvent for CallStarted
+                    await SafeExecuteAsync(
+                        () => _hubNotificationService.NotifyTimelineEventAsync(conversation.Id, new
+                        {
+                            eventType = "CallStarted",
+                            description = $"Incoming call from {from}",
+                            timestamp = DateTime.UtcNow,
+                            metadata = new { fromNumber = from, toNumber = to, callSid }
+                        }),
+                        "HubNotificationService.NotifyTimelineEvent",
+                        callSid, from);
+                    await LogToFileAsync($"Broadcast TimelineEvent (CallStarted) for Conversation: {conversation.Id}");
+                }
             }
             else
             {
-                _logger.LogError("Failed to link CallLog {CallSid} to Conversation {ConversationId} - CallLog not found", callSid, conversation.Id);
-                await LogToFileAsync($"ERROR: Failed to link CallLog to Conversation - CallLog not found for CallSid: {callSid}");
+                await LogToFileAsync($"WARNING: Conversation creation failed, continuing without conversation tracking");
             }
 
-            // Broadcast ConversationCreated event via SignalR
-            var conversationDto = await _conversationService.GetConversationDtoByIdAsync(conversation.Id);
-            if (conversationDto != null)
-            {
-                await _hubNotificationService.NotifyConversationCreatedAsync(conversationDto);
-                await LogToFileAsync($"Broadcast ConversationCreated event for Conversation: {conversation.Id}");
-
-                // Broadcast TimelineEvent for CallStarted
-                await _hubNotificationService.NotifyTimelineEventAsync(conversation.Id, new
-                {
-                    eventType = "CallStarted",
-                    description = $"Incoming call from {from}",
-                    timestamp = DateTime.UtcNow,
-                    metadata = new { fromNumber = from, toNumber = to, callSid }
-                });
-                await LogToFileAsync($"Broadcast TimelineEvent (CallStarted) for Conversation: {conversation.Id}");
-            }
-
-            // Map to DTO and broadcast via SignalR
+            // SECONDARY: Map to DTO and broadcast via SignalR
             var callSummary = new CallSummaryDto
             {
                 Id = callLog.Id,
@@ -205,21 +280,22 @@ public class TwilioVoiceController : ControllerBase
                 RecordingUrl = callLog.RecordingUrl
             };
 
+            await SafeExecuteAsync(
+                () => _hubContext.Clients.All.SendAsync("CallCreated", callSummary),
+                "SignalR.CallCreated",
+                callSid, from);
             await LogToFileAsync($"Broadcasting CallCreated event via SignalR for CallSid: {callSid}");
-            await _hubContext.Clients.All.SendAsync("CallCreated", callSummary);
 
-            // Try to find an available agent using round-robin
+            // SECONDARY: Try to find an available agent using round-robin
             await LogToFileAsync("Selecting available agent for call routing...");
-            var selectedAgent = await _agentRoutingService.SelectNextAvailableAgentAsync();
+            var selectedAgent = await SafeExecuteAsync(
+                () => _agentRoutingService.SelectNextAvailableAgentAsync(),
+                "AgentRoutingService.SelectNextAvailableAgent",
+                callSid, from);
 
             var response = new VoiceResponse();
 
             // Arabic welcome message for all incoming calls
-            //           response.Say(
-            //    "Welcome to Barah Information Technology. Your call will be transferred to customer service.",
-            //    language: "en-US",
-            //    voice: "Polly.Joanna"
-            //);
             response.Say(
                "مرحبًا بكم في شركة براح لتقنية المعلومات. يرجى الانتظار حتى يتم تحويل مكالمتكم.",
                language: "ar-SA",
@@ -229,8 +305,11 @@ public class TwilioVoiceController : ControllerBase
 
             if (selectedAgent != null)
             {
-                // Assign call to agent in database
-                await _callLogService.AssignToAgentAsync(callSid, selectedAgent.Id, selectedAgent.Email);
+                // SECONDARY: Assign call to agent in database
+                await SafeExecuteAsync(
+                    () => _callLogService.AssignToAgentAsync(callSid, selectedAgent.Id, selectedAgent.Email),
+                    "CallLogService.AssignToAgent",
+                    callSid, from);
                 await LogToFileAsync($"Assigned call to agent: {selectedAgent.Name} ({selectedAgent.Email})");
 
                 // Dial the agent's browser using Twilio Client
@@ -248,10 +327,9 @@ public class TwilioVoiceController : ControllerBase
 
                 await LogToFileAsync($"Returning TwiML response - dialing agent's browser at {selectedAgent.Email}");
 
-                // Notify the specific agent via SignalR
-                await _hubContext.Clients.User(selectedAgent.Id.ToString())
-                    .SendAsync("IncomingCall", new { CallSid = callSid, From = from, To = to });
-                await LogToFileAsync($"Sent IncomingCall notification to agent {selectedAgent.Id}");
+                // NOTE: IncomingCall banner is now shown by frontend's Twilio Device onIncoming event
+                // This ensures banner only appears AFTER IVR completes and dial actually starts
+                await LogToFileAsync($"Agent {selectedAgent.Id} will receive incoming call via Twilio Device");
             }
             else
             {
@@ -345,6 +423,7 @@ public class TwilioVoiceController : ControllerBase
             var callSid = Request.Form["CallSid"].ToString();
             var callStatus = Request.Form["CallStatus"].ToString();
             var recordingUrl = Request.Form["RecordingUrl"].ToString();
+            var callerNumber = Request.Form["From"].ToString(); // For error logging
 
             await LogToFileAsync($"Status callback - CallSid: {callSid}, Status: {callStatus}, RecordingUrl: {(string.IsNullOrEmpty(recordingUrl) ? "None" : recordingUrl)}");
             _logger.LogInformation("Call status update for CallSid: {CallSid}, Status: {CallStatus}", callSid, callStatus);
@@ -361,7 +440,7 @@ public class TwilioVoiceController : ControllerBase
                 await LogToFileAsync($"Call status updated to: {callStatus} (call still active)");
             }
 
-            // Update call log in database
+            // CRITICAL: Update call log in database - this must succeed
             await LogToFileAsync($"Updating call log in database for CallSid: {callSid}");
             var callLog = await _callLogService.UpdateStatusAsync(
                 callSid,
@@ -373,8 +452,9 @@ public class TwilioVoiceController : ControllerBase
             if (callLog != null)
             {
                 await LogToFileAsync($"Call log updated successfully - ID: {callLog.Id}, Status: {callLog.Status}");
+                callerNumber = callLog.FromNumber; // Use actual caller number for logging
 
-                // Update conversation state based on call status
+                // SECONDARY: Update conversation state based on call status
                 if (callLog.ConversationId.HasValue)
                 {
                     Application.DTOs.Conversations.ConversationDto? updatedConversation = null;
@@ -388,49 +468,65 @@ public class TwilioVoiceController : ControllerBase
                             durationSeconds = (int)(callLog.EndedAtUtc.Value - callLog.StartedAtUtc).TotalSeconds;
                         }
 
-                        updatedConversation = await _conversationService.CloseVoiceConversationAsync(callLog.ConversationId.Value, durationSeconds);
+                        // SECONDARY: Close conversation
+                        updatedConversation = await SafeExecuteAsync(
+                            () => _conversationService.CloseVoiceConversationAsync(callLog.ConversationId.Value, durationSeconds),
+                            "ConversationService.CloseVoiceConversation",
+                            callSid, callerNumber);
                         await LogToFileAsync($"Conversation {callLog.ConversationId} closed with duration {durationSeconds}s");
 
-                        // Broadcast TimelineEvent for CallEnded
-                        await _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
-                        {
-                            eventType = "CallEnded",
-                            description = $"Call ended (duration: {durationSeconds}s)",
-                            timestamp = DateTime.UtcNow,
-                            agentId = callLog.AssignedAgentId,
-                            agentName = callLog.AssignedAgentIdentity,
-                            metadata = new { durationSeconds, endReason = callStatus }
-                        });
+                        // SECONDARY: Broadcast TimelineEvent for CallEnded
+                        await SafeExecuteAsync(
+                            () => _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
+                            {
+                                eventType = "CallEnded",
+                                description = $"Call ended (duration: {durationSeconds}s)",
+                                timestamp = DateTime.UtcNow,
+                                agentId = callLog.AssignedAgentId,
+                                agentName = callLog.AssignedAgentIdentity,
+                                metadata = new { durationSeconds, endReason = callStatus }
+                            }),
+                            "HubNotificationService.NotifyTimelineEvent",
+                            callSid, callerNumber);
                         await LogToFileAsync($"Broadcast TimelineEvent (CallEnded) for Conversation: {callLog.ConversationId}");
                     }
                     else if (callStatus == "failed" || callStatus == "busy" || callStatus == "no-answer" || callStatus == "canceled")
                     {
-                        // Call didn't complete successfully - mark as abandoned
-                        updatedConversation = await _conversationService.AbandonConversationAsync(callLog.ConversationId.Value);
+                        // SECONDARY: Call didn't complete successfully - mark as abandoned
+                        updatedConversation = await SafeExecuteAsync(
+                            () => _conversationService.AbandonConversationAsync(callLog.ConversationId.Value),
+                            "ConversationService.AbandonConversation",
+                            callSid, callerNumber);
                         await LogToFileAsync($"Conversation {callLog.ConversationId} marked as abandoned (status: {callStatus})");
 
-                        // Broadcast TimelineEvent for CallEnded (abandoned)
-                        await _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
-                        {
-                            eventType = "CallEnded",
-                            description = $"Call ended ({callStatus})",
-                            timestamp = DateTime.UtcNow,
-                            agentId = callLog.AssignedAgentId,
-                            agentName = callLog.AssignedAgentIdentity,
-                            metadata = new { endReason = callStatus }
-                        });
+                        // SECONDARY: Broadcast TimelineEvent for CallEnded (abandoned)
+                        await SafeExecuteAsync(
+                            () => _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
+                            {
+                                eventType = "CallEnded",
+                                description = $"Call ended ({callStatus})",
+                                timestamp = DateTime.UtcNow,
+                                agentId = callLog.AssignedAgentId,
+                                agentName = callLog.AssignedAgentIdentity,
+                                metadata = new { endReason = callStatus }
+                            }),
+                            "HubNotificationService.NotifyTimelineEvent",
+                            callSid, callerNumber);
                         await LogToFileAsync($"Broadcast TimelineEvent (CallEnded - {callStatus}) for Conversation: {callLog.ConversationId}");
                     }
 
-                    // Broadcast ConversationUpdated event via SignalR
+                    // SECONDARY: Broadcast ConversationUpdated event via SignalR
                     if (updatedConversation != null)
                     {
-                        await _hubNotificationService.NotifyConversationUpdatedAsync(updatedConversation);
+                        await SafeExecuteAsync(
+                            () => _hubNotificationService.NotifyConversationUpdatedAsync(updatedConversation),
+                            "HubNotificationService.NotifyConversationUpdated",
+                            callSid, callerNumber);
                         await LogToFileAsync($"Broadcast ConversationUpdated event for Conversation: {callLog.ConversationId}");
                     }
                 }
 
-                // Map to DTO and broadcast via SignalR
+                // SECONDARY: Map to DTO and broadcast via SignalR
                 var callSummary = new CallSummaryDto
                 {
                     Id = callLog.Id,
@@ -444,8 +540,11 @@ public class TwilioVoiceController : ControllerBase
                     RecordingUrl = callLog.RecordingUrl
                 };
 
+                await SafeExecuteAsync(
+                    () => _hubContext.Clients.All.SendAsync("CallStatusChanged", callSummary),
+                    "SignalR.CallStatusChanged",
+                    callSid, callerNumber);
                 await LogToFileAsync($"Broadcasting CallStatusChanged event via SignalR for CallSid: {callSid}");
-                await _hubContext.Clients.All.SendAsync("CallStatusChanged", callSummary);
             }
             else
             {
@@ -505,6 +604,7 @@ public class TwilioVoiceController : ControllerBase
 
             var callSid = Request.Form["CallSid"].ToString();
             var dialCallStatus = Request.Form["DialCallStatus"].ToString();
+            var callerNumber = Request.Form["From"].ToString(); // For error logging
 
             await LogToFileAsync($"Dial status for CallSid {callSid}: {dialCallStatus}");
 
@@ -514,13 +614,21 @@ public class TwilioVoiceController : ControllerBase
                 // Agent didn't answer - try next agent or send to voicemail
                 await LogToFileAsync($"Agent didn't answer (status: {dialCallStatus}), trying next agent");
 
-                var selectedAgent = await _agentRoutingService.SelectNextAvailableAgentAsync();
+                // SECONDARY: Get next available agent
+                var selectedAgent = await SafeExecuteAsync(
+                    () => _agentRoutingService.SelectNextAvailableAgentAsync(),
+                    "AgentRoutingService.SelectNextAvailableAgent",
+                    callSid, callerNumber);
 
                 var response = new VoiceResponse();
 
                 if (selectedAgent != null)
                 {
-                    await _callLogService.AssignToAgentAsync(callSid, selectedAgent.Id, selectedAgent.Email);
+                    // SECONDARY: Assign call to new agent
+                    await SafeExecuteAsync(
+                        () => _callLogService.AssignToAgentAsync(callSid, selectedAgent.Id, selectedAgent.Email),
+                        "CallLogService.AssignToAgent",
+                        callSid, callerNumber);
                     await LogToFileAsync($"Rerouted to agent: {selectedAgent.Name} ({selectedAgent.Email})");
 
                     var dial = new Dial
@@ -557,36 +665,54 @@ public class TwilioVoiceController : ControllerBase
             {
                 await LogToFileAsync($"Agent answered call - updating conversation state");
 
-                // Get CallLog to find ConversationId and AgentId
-                var callLog = await _callLogService.GetByProviderIdAsync(callSid);
+                // SECONDARY: Get CallLog to find ConversationId and AgentId
+                var callLog = await SafeExecuteAsync(
+                    () => _callLogService.GetByProviderIdAsync(callSid),
+                    "CallLogService.GetByProviderId",
+                    callSid, callerNumber);
+
                 if (callLog != null && callLog.ConversationId.HasValue && callLog.AssignedAgentId.HasValue)
                 {
-                    // Update CallLog status from "ringing" to "in-progress"
-                    await _callLogService.UpdateStatusAsync(callSid, "in-progress");
+                    callerNumber = callLog.FromNumber; // Use actual caller number
+
+                    // SECONDARY: Update CallLog status from "ringing" to "in-progress"
+                    await SafeExecuteAsync(
+                        () => _callLogService.UpdateStatusAsync(callSid, "in-progress"),
+                        "CallLogService.UpdateStatus",
+                        callSid, callerNumber);
                     await LogToFileAsync($"CallLog status updated to 'in-progress' for CallSid: {callSid}");
 
-                    // Update conversation: assign agent and set state to Active
-                    var updatedConversation = await _conversationService.AssignAgentToConversationAsync(
-                        callLog.ConversationId.Value,
-                        callLog.AssignedAgentId.Value);
+                    // SECONDARY: Update conversation: assign agent and set state to Active
+                    var updatedConversation = await SafeExecuteAsync(
+                        () => _conversationService.AssignAgentToConversationAsync(
+                            callLog.ConversationId.Value,
+                            callLog.AssignedAgentId.Value),
+                        "ConversationService.AssignAgentToConversation",
+                        callSid, callerNumber);
                     await LogToFileAsync($"Conversation {callLog.ConversationId} assigned to agent {callLog.AssignedAgentId}, state set to Active");
 
-                    // Broadcast ConversationUpdated event via SignalR
+                    // SECONDARY: Broadcast ConversationUpdated event via SignalR
                     if (updatedConversation != null)
                     {
-                        await _hubNotificationService.NotifyConversationUpdatedAsync(updatedConversation);
+                        await SafeExecuteAsync(
+                            () => _hubNotificationService.NotifyConversationUpdatedAsync(updatedConversation),
+                            "HubNotificationService.NotifyConversationUpdated",
+                            callSid, callerNumber);
                         await LogToFileAsync($"Broadcast ConversationUpdated event for Conversation: {callLog.ConversationId}");
                     }
 
-                    // Broadcast TimelineEvent for CallAnswered
-                    await _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
-                    {
-                        eventType = "CallAnswered",
-                        description = $"Call answered by {callLog.AssignedAgentIdentity ?? "agent"}",
-                        timestamp = DateTime.UtcNow,
-                        agentId = callLog.AssignedAgentId,
-                        agentName = callLog.AssignedAgentIdentity
-                    });
+                    // SECONDARY: Broadcast TimelineEvent for CallAnswered
+                    await SafeExecuteAsync(
+                        () => _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
+                        {
+                            eventType = "CallAnswered",
+                            description = $"Call answered by {callLog.AssignedAgentIdentity ?? "agent"}",
+                            timestamp = DateTime.UtcNow,
+                            agentId = callLog.AssignedAgentId,
+                            agentName = callLog.AssignedAgentIdentity
+                        }),
+                        "HubNotificationService.NotifyTimelineEvent",
+                        callSid, callerNumber);
                     await LogToFileAsync($"Broadcast TimelineEvent (CallAnswered) for Conversation: {callLog.ConversationId}");
                 }
                 else
@@ -617,6 +743,9 @@ public class TwilioVoiceController : ControllerBase
     {
         await LogToFileAsync("=== Voicemail Method Started ===");
 
+        var callSid = "";
+        var callerNumber = "";
+
         try
         {
             // Log request body
@@ -627,18 +756,23 @@ public class TwilioVoiceController : ControllerBase
             }
             await LogToFileAsync("--- End Request Data ---");
 
-            var callSid = Request.Form["CallSid"].ToString();
+            callSid = Request.Form["CallSid"].ToString();
+            callerNumber = Request.Form["From"].ToString();
             var recordingUrl = Request.Form["RecordingUrl"].ToString();
 
             await LogToFileAsync($"Voicemail recorded for CallSid {callSid}: {recordingUrl}");
 
-            // Update call log with voicemail recording URL and status
-            await _callLogService.UpdateStatusAsync(
-                callSid,
-                "voicemail",
-                DateTimeOffset.UtcNow,
-                recordingUrl
-            );
+            // SECONDARY: Update call log with voicemail recording URL and status
+            // Call continues even if this fails - TwiML response still returns
+            await SafeExecuteAsync(
+                () => _callLogService.UpdateStatusAsync(
+                    callSid,
+                    "voicemail",
+                    DateTimeOffset.UtcNow,
+                    recordingUrl
+                ),
+                "CallLogService.UpdateStatus",
+                callSid, callerNumber);
 
             var response = new VoiceResponse();
             response.Say("Thank you for your message. Goodbye.");
@@ -650,9 +784,15 @@ public class TwilioVoiceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing voicemail");
+            await LogCallErrorAsync(callSid, callerNumber, "Voicemail", ex.Message);
             await LogToFileAsync($"ERROR: Exception in Voicemail - {ex.Message}");
             await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
-            return StatusCode(500, "Internal server error");
+
+            // Still return a valid TwiML response even on error
+            var response = new VoiceResponse();
+            response.Say("Thank you for your message. Goodbye.");
+            response.Hangup();
+            return Content(response.ToString(), "application/xml");
         }
     }
 
@@ -664,6 +804,9 @@ public class TwilioVoiceController : ControllerBase
     public async Task<IActionResult> RecordingStatusCallback()
     {
         await LogToFileAsync("=== RecordingStatusCallback Started ===");
+
+        var callSid = "";
+        var callerNumber = "";
 
         try
         {
@@ -695,7 +838,8 @@ public class TwilioVoiceController : ControllerBase
             }
 
             // Extract recording data
-            var callSid = Request.Form["CallSid"].ToString();
+            callSid = Request.Form["CallSid"].ToString();
+            callerNumber = Request.Form["From"].ToString();
             var recordingSid = Request.Form["RecordingSid"].ToString();
             var recordingUrl = Request.Form["RecordingUrl"].ToString();
             var recordingStatus = Request.Form["RecordingStatus"].ToString();
@@ -704,7 +848,7 @@ public class TwilioVoiceController : ControllerBase
 
             await LogToFileAsync($"Recording callback - CallSid: {callSid}, RecordingSid: {recordingSid}, Status: {recordingStatus}, Duration: {duration}s, Channels: {recordingChannels}");
 
-            // Process completed recordings
+            // Process completed recordings - the service has its own internal try-catch
             if (recordingStatus == "completed")
             {
                 await LogToFileAsync($"Processing completed recording for CallSid: {callSid}");
@@ -727,9 +871,11 @@ public class TwilioVoiceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing recording callback");
+            await LogCallErrorAsync(callSid, callerNumber, "RecordingStatusCallback", ex.Message);
             await LogToFileAsync($"ERROR: Exception in RecordingStatusCallback - {ex.Message}");
             await LogToFileAsync($"Stack Trace: {ex.StackTrace}");
-            return StatusCode(500, "Internal server error");
+            // Return OK to Twilio even on error - don't fail the webhook
+            return Ok();
         }
     }
 
@@ -750,21 +896,29 @@ public class TwilioVoiceController : ControllerBase
                 return NotFound($"Call not found: {callSid}");
             }
 
-            // Update CallLog status to on-hold
-            await _callLogService.UpdateStatusAsync(callSid, "on-hold");
+            var callerNumber = callLog.FromNumber;
+
+            // SECONDARY: Update CallLog status to on-hold
+            await SafeExecuteAsync(
+                () => _callLogService.UpdateStatusAsync(callSid, "on-hold"),
+                "CallLogService.UpdateStatus",
+                callSid, callerNumber);
             await LogToFileAsync($"CallLog status updated to 'on-hold' for CallSid: {callSid}");
 
-            // Broadcast timeline event if conversation exists
+            // SECONDARY: Broadcast timeline event if conversation exists
             if (callLog.ConversationId.HasValue)
             {
-                await _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
-                {
-                    eventType = "OnHold",
-                    description = "Call placed on hold",
-                    timestamp = DateTime.UtcNow,
-                    agentId = callLog.AssignedAgentId,
-                    agentName = callLog.AssignedAgentIdentity
-                });
+                await SafeExecuteAsync(
+                    () => _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
+                    {
+                        eventType = "OnHold",
+                        description = "Call placed on hold",
+                        timestamp = DateTime.UtcNow,
+                        agentId = callLog.AssignedAgentId,
+                        agentName = callLog.AssignedAgentIdentity
+                    }),
+                    "HubNotificationService.NotifyTimelineEvent",
+                    callSid, callerNumber);
                 await LogToFileAsync($"Broadcast TimelineEvent (OnHold) for Conversation: {callLog.ConversationId}");
             }
 
@@ -774,6 +928,7 @@ public class TwilioVoiceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error placing call on hold");
+            await LogCallErrorAsync(callSid, "", "HoldCall", ex.Message);
             await LogToFileAsync($"ERROR: Exception in HoldCall - {ex.Message}");
             return StatusCode(500, "Internal server error");
         }
@@ -796,21 +951,29 @@ public class TwilioVoiceController : ControllerBase
                 return NotFound($"Call not found: {callSid}");
             }
 
-            // Update CallLog status back to in-progress
-            await _callLogService.UpdateStatusAsync(callSid, "in-progress");
+            var callerNumber = callLog.FromNumber;
+
+            // SECONDARY: Update CallLog status back to in-progress
+            await SafeExecuteAsync(
+                () => _callLogService.UpdateStatusAsync(callSid, "in-progress"),
+                "CallLogService.UpdateStatus",
+                callSid, callerNumber);
             await LogToFileAsync($"CallLog status updated to 'in-progress' for CallSid: {callSid}");
 
-            // Broadcast timeline event if conversation exists
+            // SECONDARY: Broadcast timeline event if conversation exists
             if (callLog.ConversationId.HasValue)
             {
-                await _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
-                {
-                    eventType = "Resumed",
-                    description = "Call resumed from hold",
-                    timestamp = DateTime.UtcNow,
-                    agentId = callLog.AssignedAgentId,
-                    agentName = callLog.AssignedAgentIdentity
-                });
+                await SafeExecuteAsync(
+                    () => _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
+                    {
+                        eventType = "Resumed",
+                        description = "Call resumed from hold",
+                        timestamp = DateTime.UtcNow,
+                        agentId = callLog.AssignedAgentId,
+                        agentName = callLog.AssignedAgentIdentity
+                    }),
+                    "HubNotificationService.NotifyTimelineEvent",
+                    callSid, callerNumber);
                 await LogToFileAsync($"Broadcast TimelineEvent (Resumed) for Conversation: {callLog.ConversationId}");
             }
 
@@ -820,6 +983,7 @@ public class TwilioVoiceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resuming call");
+            await LogCallErrorAsync(callSid, "", "ResumeCall", ex.Message);
             await LogToFileAsync($"ERROR: Exception in ResumeCall - {ex.Message}");
             return StatusCode(500, "Internal server error");
         }
@@ -842,20 +1006,25 @@ public class TwilioVoiceController : ControllerBase
                 return NotFound($"Call not found: {callSid}");
             }
 
-            // Broadcast timeline event if conversation exists
+            var callerNumber = callLog.FromNumber;
+
+            // SECONDARY: Broadcast timeline event if conversation exists
             if (callLog.ConversationId.HasValue)
             {
                 var eventType = muted ? "Muted" : "Unmuted";
                 var description = muted ? "Call muted" : "Call unmuted";
 
-                await _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
-                {
-                    eventType,
-                    description,
-                    timestamp = DateTime.UtcNow,
-                    agentId = callLog.AssignedAgentId,
-                    agentName = callLog.AssignedAgentIdentity
-                });
+                await SafeExecuteAsync(
+                    () => _hubNotificationService.NotifyTimelineEventAsync(callLog.ConversationId.Value, new
+                    {
+                        eventType,
+                        description,
+                        timestamp = DateTime.UtcNow,
+                        agentId = callLog.AssignedAgentId,
+                        agentName = callLog.AssignedAgentIdentity
+                    }),
+                    "HubNotificationService.NotifyTimelineEvent",
+                    callSid, callerNumber);
                 await LogToFileAsync($"Broadcast TimelineEvent ({eventType}) for Conversation: {callLog.ConversationId}");
             }
 
@@ -865,6 +1034,7 @@ public class TwilioVoiceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error toggling mute");
+            await LogCallErrorAsync(callSid, "", "MuteCall", ex.Message);
             await LogToFileAsync($"ERROR: Exception in MuteCall - {ex.Message}");
             return StatusCode(500, "Internal server error");
         }

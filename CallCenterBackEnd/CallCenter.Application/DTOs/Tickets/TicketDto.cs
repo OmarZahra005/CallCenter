@@ -53,6 +53,7 @@ public class TicketStatusHistoryDto
 public class CreateTicketRequest
 {
     public Guid CustomerId { get; set; }
+    public Guid? ConversationId { get; set; }
     public Guid? TeamId { get; set; }
     public string Subject { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

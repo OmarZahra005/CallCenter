@@ -18,6 +18,10 @@ public class CallLog : Entity
     public Guid? AssignedAgentId { get; set; }
     public string? AssignedAgentIdentity { get; set; }
 
+    // Link to Conversation
+    public Guid? ConversationId { get; set; }
+
     // Navigation properties
     public virtual Agent? AssignedAgent { get; set; }
+    public virtual Conversation? Conversation { get; set; }
 }

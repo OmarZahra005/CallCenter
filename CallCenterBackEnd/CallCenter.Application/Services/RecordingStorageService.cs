@@ -12,6 +12,7 @@ public class RecordingStorageService : IRecordingStorageService
 {
     private readonly ICallRecordingService _recordingService;
     private readonly ICallLogService _callLogService;
+    private readonly ITranscriptionService _transcriptionService;
     private readonly ILogger<RecordingStorageService> _logger;
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
@@ -20,11 +21,13 @@ public class RecordingStorageService : IRecordingStorageService
     public RecordingStorageService(
         ICallRecordingService recordingService,
         ICallLogService callLogService,
+        ITranscriptionService transcriptionService,
         ILogger<RecordingStorageService> logger,
         IConfiguration configuration)
     {
         _recordingService = recordingService;
         _callLogService = callLogService;
+        _transcriptionService = transcriptionService;
         _logger = logger;
         _configuration = configuration;
         _httpClient = new HttpClient();
@@ -87,6 +90,21 @@ public class RecordingStorageService : IRecordingStorageService
             await _callLogService.UpdateStatusAsync(callSid, null, null, relativePath);
 
             _logger.LogInformation("Recording processing completed for CallSid: {CallSid}, RecordingId: {RecordingId}", callSid, recording.Id);
+
+            // 6. Trigger automatic transcription and analysis
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    _logger.LogInformation("Starting automatic transcription for recording: {RecordingId}", recording.Id);
+                    await _transcriptionService.ProcessTranscriptionAsync(recording.Id, fullPath);
+                    _logger.LogInformation("Automatic transcription completed for recording: {RecordingId}", recording.Id);
+                }
+                catch (Exception transcriptionEx)
+                {
+                    _logger.LogError(transcriptionEx, "Error during automatic transcription for recording: {RecordingId}", recording.Id);
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -235,5 +253,13 @@ public class RecordingStorageService : IRecordingStorageService
     {
         var retentionDays = _configuration.GetValue<int>("RecordingStorage:RetentionDays", 90);
         return DateTime.UtcNow.AddDays(retentionDays);
+    }
+
+    /// <summary>
+    /// Get the base storage path for recordings
+    /// </summary>
+    public string GetStorageBasePath()
+    {
+        return _storageBasePath;
     }
 }

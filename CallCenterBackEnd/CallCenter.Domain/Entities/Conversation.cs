@@ -17,11 +17,18 @@ public class Conversation
     public string? LastMessage { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    // ACW (After Call Work) fields
+    public string? Disposition { get; set; }
+    public string? AcwNotes { get; set; }
+    public bool FollowUpRequired { get; set; }
+    public DateTime? FollowUpDate { get; set; }
+
     // Navigation properties
     public virtual Customer Customer { get; set; } = null!;
     public virtual Agent? Agent { get; set; }
     public virtual Queue? Queue { get; set; }
     public virtual ICollection<ConversationMessage> Messages { get; set; } = new List<ConversationMessage>();
+    public virtual ICollection<ConversationNote> Notes { get; set; } = new List<ConversationNote>();
     public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
     public virtual ICollection<ConversationDisposition> Dispositions { get; set; } = new List<ConversationDisposition>();
 }

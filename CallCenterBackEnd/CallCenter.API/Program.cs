@@ -1,6 +1,7 @@
 using System.Text;
 using CallCenter.Application;
 using CallCenter.Application.DTOs.WhatsApp;
+using CallCenter.Application.DTOs.Transcription;
 using CallCenter.Application.Interfaces;
 using CallCenter.Application.Services;
 using CallCenter.Infrastructure;
@@ -88,6 +89,12 @@ builder.Services.AddScoped<CallCenter.Application.Interfaces.IHubNotificationSer
 
 // Register AgentRoutingService
 builder.Services.AddScoped<IAgentRoutingService, AgentRoutingService>();
+
+// Configure TranscriptionApi options
+builder.Services.Configure<TranscriptionApiOptions>(builder.Configuration.GetSection("TranscriptionApi"));
+
+// Register ExternalTranscriptionService with HttpClient
+builder.Services.AddHttpClient<IExternalTranscriptionService, ExternalTranscriptionService>();
 
 var app = builder.Build();
 

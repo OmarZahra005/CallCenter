@@ -16,7 +16,13 @@
       "Bash(ls:*)",
       "Bash(dir:*)",
       "Bash(taskkill:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 80424 -Force\")",
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+      "Bash(dotnet tool restore:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

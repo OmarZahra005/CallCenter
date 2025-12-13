@@ -15,15 +15,23 @@ public interface ICustomerService
     Task<bool> DeleteCustomerAsync(Guid id);
     Task<CustomerDto?> GetByPhoneAsync(string phone);
     Task<CustomerDto?> GetByEmailAsync(string email);
+    Task<CustomerStatsDto> GetCustomerStatsAsync(Guid customerId);
 }
 
 public class CustomerService : ICustomerService
 {
     private readonly ICustomerRepository _customerRepository;
+    private readonly IConversationRepository _conversationRepository;
+    private readonly ITicketRepository _ticketRepository;
 
-    public CustomerService(ICustomerRepository customerRepository)
+    public CustomerService(
+        ICustomerRepository customerRepository,
+        IConversationRepository conversationRepository,
+        ITicketRepository ticketRepository)
     {
         _customerRepository = customerRepository;
+        _conversationRepository = conversationRepository;
+        _ticketRepository = ticketRepository;
     }
 
     public async Task<PagedResponse<CustomerDto>> GetCustomersAsync(PagedRequest request, string? search = null)
@@ -134,6 +142,40 @@ public class CustomerService : ICustomerService
     {
         var customer = await _customerRepository.GetByEmailAsync(email);
         return customer != null ? MapToDto(customer) : null;
+    }
+
+    public async Task<CustomerStatsDto> GetCustomerStatsAsync(Guid customerId)
+    {
+        var conversations = await _conversationRepository.GetByCustomerIdAsync(customerId);
+        var tickets = await _ticketRepository.GetByCustomerIdAsync(customerId);
+
+        // Calculate voice call stats
+        var voiceConversations = conversations.Where(c => c.Channel == Channel.Voice).ToList();
+        var avgDuration = voiceConversations.Any(c => c.DurationSeconds.HasValue)
+            ? voiceConversations.Where(c => c.DurationSeconds.HasValue).Average(c => c.DurationSeconds!.Value)
+            : (double?)null;
+
+        // Get the most recent interaction date
+        var lastConversationDate = conversations.Any() ? conversations.Max(c => c.StartTime) : (DateTime?)null;
+        var lastTicketDate = tickets.Any() ? tickets.Max(t => t.CreatedAt) : (DateTime?)null;
+        var lastInteraction = lastConversationDate.HasValue && lastTicketDate.HasValue
+            ? (lastConversationDate > lastTicketDate ? lastConversationDate : lastTicketDate)
+            : lastConversationDate ?? lastTicketDate;
+
+        // Count total messages across all conversations
+        var totalMessages = conversations.Sum(c => c.Messages?.Count ?? 0);
+
+        return new CustomerStatsDto
+        {
+            TotalCalls = voiceConversations.Count,
+            TotalTickets = tickets.Count,
+            OpenTickets = tickets.Count(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved),
+            ResolvedTickets = tickets.Count(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed),
+            LastInteractionDate = lastInteraction,
+            TotalConversations = conversations.Count,
+            AvgCallDurationSeconds = avgDuration,
+            TotalMessages = totalMessages
+        };
     }
 
     private static CustomerDto MapToDto(Customer customer)

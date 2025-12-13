@@ -14,6 +14,12 @@ public class Transcription
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 
+    // AI Analysis fields
+    public string? Summary { get; set; }           // AI-generated call summary
+    public string? Sentiment { get; set; }         // "positive", "neutral", "negative"
+    public string? DetectedIssues { get; set; }    // JSON array of detected issues
+    public string? ActionItems { get; set; }       // JSON array of suggested action items
+
     // Navigation properties
     public virtual CallRecording CallRecording { get; set; } = null!;
     public virtual ICollection<TranscriptionSegment> Segments { get; set; } = new List<TranscriptionSegment>();

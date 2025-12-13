@@ -1,8 +1,46 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Phone,
+  PhoneOff,
+  Mic,
+  MicOff,
+  Pause,
+  Play,
+  ArrowRightLeft,
+  Clock,
+  Calendar,
+  MessageSquare,
+  Ticket,
+  ChevronDown,
+  ChevronUp,
+  PhoneCall,
+  Mail,
+  FileText,
+  Lightbulb,
+  AlertCircle
+} from 'lucide-react';
 import { Card, CardContent, Badge, Button } from '../../../components/ui';
 import { CallDurationTimer, LiveIndicator } from '../../../components/ui';
 import type { CallInfo, CustomerInfo } from '../hooks/useAgentDesktop';
 
 type CallState = 'active' | 'onhold';
+
+interface Interaction {
+  id: string;
+  type: 'Call' | 'Ticket' | 'Email' | 'Chat';
+  summary: string;
+  date: string;
+  status?: string;
+}
+
+interface LinkedTicket {
+  id: string;
+  subject: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+}
 
 interface CallInfoPanelProps {
   callInfo: CallInfo;
@@ -16,7 +54,82 @@ interface CallInfoPanelProps {
   onResume: () => void;
   onTransfer: () => void;
   onHangup: () => void;
+  recentInteractions?: Interaction[];
+  linkedTickets?: LinkedTicket[];
 }
+
+// Call script suggestions based on call type
+const getCallScriptSuggestions = (_direction: string, customerType: string) => {
+  const suggestions = [
+    {
+      id: '1',
+      title: 'Greeting',
+      script: `Thank you for calling. My name is [Agent Name]. How may I assist you today?`,
+      icon: MessageSquare,
+    },
+    {
+      id: '2',
+      title: 'Verify Identity',
+      script: 'For security purposes, may I verify your account with your registered email or phone number?',
+      icon: AlertCircle,
+    },
+    {
+      id: '3',
+      title: 'Issue Resolution',
+      script: 'I understand your concern. Let me look into this for you right away.',
+      icon: Lightbulb,
+    },
+    {
+      id: '4',
+      title: 'Closing',
+      script: 'Is there anything else I can help you with today? Thank you for choosing us.',
+      icon: Phone,
+    },
+  ];
+
+  if (customerType === 'VIP' || customerType === 'Premium') {
+    suggestions.unshift({
+      id: '0',
+      title: 'VIP Greeting',
+      script: `Thank you for being a valued ${customerType} customer. How may I provide you with exceptional service today?`,
+      icon: MessageSquare,
+    });
+  }
+
+  return suggestions;
+};
+
+// Get priority badge color
+const getPriorityColor = (priority: string) => {
+  switch (priority?.toLowerCase()) {
+    case 'critical': return 'danger';
+    case 'high': return 'warning';
+    case 'medium': return 'info';
+    default: return 'default';
+  }
+};
+
+// Get status badge color
+const getStatusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'open': return 'info';
+    case 'in progress': return 'warning';
+    case 'resolved': return 'success';
+    case 'closed': return 'default';
+    default: return 'default';
+  }
+};
+
+// Get interaction icon
+const getInteractionIcon = (type: string) => {
+  switch (type) {
+    case 'Call': return PhoneCall;
+    case 'Ticket': return Ticket;
+    case 'Email': return Mail;
+    case 'Chat': return MessageSquare;
+    default: return FileText;
+  }
+};
 
 export const CallInfoPanel = ({
   callInfo,
@@ -30,7 +143,13 @@ export const CallInfoPanel = ({
   onResume,
   onTransfer,
   onHangup,
+  recentInteractions = [],
+  linkedTickets = [],
 }: CallInfoPanelProps) => {
+  const [isScriptExpanded, setIsScriptExpanded] = useState(false);
+  const [isInteractionsExpanded, setIsInteractionsExpanded] = useState(true);
+  const [isTicketsExpanded, setIsTicketsExpanded] = useState(true);
+
   // Derived values
   const customerName = customer?.name || callInfo.callerName || 'Unknown Caller';
   const customerPhone = customer?.phone || callInfo.callerNumber;
@@ -43,153 +162,367 @@ export const CallInfoPanel = ({
   };
 
   const currentStatus = statusConfig[callState];
+  const callScripts = getCallScriptSuggestions(callInfo.direction, customerType);
+
+  // Format start time
+  const formatStartTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
+  };
 
   return (
     <Card variant="bordered" className="flex-shrink-0">
-      <CardContent className="p-6">
-        {/* Header: Status + Customer Badge */}
-        <div className="flex items-start justify-between mb-4">
-          <LiveIndicator variant={currentStatus.variant} label={currentStatus.label} />
-          <Badge variant={customerType === 'VIP' || customerType === 'Premium' ? 'success' : 'default'}>
-            {customerType}
-          </Badge>
-        </div>
+      <CardContent className="p-0">
+        {/* Main Call Info Section */}
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          {/* Header: Status + Customer Badge */}
+          <div className="flex items-start justify-between mb-4">
+            <LiveIndicator variant={currentStatus.variant} label={currentStatus.label} />
+            <Badge variant={customerType === 'VIP' || customerType === 'Premium' ? 'success' : 'default'}>
+              {customerType}
+            </Badge>
+          </div>
 
-        {/* Customer Info */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
-            {customerName}
-          </h2>
-          <p className="text-base text-gray-600 dark:text-gray-400">{customerPhone}</p>
-        </div>
+          {/* Customer Info */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
+              {customerName}
+            </h2>
+            <p className="text-base text-gray-600 dark:text-gray-400">{customerPhone}</p>
+          </div>
 
-        {/* Call Duration - Prominent */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-gray-50 dark:bg-gray-800 px-8 py-4 rounded-xl border border-gray-200 dark:border-gray-700">
-            <CallDurationTimer startTime={callStartTime} size="lg" className="text-4xl font-mono font-bold" />
+          {/* Call Time Info */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Call Start Time */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
+                <Calendar className="w-4 h-4" />
+                <span className="text-xs font-medium">Started At</span>
+              </div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {formatStartTime(callStartTime)}
+              </p>
+            </div>
+
+            {/* Call Duration */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs font-medium">Duration</span>
+              </div>
+              <CallDurationTimer
+                startTime={callStartTime}
+                size="lg"
+                className="text-lg font-mono font-semibold text-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Call Metadata */}
+          <div className="flex items-center gap-3 mb-6 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
+            <Badge variant="info" size="sm">
+              {callInfo.direction}
+            </Badge>
+            {callInfo.queueName && <span>Queue: {callInfo.queueName}</span>}
+            {callInfo.callId && <span className="text-xs">ID: {callInfo.callId.slice(0, 8)}</span>}
+            {/* Recording indicator */}
+            <span className="flex items-center gap-1">
+              <motion.span
+                animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="w-2 h-2 rounded-full bg-red-500"
+              />
+              Recording
+            </span>
+          </div>
+
+          {/* Call Controls */}
+          <div className="grid grid-cols-4 gap-3">
+            {/* Mute Button */}
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={onMute}
+                variant={isMuted ? 'primary' : 'secondary'}
+                size="md"
+                className={`w-full flex flex-col items-center gap-1.5 h-auto py-3 ${
+                  isMuted ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-800' : ''
+                }`}
+                title={isMuted ? 'Click to unmute' : 'Click to mute'}
+              >
+                {isMuted ? (
+                  <MicOff className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+                <span className="text-xs font-medium">{isMuted ? 'Unmute' : 'Mute'}</span>
+                {isMuted && (
+                  <span className="text-[10px] text-red-400 font-medium">MUTED</span>
+                )}
+              </Button>
+            </motion.div>
+
+            {/* Hold/Resume Button */}
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={isOnHold ? onResume : onHold}
+                variant={isOnHold ? 'warning' : 'secondary'}
+                size="md"
+                className={`w-full flex flex-col items-center gap-1.5 h-auto py-3 ${
+                  isOnHold ? 'ring-2 ring-yellow-500 ring-offset-2 dark:ring-offset-gray-800' : ''
+                }`}
+                title={isOnHold ? 'Click to resume' : 'Click to hold'}
+              >
+                {isOnHold ? (
+                  <Play className="w-5 h-5" />
+                ) : (
+                  <Pause className="w-5 h-5" />
+                )}
+                <span className="text-xs font-medium">{isOnHold ? 'Resume' : 'Hold'}</span>
+                {isOnHold && (
+                  <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">ON HOLD</span>
+                )}
+              </Button>
+            </motion.div>
+
+            {/* Transfer Button */}
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={onTransfer}
+                variant="secondary"
+                size="md"
+                className="w-full flex flex-col items-center gap-1.5 h-auto py-3"
+                title="Transfer call to another agent"
+              >
+                <ArrowRightLeft className="w-5 h-5" />
+                <span className="text-xs font-medium">Transfer</span>
+              </Button>
+            </motion.div>
+
+            {/* End Call Button */}
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={onHangup}
+                variant="danger"
+                size="md"
+                className="w-full flex flex-col items-center gap-1.5 h-auto py-3"
+                title="End the call"
+              >
+                <PhoneOff className="w-5 h-5" />
+                <span className="text-xs font-medium">End Call</span>
+              </Button>
+            </motion.div>
           </div>
         </div>
 
-        {/* Call Metadata */}
-        <div className="flex items-center gap-3 mb-6 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
-          <Badge variant="info" size="sm">
-            {callInfo.direction}
-          </Badge>
-          {callInfo.queueName && <span>Queue: {callInfo.queueName}</span>}
-          {callInfo.callId && <span className="text-xs">ID: {callInfo.callId.slice(0, 8)}</span>}
-          {/* Recording indicator - always show for now */}
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            Recording
-          </span>
-        </div>
-
-        {/* Call Controls */}
-        <div className="grid grid-cols-4 gap-3">
-          {/* Mute Button */}
-          <Button
-            onClick={onMute}
-            variant={isMuted ? 'primary' : 'secondary'}
-            size="md"
-            className={`flex flex-col items-center gap-1 h-auto py-3 ${
-              isMuted ? 'ring-2 ring-primary-500' : ''
-            }`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        {/* Expandable Sections */}
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          {/* Call Script / Suggested Actions */}
+          <div>
+            <button
+              onClick={() => setIsScriptExpanded(!isScriptExpanded)}
+              className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
             >
-              {isMuted ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                />
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  Call Script & Suggestions
+                </span>
+              </div>
+              {isScriptExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
               ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                />
+                <ChevronDown className="w-4 h-4 text-gray-400" />
               )}
-            </svg>
-            <span className="text-xs">{isMuted ? 'Unmute' : 'Mute'}</span>
-          </Button>
+            </button>
+            <AnimatePresence>
+              {isScriptExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-4 space-y-3">
+                    {callScripts.map((script) => {
+                      const Icon = script.icon;
+                      return (
+                        <div
+                          key={script.id}
+                          className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Icon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                              {script.title}
+                            </span>
+                          </div>
+                          <p className="text-sm text-amber-700 dark:text-amber-400 italic">
+                            "{script.script}"
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-          {/* Hold/Resume Button */}
-          <Button
-            onClick={isOnHold ? onResume : onHold}
-            variant={isOnHold ? 'warning' : 'secondary'}
-            size="md"
-            className={`flex flex-col items-center gap-1 h-auto py-3 ${
-              isOnHold ? 'ring-2 ring-yellow-500' : ''
-            }`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {/* Customer Last Interactions */}
+          <div>
+            <button
+              onClick={() => setIsInteractionsExpanded(!isInteractionsExpanded)}
+              className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span className="text-xs">{isOnHold ? 'Resume' : 'Hold'}</span>
-          </Button>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  Recent Interactions
+                </span>
+                {recentInteractions.length > 0 && (
+                  <Badge variant="info" size="sm">{recentInteractions.length}</Badge>
+                )}
+              </div>
+              {isInteractionsExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+            <AnimatePresence>
+              {isInteractionsExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-4">
+                    {recentInteractions.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
+                        No recent interactions found
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {recentInteractions.slice(0, 5).map((interaction) => {
+                          const Icon = getInteractionIcon(interaction.type);
+                          return (
+                            <div
+                              key={interaction.id}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                            >
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                interaction.type === 'Call' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                                interaction.type === 'Ticket' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                                interaction.type === 'Email' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                                'bg-green-100 dark:bg-green-900/30'
+                              }`}>
+                                <Icon className={`w-4 h-4 ${
+                                  interaction.type === 'Call' ? 'text-blue-600 dark:text-blue-400' :
+                                  interaction.type === 'Ticket' ? 'text-orange-600 dark:text-orange-400' :
+                                  interaction.type === 'Email' ? 'text-purple-600 dark:text-purple-400' :
+                                  'text-green-600 dark:text-green-400'
+                                }`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {interaction.summary}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {interaction.type} • {interaction.date}
+                                </p>
+                              </div>
+                              {interaction.status && (
+                                <Badge variant={getStatusColor(interaction.status)} size="sm">
+                                  {interaction.status}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-          {/* Transfer Button */}
-          <Button
-            onClick={onTransfer}
-            variant="secondary"
-            size="md"
-            className="flex flex-col items-center gap-1 h-auto py-3"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {/* Linked Tickets */}
+          <div>
+            <button
+              onClick={() => setIsTicketsExpanded(!isTicketsExpanded)}
+              className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
-            <span className="text-xs">Transfer</span>
-          </Button>
-
-          {/* End Call Button */}
-          <Button
-            onClick={onHangup}
-            variant="danger"
-            size="md"
-            className="flex flex-col items-center gap-1 h-auto py-3"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"
-              />
-            </svg>
-            <span className="text-xs">End Call</span>
-          </Button>
+              <div className="flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-orange-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  Linked Tickets
+                </span>
+                {linkedTickets.length > 0 && (
+                  <Badge variant="warning" size="sm">{linkedTickets.length}</Badge>
+                )}
+              </div>
+              {isTicketsExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+            <AnimatePresence>
+              {isTicketsExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-4">
+                    {linkedTickets.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
+                        No linked tickets
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {linkedTickets.map((ticket) => (
+                          <div
+                            key={ticket.id}
+                            className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {ticket.subject}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  Created: {ticket.createdAt}
+                                </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <Badge variant={getStatusColor(ticket.status)} size="sm">
+                                  {ticket.status}
+                                </Badge>
+                                <Badge variant={getPriorityColor(ticket.priority)} size="sm">
+                                  {ticket.priority}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </CardContent>
     </Card>

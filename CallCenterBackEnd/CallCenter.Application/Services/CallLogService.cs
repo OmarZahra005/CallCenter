@@ -13,6 +13,7 @@ public interface ICallLogService
     Task<CallLog> CreateIncomingAsync(string providerCallId, string from, string to, string direction);
     Task<CallLog?> UpdateStatusAsync(string providerCallId, string? status = null, DateTimeOffset? endedAtUtc = null, string? recordingUrl = null);
     Task<CallLog> AssignToAgentAsync(string providerCallId, Guid agentId, string agentIdentity);
+    Task<CallLog?> LinkToConversationAsync(string providerCallId, Guid conversationId);
     Task<CallLog?> GetByProviderIdAsync(string providerCallId);
     Task<CallLog?> GetByIdAsync(Guid id);
     Task<List<CallLog>> GetActiveCallsAsync();
@@ -102,6 +103,25 @@ public class CallLogService : ICallLogService
         await _callLogRepository.SaveChangesAsync();
 
         _logger.LogInformation("Assigned call {CallLogId} to agent {AgentId} ({AgentIdentity})", callLog.Id, agentId, agentIdentity);
+        return callLog;
+    }
+
+    public async Task<CallLog?> LinkToConversationAsync(string providerCallId, Guid conversationId)
+    {
+        var callLog = await _callLogRepository.GetByProviderIdAsync(providerCallId);
+
+        if (callLog == null)
+        {
+            _logger.LogWarning("Call log not found for provider call {ProviderCallId}", providerCallId);
+            return null;
+        }
+
+        callLog.ConversationId = conversationId;
+
+        _callLogRepository.Update(callLog);
+        await _callLogRepository.SaveChangesAsync();
+
+        _logger.LogInformation("Linked call {CallLogId} to conversation {ConversationId}", callLog.Id, conversationId);
         return callLog;
     }
 

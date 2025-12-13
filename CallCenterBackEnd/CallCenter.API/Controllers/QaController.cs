@@ -9,7 +9,7 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-[RoleAuthorize(AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
+[RoleAuthorize(AgentRole.Agent, AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
 public class QaController : ControllerBase
 {
     private readonly IQaService _qaService;
@@ -40,6 +40,22 @@ public class QaController : ControllerBase
     {
         var scorecards = await _qaService.GetScorecardsByEvaluatorAsync(evaluatorId);
         return Ok(scorecards);
+    }
+
+    [HttpGet("scorecards/recording/{recordingId}")]
+    public async Task<ActionResult<QaScorecardDto>> GetScorecardByRecordingId(Guid recordingId)
+    {
+        var scorecard = await _qaService.GetScorecardByRecordingIdAsync(recordingId);
+        if (scorecard == null) return NotFound();
+        return Ok(scorecard);
+    }
+
+    [HttpGet("scorecards/call/{callSid}")]
+    public async Task<ActionResult<QaScorecardDto>> GetScorecardByCallSid(string callSid)
+    {
+        var scorecard = await _qaService.GetScorecardByCallSidAsync(callSid);
+        if (scorecard == null) return NotFound();
+        return Ok(scorecard);
     }
 
     [HttpPost("scorecards")]

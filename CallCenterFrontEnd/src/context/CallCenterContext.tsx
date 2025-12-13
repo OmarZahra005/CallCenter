@@ -183,11 +183,27 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (state.incomingRingingCall) {
       dispatch({ type: 'SET_ACTIVE_CALL', payload: state.incomingRingingCall });
       dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
+    } else if (state.incomingTwilioCall) {
+      // Fallback: Build call summary from Twilio call parameters when SignalR hasn't provided it yet
+      const twilioCall = state.incomingTwilioCall;
+      const callSummary: CallSummary = {
+        id: twilioCall.parameters.CallSid || `twilio-${Date.now()}`,
+        providerCallId: twilioCall.parameters.CallSid || '',
+        fromNumber: twilioCall.parameters.From || 'Unknown',
+        toNumber: twilioCall.parameters.To || state.agentIdentity || '',
+        direction: 'inbound',
+        status: 'InProgress',
+        startedAtUtc: new Date().toISOString(),
+        endedAtUtc: null,
+        recordingUrl: null,
+      };
+      dispatch({ type: 'SET_ACTIVE_CALL', payload: callSummary });
+      dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
     }
 
     dispatch({ type: 'SET_INCOMING_RINGING_CALL', payload: null });
     dispatch({ type: 'SET_IS_ANSWERING', payload: false });
-  }, [state.incomingTwilioCall, state.incomingRingingCall]);
+  }, [state.incomingTwilioCall, state.incomingRingingCall, state.agentIdentity]);
 
   const rejectIncoming = useCallback(() => {
     twilioDeviceManager.reject();

@@ -79,4 +79,14 @@ public class TicketsController : ControllerBase
         var tickets = await _ticketService.GetByStatusAsync(status);
         return Ok(tickets);
     }
+
+    /// <summary>
+    /// Gets all tickets linked to a specific conversation.
+    /// </summary>
+    [HttpGet("conversation/{conversationId}")]
+    public async Task<ActionResult<List<TicketDto>>> GetByConversation(Guid conversationId)
+    {
+        var tickets = await _ticketService.GetByConversationIdAsync(conversationId);
+        return Ok(tickets);
+    }
 }

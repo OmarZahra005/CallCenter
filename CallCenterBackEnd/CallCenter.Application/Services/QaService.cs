@@ -8,6 +8,8 @@ public interface IQaService
 {
     // Scorecards
     Task<QaScorecardDto?> GetScorecardByIdAsync(Guid id);
+    Task<QaScorecardDto?> GetScorecardByRecordingIdAsync(Guid recordingId);
+    Task<QaScorecardDto?> GetScorecardByCallSidAsync(string callSid);
     Task<List<QaScorecardDto>> GetScorecardsByAgentAsync(Guid agentId);
     Task<List<QaScorecardDto>> GetScorecardsByEvaluatorAsync(Guid evaluatorId);
     Task<QaScorecardDto> CreateScorecardAsync(CreateScorecardRequest request);
@@ -41,6 +43,18 @@ public class QaService : IQaService
         return scorecard != null ? MapToDto(scorecard) : null;
     }
 
+    public async Task<QaScorecardDto?> GetScorecardByRecordingIdAsync(Guid recordingId)
+    {
+        var scorecard = await _scorecardRepository.GetByRecordingIdAsync(recordingId);
+        return scorecard != null ? MapToDto(scorecard) : null;
+    }
+
+    public async Task<QaScorecardDto?> GetScorecardByCallSidAsync(string callSid)
+    {
+        var scorecard = await _scorecardRepository.GetByCallSidAsync(callSid);
+        return scorecard != null ? MapToDto(scorecard) : null;
+    }
+
     public async Task<List<QaScorecardDto>> GetScorecardsByAgentAsync(Guid agentId)
     {
         var scorecards = await _scorecardRepository.GetByAgentIdAsync(agentId);
@@ -55,9 +69,10 @@ public class QaService : IQaService
 
     public async Task<QaScorecardDto> CreateScorecardAsync(CreateScorecardRequest request)
     {
+        var scorecardId = Guid.NewGuid();
         var scorecard = new QaScorecard
         {
-            Id = Guid.NewGuid(),
+            Id = scorecardId,
             FormId = request.FormId,
             TicketId = request.TicketId,
             ConversationId = request.ConversationId,
@@ -74,10 +89,21 @@ public class QaService : IQaService
             AreasForImprovement = request.AreasForImprovement,
             EvaluationDate = request.EvaluationDate,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            Details = request.Details.Select(d => new QaScorecardDetail
+            {
+                Id = Guid.NewGuid(),
+                ScorecardId = scorecardId,
+                CriteriaId = d.CriteriaId,
+                PointsEarned = d.PointsEarned,
+                MaxPoints = d.MaxPoints,
+                Comments = d.Comments,
+                CreatedAt = DateTime.UtcNow
+            }).ToList()
         };
 
         await _scorecardRepository.AddAsync(scorecard);
+        await _scorecardRepository.SaveChangesAsync();
         return MapToDto(scorecard);
     }
 
@@ -191,7 +217,16 @@ public class QaService : IQaService
         Strengths = scorecard.Strengths,
         AreasForImprovement = scorecard.AreasForImprovement,
         EvaluationDate = scorecard.EvaluationDate,
-        CreatedAt = scorecard.CreatedAt
+        CreatedAt = scorecard.CreatedAt,
+        Details = scorecard.Details?.Select(d => new QaScorecardDetailDto
+        {
+            Id = d.Id,
+            CriteriaId = d.CriteriaId,
+            CriteriaName = d.Criteria?.CriteriaName,
+            PointsEarned = d.PointsEarned,
+            MaxPoints = d.MaxPoints,
+            Comments = d.Comments
+        }).ToList() ?? new List<QaScorecardDetailDto>()
     };
 
     private static QaEvaluationFormDto MapToDto(QaEvaluationForm form) => new()
@@ -239,6 +274,17 @@ public record QaScorecardDto
     public string? AreasForImprovement { get; init; }
     public DateOnly EvaluationDate { get; init; }
     public DateTime CreatedAt { get; init; }
+    public List<QaScorecardDetailDto> Details { get; init; } = new();
+}
+
+public record QaScorecardDetailDto
+{
+    public Guid Id { get; init; }
+    public Guid CriteriaId { get; init; }
+    public string? CriteriaName { get; init; }
+    public int PointsEarned { get; init; }
+    public int MaxPoints { get; init; }
+    public string? Comments { get; init; }
 }
 
 public record QaEvaluationFormDto
@@ -280,6 +326,15 @@ public record CreateScorecardRequest
     public string? Strengths { get; init; }
     public string? AreasForImprovement { get; init; }
     public DateOnly EvaluationDate { get; init; }
+    public List<CreateScorecardDetailRequest> Details { get; init; } = new();
+}
+
+public record CreateScorecardDetailRequest
+{
+    public Guid CriteriaId { get; init; }
+    public int PointsEarned { get; init; }
+    public int MaxPoints { get; init; }
+    public string? Comments { get; init; }
 }
 
 public record UpdateScorecardRequest

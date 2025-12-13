@@ -27,6 +27,7 @@ public class ApplicationDbContext : DbContext
     // Conversations
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationMessage> ConversationMessages => Set<ConversationMessage>();
+    public DbSet<ConversationNote> ConversationNotes => Set<ConversationNote>();
 
     // Ticketing
     public DbSet<Ticket> Tickets => Set<Ticket>();
@@ -42,6 +43,8 @@ public class ApplicationDbContext : DbContext
 
     // AI & Speech
     public DbSet<CallTranscription> CallTranscriptions => Set<CallTranscription>();
+    public DbSet<Transcription> Transcriptions => Set<Transcription>();
+    public DbSet<TranscriptionSegment> TranscriptionSegments => Set<TranscriptionSegment>();
     public DbSet<AiSuggestion> AiSuggestions => Set<AiSuggestion>();
     public DbSet<KnowledgeBaseArticle> KnowledgeBaseArticles => Set<KnowledgeBaseArticle>();
     public DbSet<ArticleSearchLog> ArticleSearchLogs => Set<ArticleSearchLog>();

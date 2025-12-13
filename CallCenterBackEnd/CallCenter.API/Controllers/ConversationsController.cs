@@ -87,4 +87,36 @@ public class ConversationsController : ControllerBase
         if (!result) return NotFound();
         return NoContent();
     }
+
+    /// <summary>
+    /// Saves ACW (After Call Work) data to a conversation.
+    /// </summary>
+    [HttpPut("{id}/acw")]
+    public async Task<ActionResult<ConversationDto>> SaveAcw(Guid id, SaveAcwRequest request)
+    {
+        var conversation = await _conversationService.SaveAcwDataAsync(id, request);
+        if (conversation == null) return NotFound();
+        return Ok(conversation);
+    }
+
+    /// <summary>
+    /// Gets all notes for a conversation.
+    /// </summary>
+    [HttpGet("{id}/notes")]
+    public async Task<ActionResult<List<ConversationNoteDto>>> GetNotes(Guid id)
+    {
+        var notes = await _conversationService.GetNotesAsync(id);
+        return Ok(notes);
+    }
+
+    /// <summary>
+    /// Adds a note to a conversation.
+    /// </summary>
+    [HttpPost("{id}/notes")]
+    public async Task<ActionResult<ConversationNoteDto>> AddNote(Guid id, [FromBody] AddNoteRequest request, [FromQuery] Guid agentId)
+    {
+        var note = await _conversationService.AddNoteAsync(id, agentId, request.Content);
+        if (note == null) return NotFound();
+        return Ok(note);
+    }
 }

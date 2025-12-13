@@ -71,4 +71,15 @@ public class CustomersController : ControllerBase
         if (customer == null) return NotFound();
         return Ok(customer);
     }
+
+    [HttpGet("{id}/stats")]
+    public async Task<ActionResult<CustomerStatsDto>> GetCustomerStats(Guid id)
+    {
+        // First verify customer exists
+        var customer = await _customerService.GetCustomerByIdAsync(id);
+        if (customer == null) return NotFound();
+
+        var stats = await _customerService.GetCustomerStatsAsync(id);
+        return Ok(stats);
+    }
 }

@@ -41,4 +41,27 @@ public class QaScorecardRepository : Repository<QaScorecard>, IQaScorecardReposi
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<QaScorecard?> GetByRecordingIdAsync(Guid recordingId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(s => s.Form)
+                .ThenInclude(f => f.Criteria.OrderBy(c => c.DisplayOrder))
+            .Include(s => s.Agent)
+            .Include(s => s.Evaluator)
+            .Include(s => s.Details)
+            .FirstOrDefaultAsync(s => s.CallRecordingId == recordingId, cancellationToken);
+    }
+
+    public async Task<QaScorecard?> GetByCallSidAsync(string callSid, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(s => s.Form)
+                .ThenInclude(f => f.Criteria.OrderBy(c => c.DisplayOrder))
+            .Include(s => s.Agent)
+            .Include(s => s.Evaluator)
+            .Include(s => s.Details)
+            .Include(s => s.CallRecording)
+            .FirstOrDefaultAsync(s => s.CallRecording != null && s.CallRecording.CallId == callSid, cancellationToken);
+    }
 }

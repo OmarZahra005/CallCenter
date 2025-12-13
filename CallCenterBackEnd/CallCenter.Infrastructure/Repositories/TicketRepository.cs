@@ -46,4 +46,13 @@ public class TicketRepository : Repository<Ticket>, ITicketRepository
     {
         return await _dbSet.Where(t => t.Priority == priority).ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Ticket>> GetByConversationIdAsync(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(t => t.Agent)
+            .Where(t => t.ConversationId == conversationId)
+            .OrderBy(t => t.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }

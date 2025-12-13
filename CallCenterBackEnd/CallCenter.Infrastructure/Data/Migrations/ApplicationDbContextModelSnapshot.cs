@@ -643,6 +643,10 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("assigned_agent_identity");
 
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("conversation_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
@@ -711,6 +715,9 @@ namespace CallCenter.Infrastructure.Data.Migrations
 
                     b.HasIndex("AssignedAgentId")
                         .HasDatabaseName("i_x_call_logs_assigned_agent_id");
+
+                    b.HasIndex("ConversationId")
+                        .HasDatabaseName("i_x_call_logs_conversation_id");
 
                     b.HasIndex("ProviderCallId")
                         .IsUnique()
@@ -916,6 +923,10 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
+                    b.Property<string>("AcwNotes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("acw_notes");
+
                     b.Property<Guid?>("AgentId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("agent_id");
@@ -932,6 +943,10 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("customer_id");
 
+                    b.Property<string>("Disposition")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("disposition");
+
                     b.Property<int?>("DurationSeconds")
                         .HasColumnType("int")
                         .HasColumnName("duration_seconds");
@@ -939,6 +954,14 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime2")
                         .HasColumnName("end_time");
+
+                    b.Property<DateTime?>("FollowUpDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("follow_up_date");
+
+                    b.Property<bool>("FollowUpRequired")
+                        .HasColumnType("bit")
+                        .HasColumnName("follow_up_required");
 
                     b.Property<string>("LastMessage")
                         .HasColumnType("nvarchar(max)")
@@ -1067,6 +1090,42 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasDatabaseName("i_x_conversation_messages_sender_id");
 
                     b.ToTable("conversation_messages");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.ConversationNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("agent_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("content");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_conversation_notes");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("i_x_conversation_notes_agent_id");
+
+                    b.HasIndex("ConversationId")
+                        .HasDatabaseName("i_x_conversation_notes_conversation_id");
+
+                    b.ToTable("conversation_notes");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.CtiEvent", b =>
@@ -2512,6 +2571,111 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.ToTable("time_off_requests");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.Transcription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActionItems")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("action_items");
+
+                    b.Property<Guid>("CallRecordingId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("call_recording_id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_at");
+
+                    b.Property<float?>("Confidence")
+                        .HasColumnType("real")
+                        .HasColumnName("confidence");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DetectedIssues")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("detected_issues");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("language");
+
+                    b.Property<string>("Sentiment")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("sentiment");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("summary");
+
+                    b.Property<int>("WordCount")
+                        .HasColumnType("int")
+                        .HasColumnName("word_count");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_transcriptions");
+
+                    b.HasIndex("CallRecordingId")
+                        .HasDatabaseName("i_x_transcriptions_call_recording_id");
+
+                    b.ToTable("transcriptions");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.TranscriptionSegment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<float?>("Confidence")
+                        .HasColumnType("real")
+                        .HasColumnName("confidence");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time")
+                        .HasColumnName("end_time");
+
+                    b.Property<string>("Speaker")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("speaker");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time")
+                        .HasColumnName("start_time");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("text");
+
+                    b.Property<Guid>("TranscriptionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("transcription_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_transcription_segments");
+
+                    b.HasIndex("TranscriptionId")
+                        .HasDatabaseName("i_x_transcription_segments_transcription_id");
+
+                    b.ToTable("transcription_segments");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.Agent", b =>
                 {
                     b.HasOne("CallCenter.Domain.Entities.Team", "Team")
@@ -2658,7 +2822,14 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasForeignKey("AssignedAgentId")
                         .HasConstraintName("f_k_call_logs_agents_assigned_agent_id");
 
+                    b.HasOne("CallCenter.Domain.Entities.Conversation", "Conversation")
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .HasConstraintName("f_k_call_logs__conversations_conversation_id");
+
                     b.Navigation("AssignedAgent");
+
+                    b.Navigation("Conversation");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.CallRecording", b =>
@@ -2785,6 +2956,27 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Conversation");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.ConversationNote", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_conversation_notes_agents_agent_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Conversation", "Conversation")
+                        .WithMany("Notes")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_conversation_notes_conversations_conversation_id");
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("Conversation");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.CtiEvent", b =>
@@ -3176,6 +3368,30 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("ApprovedByAgent");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.Transcription", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.CallRecording", "CallRecording")
+                        .WithMany()
+                        .HasForeignKey("CallRecordingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_transcriptions_call_recordings_call_recording_id");
+
+                    b.Navigation("CallRecording");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.TranscriptionSegment", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Transcription", "Transcription")
+                        .WithMany("Segments")
+                        .HasForeignKey("TranscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_transcription_segments_transcriptions_transcription_id");
+
+                    b.Navigation("Transcription");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.Agent", b =>
                 {
                     b.Navigation("Kpis");
@@ -3212,6 +3428,8 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Dispositions");
 
                     b.Navigation("Messages");
+
+                    b.Navigation("Notes");
 
                     b.Navigation("Tickets");
                 });
@@ -3279,6 +3497,11 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("SlaTracking");
 
                     b.Navigation("StatusHistory");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.Transcription", b =>
+                {
+                    b.Navigation("Segments");
                 });
 #pragma warning restore 612, 618
         }

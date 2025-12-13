@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, Badge, Button, Avatar } from '../../../components/ui';
+import { Card, CardContent, Button } from '../../../components/ui';
 import { SLATimer, ConversationItem } from '../../../components/ui';
 import { useAgentDesktop, type ConversationInfo } from '../hooks/useAgentDesktop';
 import TransferDialog from '../components/TransferDialog';
 import { AgentControlBar } from '../components/AgentControlBar';
 import { CallInfoPanel } from '../components/CallInfoPanel';
+import { ACWPanel, type ACWFormData } from '../components/ACWPanel';
+import { RecordingCard } from '../components/RecordingCard';
+import { ConversationTimeline } from '../components/ConversationTimeline';
+import { LinkedTicketsList } from '../components/LinkedTicketsList';
+import { Customer360Card } from '../components/Customer360Card';
+import { NotesPanel } from '../components/NotesPanel';
 import { IncomingCallBanner } from '../../../components/call-center';
 import { CallCenterProvider, useCallCenter } from '../../../context/CallCenterContext';
 import { useAuthStore } from '../../../store/authStore';
-import apiClient from '../../../api/client';
 
 const AgentDesktopContent = () => {
   const { t } = useTranslation();
@@ -34,66 +38,7 @@ const AgentDesktopContent = () => {
     }
   }, [user?.email, twilioReady, setAgentIdentity]);
 
-  // Lookup customer when Twilio call becomes active
-  useEffect(() => {
-    const lookupCustomer = async () => {
-      if (twilioActiveCall && twilioActiveCall.fromNumber) {
-        try {
-          // Normalize phone number to local format (0546652410)
-          let phone = twilioActiveCall.fromNumber.replace(/[\s\-\(\)]/g, '');
-
-          // Convert +966XXXXXXXXX or 966XXXXXXXXX to 0XXXXXXXXX
-          if (phone.startsWith('+966')) {
-            phone = '0' + phone.substring(4);
-          } else if (phone.startsWith('966') && phone.length >= 12) {
-            phone = '0' + phone.substring(3);
-          }
-
-          const response = await apiClient.get(`/customers/phone/${phone}`);
-          if (response.data?.id) {
-            setCurrentCustomerId(response.data.id);
-          }
-        } catch (error) {
-          console.error('Error looking up customer:', error);
-        }
-      }
-    };
-
-    lookupCustomer();
-  }, [twilioActiveCall]);
-
-  // Clear customer when call ends
-  useEffect(() => {
-    if (!twilioActiveCall) {
-      setCurrentCustomerId(null);
-    }
-  }, [twilioActiveCall]);
-
-  // Customer lookup state
-  const [currentCustomerId, setCurrentCustomerId] = useState<string | null>(null);
-
-  // Fetch customer data
-  const { data: twilioCustomer, isLoading: twilioCustomerLoading } = useQuery({
-    queryKey: ['customers', currentCustomerId],
-    queryFn: async () => {
-      if (!currentCustomerId) return null;
-      const response = await apiClient.get(`/customers/${currentCustomerId}`);
-      return response.data;
-    },
-    enabled: !!currentCustomerId,
-  });
-
-  // Ticket form state
-  const [ticketSubject, setTicketSubject] = useState('');
-  const [ticketDescription, setTicketDescription] = useState('');
-  const [ticketPriority, setTicketPriority] = useState('Medium');
-  const [ticketCategory, setTicketCategory] = useState('General');
-  const [callNotes, setCallNotes] = useState('');
-
-  // Transfer dialog state
-  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
-
-  // Use the custom hook for all data and handlers
+  // Use the custom hook for all data and handlers (moved up before Twilio lookup)
   const {
     callState,
     agentState,
@@ -109,27 +54,64 @@ const AgentDesktopContent = () => {
     handleChangeAgentState,
     createTicket,
     isCreatingTicket,
+    // ACW related
+    isACWActive,
+    lastCallId,
+    lastCallSid,
+    lastCallDuration,
+    lastCustomerName,
+    lastConversationId,
+    handleACWComplete,
+    handleACWSkip,
+    // Timeline related
+    activeConversationId,
+    // Effective IDs (current or last for ACW)
+    effectiveCustomerId,
+    // Functions to set customer from Twilio
+    setCustomerIdFromTwilio,
+    lookupCustomerByPhone,
   } = useAgentDesktop();
+
+  // Lookup customer when Twilio call becomes active - use hook's function
+  useEffect(() => {
+    const lookupCustomer = async () => {
+      if (twilioActiveCall && twilioActiveCall.fromNumber) {
+        const customerId = await lookupCustomerByPhone(twilioActiveCall.fromNumber);
+        if (customerId) {
+          setCustomerIdFromTwilio(customerId);
+        }
+      }
+    };
+
+    lookupCustomer();
+  }, [twilioActiveCall, lookupCustomerByPhone, setCustomerIdFromTwilio]);
+
+  // Ticket form state
+  const [ticketSubject, setTicketSubject] = useState('');
+  const [ticketDescription, setTicketDescription] = useState('');
+  const [ticketPriority, setTicketPriority] = useState('Medium');
+  const [ticketCategory, setTicketCategory] = useState('General');
+  const [callNotes, setCallNotes] = useState('');
+
+  // Transfer dialog state
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
 
   // Get display name and info
   const agentName = currentAgent?.name || 'Agent';
-  // Prioritize Twilio customer data over mock data
-  const displayCustomer = twilioCustomer || currentCustomer;
-  const customerName = displayCustomer?.name || twilioActiveCall?.fromNumber || currentCall?.callerName || 'Unknown Caller';
-  const customerPhone = displayCustomer?.phone || twilioActiveCall?.fromNumber || currentCall?.callerNumber || '';
-  const customerEmail = displayCustomer?.email || '';
-  const customerType = displayCustomer?.type || 'Standard';
 
   const handleCreateTicket = async () => {
     if (!ticketSubject.trim()) return;
 
     try {
+      // Include conversationId to link ticket to current conversation
+      const conversationIdToLink = activeConversationId || lastConversationId;
       await createTicket({
         subject: ticketSubject,
         description: ticketDescription,
         priority: ticketPriority,
         category: ticketCategory,
-        customerId: currentCustomerId || currentCustomer?.id,
+        customerId: effectiveCustomerId || currentCustomer?.id,
+        conversationId: conversationIdToLink || undefined,
       });
 
       // Clear form on success
@@ -142,6 +124,12 @@ const AgentDesktopContent = () => {
       console.error('Error creating ticket:', error);
       alert(t('agentDesktop.ticketFailed'));
     }
+  };
+
+  // Handler to open recording in QA module
+  const handleOpenRecordingInQA = (recordingId: string) => {
+    // Navigate to QA module with recording ID
+    window.open(`/qa?recordingId=${recordingId}`, '_blank');
   };
 
   if (isLoading) {
@@ -205,14 +193,14 @@ const AgentDesktopContent = () => {
             callInfo={{
               callId: twilioActiveCall.id,
               callerNumber: twilioActiveCall.fromNumber,
-              callerName: twilioCustomer?.name,
-              customerId: currentCustomerId || undefined,
+              callerName: currentCustomer?.name,
+              customerId: effectiveCustomerId || undefined,
               direction: twilioActiveCall.direction as 'Inbound' | 'Outbound' | 'Transfer',
               queueName: undefined,
               waitTimeSeconds: undefined,
               startTime: new Date(twilioActiveCall.startedAtUtc),
             }}
-            customer={twilioCustomer}
+            customer={currentCustomer}
             callState={twilioIsOnHold ? 'onhold' : 'active'}
             callStartTime={twilioCallStartTime}
             isMuted={twilioIsMuted}
@@ -222,105 +210,119 @@ const AgentDesktopContent = () => {
             onResume={() => twilioToggleHold()}
             onTransfer={() => setIsTransferDialogOpen(true)}
             onHangup={twilioHangup}
+            recentInteractions={customerInteractions.slice(0, 5).map(interaction => ({
+              id: interaction.id,
+              type: interaction.type as 'Call' | 'Ticket' | 'Email' | 'Chat',
+              summary: interaction.summary,
+              date: interaction.date,
+              status: interaction.status,
+            }))}
+            linkedTickets={customerInteractions
+              .filter(i => i.type === 'Ticket')
+              .slice(0, 3)
+              .map(ticket => ({
+                id: ticket.id,
+                subject: ticket.summary,
+                status: ticket.status || 'Open',
+                priority: 'Medium',
+                createdAt: ticket.date,
+              }))}
           />
+        )}
+
+        {/* ACW Panel - After Call Work */}
+        {isACWActive && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* ACW Form - Takes 2/3 of the space */}
+              <div className="lg:col-span-2">
+                <ACWPanel
+                  isVisible={isACWActive}
+                  callId={lastCallId || undefined}
+                  customerName={lastCustomerName || undefined}
+                  callDuration={lastCallDuration}
+                  acwTimeoutSeconds={30}
+                  onComplete={(data: ACWFormData) => handleACWComplete(data)}
+                  onSkip={handleACWSkip}
+                />
+              </div>
+
+              {/* Recording Card - Takes 1/3 of the space */}
+              <div className="lg:col-span-1">
+                <RecordingCard
+                  isVisible={isACWActive}
+                  callSid={lastCallSid || undefined}
+                  callId={lastCallId || undefined}
+                  onOpenInQA={handleOpenRecordingInQA}
+                />
+              </div>
+            </div>
+
+            {/* Timeline, Linked Tickets and Notes for completed call during ACW */}
+            {lastConversationId && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <ConversationTimeline
+                  conversationId={lastConversationId}
+                  isCollapsible={true}
+                  defaultExpanded={true}
+                />
+                <LinkedTicketsList
+                  conversationId={lastConversationId}
+                  customerId={effectiveCustomerId || null}
+                  isCollapsible={true}
+                  defaultExpanded={true}
+                  onViewTicket={(ticketId) => window.open(`/tickets/${ticketId}`, '_blank')}
+                />
+                <NotesPanel
+                  conversationId={lastConversationId}
+                  isCollapsible={true}
+                  defaultExpanded={true}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Timeline, Linked Tickets and Notes for active call (when not in ACW) */}
+        {!isACWActive && activeConversationId && twilioActiveCall && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <ConversationTimeline
+              conversationId={activeConversationId}
+              isCollapsible={true}
+              defaultExpanded={false}
+            />
+            <LinkedTicketsList
+              conversationId={activeConversationId}
+              customerId={effectiveCustomerId || null}
+              isCollapsible={true}
+              defaultExpanded={true}
+              onViewTicket={(ticketId) => window.open(`/tickets/${ticketId}`, '_blank')}
+            />
+            <NotesPanel
+              conversationId={activeConversationId}
+              isCollapsible={true}
+              defaultExpanded={false}
+            />
+          </div>
         )}
 
         {/* Content Panels */}
         <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
           {/* Customer 360 View */}
-          <Card variant="bordered" className="overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.customer360')}</h3>
-            </div>
-            <CardContent className="flex-1 overflow-y-auto">
-              {(customerLoading || twilioCustomerLoading) ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                </div>
-              ) : displayCustomer || twilioActiveCall || currentCall ? (
-                <>
-                  <div className="flex items-center gap-4 mb-4">
-                    <Avatar name={customerName} size="xl" />
-                    <div>
-                      <h4 className="font-semibold text-lg text-gray-900 dark:text-white">{customerName}</h4>
-                      <Badge variant={customerType === 'Premium' || customerType === 'VIP' ? 'success' : 'default'}>
-                        {t(`customerType.${customerType.toLowerCase()}`)}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {customerPhone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        <span className="text-gray-700 dark:text-gray-300">{customerPhone}</span>
-                      </div>
-                    )}
-                    {customerEmail && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-gray-700 dark:text-gray-300">{customerEmail}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {displayCustomer && (
-                    <>
-                      <div className="mt-6">
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.statistics')}</h5>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {customerInteractions.filter(i => i.type === 'Call').length}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('agentDesktop.totalCalls')}</p>
-                          </div>
-                          <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {customerInteractions.filter(i => i.type === 'Ticket').length}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('nav.tickets')}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-6">
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.recentInteractions')}</h5>
-                        {customerInteractions.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-2">{t('agentDesktop.noInteractionsFound')}</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {customerInteractions.map((interaction) => (
-                              <div key={interaction.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900 dark:text-white">{interaction.type}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{interaction.summary}</p>
-                                </div>
-                                <div className="text-end">
-                                  <span className="text-xs text-gray-400">{interaction.date}</span>
-                                  {interaction.status && (
-                                    <p className="text-xs text-gray-500">{interaction.status}</p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-32 text-gray-500">
-                  <p>{t('agentDesktop.noCustomerData')}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <Customer360Card
+            customerId={effectiveCustomerId}
+            customer={currentCustomer}
+            callerNumber={twilioActiveCall?.fromNumber || currentCall?.callerNumber}
+            isLoading={customerLoading}
+            recentInteractions={customerInteractions.map(interaction => ({
+              id: interaction.id,
+              type: interaction.type as 'Call' | 'Ticket' | 'Email' | 'Chat',
+              summary: interaction.summary,
+              date: interaction.date,
+              status: interaction.status,
+            }))}
+            onViewCustomer={(id) => window.open(`/customers/${id}`, '_blank')}
+          />
 
           {/* Ticket / Notes Panel */}
           <Card variant="bordered" className="overflow-hidden flex flex-col">

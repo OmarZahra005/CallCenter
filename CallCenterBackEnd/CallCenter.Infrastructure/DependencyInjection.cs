@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ICoachingSessionRepository, CoachingSessionRepository>();
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();
         services.AddScoped<ICallLogRepository, CallLogRepository>();
+        services.AddScoped<IConversationNoteRepository, ConversationNoteRepository>();
 
         // Services
         services.AddSingleton<ILocalizationService, LocalizationService>();
@@ -87,6 +88,9 @@ public static class DependencyInjection
 
         // Dashboard Services
         services.AddScoped<IDashboardService, DashboardService>();
+
+        // Timeline Services
+        services.AddScoped<ITimelineService, TimelineService>();
 
         // Mock CTI Services
         services.AddScoped<IMockCtiService, MockCtiService>();

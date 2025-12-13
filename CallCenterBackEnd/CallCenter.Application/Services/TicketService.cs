@@ -17,6 +17,7 @@ public interface ITicketService
     Task<TicketDto?> AssignTicketAsync(Guid id, AssignTicketRequest request);
     Task<List<TicketDto>> GetByCustomerIdAsync(Guid customerId);
     Task<List<TicketDto>> GetByStatusAsync(TicketStatus status);
+    Task<List<TicketDto>> GetByConversationIdAsync(Guid conversationId);
 }
 
 public class TicketService : ITicketService
@@ -110,6 +111,7 @@ public class TicketService : ITicketService
             Id = Guid.NewGuid(),
             TicketNumber = $"TKT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}",
             CustomerId = request.CustomerId,
+            ConversationId = request.ConversationId,
             TeamId = request.TeamId,
             Subject = request.Subject,
             Description = request.Description,
@@ -206,6 +208,12 @@ public class TicketService : ITicketService
     public async Task<List<TicketDto>> GetByStatusAsync(TicketStatus status)
     {
         var tickets = await _ticketRepository.GetByStatusAsync(status);
+        return tickets.Select(MapToDto).ToList();
+    }
+
+    public async Task<List<TicketDto>> GetByConversationIdAsync(Guid conversationId)
+    {
+        var tickets = await _ticketRepository.GetByConversationIdAsync(conversationId);
         return tickets.Select(MapToDto).ToList();
     }
 

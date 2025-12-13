@@ -12,4 +12,5 @@ public interface ITicketRepository : IRepository<Ticket>
     Task<IReadOnlyList<Ticket>> GetByTeamIdAsync(Guid teamId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Ticket>> GetByStatusAsync(TicketStatus status, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Ticket>> GetByPriorityAsync(TicketPriority priority, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Ticket>> GetByConversationIdAsync(Guid conversationId, CancellationToken cancellationToken = default);
 }

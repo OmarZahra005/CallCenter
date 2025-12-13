@@ -7,6 +7,7 @@ public class ConversationDto
     public Guid Id { get; set; }
     public Guid CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
+    public string? PhoneNumber { get; set; }
     public Guid? AgentId { get; set; }
     public string? AgentName { get; set; }
     public Guid? QueueId { get; set; }
@@ -15,6 +16,7 @@ public class ConversationDto
     public ConversationState State { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+    public int? DurationSeconds { get; set; }
     public int MessageCount { get; set; }
 }
 
@@ -52,4 +54,12 @@ public class TransferConversationRequest
 {
     public Guid NewAgentId { get; set; }
     public string? Reason { get; set; }
+}
+
+public class SaveAcwRequest
+{
+    public string Disposition { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+    public bool FollowUpRequired { get; set; }
+    public DateTime? FollowUpDate { get; set; }
 }

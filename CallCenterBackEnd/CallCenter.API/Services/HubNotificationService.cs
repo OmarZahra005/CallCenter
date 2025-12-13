@@ -115,4 +115,46 @@ public class HubNotificationService : IHubNotificationService
     }
 
     #endregion
+
+    #region Conversation Notifications
+
+    public async Task NotifyConversationCreatedAsync(object conversation)
+    {
+        await _hubContext.Clients.All.SendAsync("ConversationCreated", conversation);
+    }
+
+    public async Task NotifyConversationUpdatedAsync(object conversation)
+    {
+        await _hubContext.Clients.All.SendAsync("ConversationUpdated", conversation);
+    }
+
+    #endregion
+
+    #region Timeline Notifications
+
+    public async Task NotifyTimelineEventAsync(Guid conversationId, object timelineEvent)
+    {
+        await _hubContext.Clients.All.SendAsync("TimelineEvent", new
+        {
+            conversationId,
+            timelineEvent,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    #endregion
+
+    #region Notes Notifications
+
+    public async Task NotifyNoteAddedAsync(Guid conversationId, object note)
+    {
+        await _hubContext.Clients.All.SendAsync("NoteAdded", new
+        {
+            conversationId,
+            note,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    #endregion
 }

@@ -1,62 +1,61 @@
-[2025-12-07 13:48:39.336] === IncomingCall Method Started ===
-[2025-12-07 13:48:39.340] --- Twilio Configuration ---
-[2025-12-07 13:48:39.343] AccountSid: ACec...34a0
-[2025-12-07 13:48:39.344] ApiKeySid: SK38...a3dd
-[2025-12-07 13:48:39.345] ApiKeySecret: bqok...CW1C
-[2025-12-07 13:48:39.347] VoiceTwimlAppSid: APaa0b184cc06fd3b7a1642e79703d48c4
-[2025-12-07 13:48:39.348] CallerId: +16574675972
-[2025-12-07 13:48:39.348] WebhookAuthToken: d5e3...a5a8
-[2025-12-07 13:48:39.349] --- End Configuration ---
-[2025-12-07 13:48:39.350] --- Request Headers ---
-[2025-12-07 13:48:39.352] Accept: */*
-[2025-12-07 13:48:39.353] Connection: close
-[2025-12-07 13:48:39.354] Content-Length: 828
-[2025-12-07 13:48:39.355] Content-Type: application/x-www-form-urlencoded; charset=UTF-8
-[2025-12-07 13:48:39.357] Host: callcenter.ink
-[2025-12-07 13:48:39.359] User-Agent: TwilioProxy/1.1
-[2025-12-07 13:48:39.359] X-Twilio-Service-Flow-Event: %7B%22flow_id%22%3A%22RQa06e4907044af3126b73a810960feb17%22%2C%22type%22%3A%22api_event%22%2C%22action%22%3A%22twiml_fetch%22%2C%22sub_action%22%3A%22completed%22%2C%22result%22%3A%22success%22%2C%22metadata%22%3A%7B%22transfer_type%22%3A%22call_transfer_url%22%7D%7D
-[2025-12-07 13:48:39.360] I-Twilio-Idempotency-Token: 0b995280-a788-4ff2-b326-4585232399fa
-[2025-12-07 13:48:39.362] X-Twilio-Signature: fHjcnjnspSdWJfYdUTxidqMWcSM=
-[2025-12-07 13:48:39.363] X-Home-Region: us1
-[2025-12-07 13:48:39.363] --- Request Body ---
-[2025-12-07 13:48:39.364] Called: +16574675972
-[2025-12-07 13:48:39.365] ToState: CA
-[2025-12-07 13:48:39.366] CallerCountry: SA
-[2025-12-07 13:48:39.369] Direction: inbound
-[2025-12-07 13:48:39.371] CallerState: 
-[2025-12-07 13:48:39.372] ToZip: 
-[2025-12-07 13:48:39.373] CallSid: CAef49060a9f5bcf76bc07d08c81e46e47
-[2025-12-07 13:48:39.375] To: +16574675972
-[2025-12-07 13:48:39.377] CallerZip: 
-[2025-12-07 13:48:39.380] ToCountry: US
-[2025-12-07 13:48:39.383] StirVerstat: TN-Validation-Passed-C
-[2025-12-07 13:48:39.386] CallToken: %7B%22parentCallInfoToken%22%3A%22eyJhbGciOiJFUzI1NiJ9.eyJjYWxsU2lkIjoiQ0FlZjQ5MDYwYTlmNWJjZjc2YmMwN2QwOGM4MWU0NmU0NyIsImZyb20iOiIrOTY2NTQ2NjUyNDEwIiwidG8iOiIrMTY1NzQ2NzU5NzIiLCJpYXQiOiIxNzY1MTE1MzE5In0.0fo3t4VH1kWjnzC1jZQUX4AIgNmowJ2rejYIYjhzoEZgANnoWSy1Yw1U74piXGKZQ-_9OFTOfEe7fMakxvalRQ%22%2C%22identityHeaderTokens%22%3A%5B%5D%7D
-[2025-12-07 13:48:39.386] CalledZip: 
-[2025-12-07 13:48:39.386] ApiVersion: 2010-04-01
-[2025-12-07 13:48:39.388] CalledCity: 
-[2025-12-07 13:48:39.388] CallStatus: ringing
-[2025-12-07 13:48:39.390] From: +966546652410
-[2025-12-07 13:48:39.391] AccountSid: REDACTED_ACCOUNT_SID
-[2025-12-07 13:48:39.392] CalledCountry: US
-[2025-12-07 13:48:39.393] CallerCity: 
-[2025-12-07 13:48:39.393] ToCity: 
-[2025-12-07 13:48:39.394] FromCountry: SA
-[2025-12-07 13:48:39.396] Caller: +966546652410
-[2025-12-07 13:48:39.397] FromCity: 
-[2025-12-07 13:48:39.397] CalledState: CA
-[2025-12-07 13:48:39.397] FromZip: 
-[2025-12-07 13:48:39.398] FromState: 
-[2025-12-07 13:48:39.399] --- End Request Data ---
-[2025-12-07 13:48:39.400] Validating signature for URL: https://callcenter.ink/api/twilio/voice/incoming
-[2025-12-07 13:48:39.401] Twilio Signature: fHjcnjnspSdWJfYdUTxidqMWcSM=
-[2025-12-07 13:48:39.403] WebhookAuthToken (first 4 chars): d5e3
-[2025-12-07 13:48:39.404] Form Keys: Called, ToState, CallerCountry, Direction, CallerState, ToZip, CallSid, To, CallerZip, ToCountry, StirVerstat, CallToken, CalledZip, ApiVersion, CalledCity, CallStatus, From, AccountSid, CalledCountry, CallerCity, ToCity, FromCountry, Caller, FromCity, CalledState, FromZip, FromState
-[2025-12-07 13:48:39.406] Incoming call - From: +966546652410, To: +16574675972, CallSid: CAef49060a9f5bcf76bc07d08c81e46e47, Status: ringing
-[2025-12-07 13:48:39.406] Creating call log in database for CallSid: CAef49060a9f5bcf76bc07d08c81e46e47
-[2025-12-07 13:48:39.411] Call log created with ID: 18f11f79-c173-4a24-9898-99d64745da79
-[2025-12-07 13:48:39.412] Broadcasting CallCreated event via SignalR for CallSid: CAef49060a9f5bcf76bc07d08c81e46e47
-[2025-12-07 13:48:39.412] Selecting available agent for call routing...
-[2025-12-07 13:48:39.419] Assigned call to agent: OmarZahra (omar.zahra@callcenter.com)
-[2025-12-07 13:48:39.419] Returning TwiML response - dialing agent's browser at omar.zahra@callcenter.com
-[2025-12-07 13:48:39.420] Sent IncomingCall notification to agent 11111111-1111-1111-1111-111111111111
-[2025-12-07 13:48:39.421] === IncomingCall Method Completed Successfully ===
+[2025-12-07 17:43:07.567] === IncomingCall Method Started ===
+[2025-12-07 17:43:07.581] --- Twilio Configuration ---
+[2025-12-07 17:43:07.595] AccountSid: ACec...34a0
+[2025-12-07 17:43:07.600] ApiKeySid: SK38...a3dd
+[2025-12-07 17:43:07.600] ApiKeySecret: bqok...CW1C
+[2025-12-07 17:43:07.601] VoiceTwimlAppSid: APaa0b184cc06fd3b7a1642e79703d48c4
+[2025-12-07 17:43:07.601] CallerId: +16574675972
+[2025-12-07 17:43:07.602] WebhookAuthToken: d5e3...a5a8
+[2025-12-07 17:43:07.608] --- End Configuration ---
+[2025-12-07 17:43:07.610] --- Request Headers ---
+[2025-12-07 17:43:07.610] Accept: */*
+[2025-12-07 17:43:07.613] Connection: close
+[2025-12-07 17:43:07.613] Content-Length: 793
+[2025-12-07 17:43:07.616] Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+[2025-12-07 17:43:07.617] Host: callcenter.ink
+[2025-12-07 17:43:07.618] User-Agent: TwilioProxy/1.1
+[2025-12-07 17:43:07.618] X-Twilio-Service-Flow-Event: %7B%22flow_id%22%3A%22RQa79d3f4ebd944197388710b5364abb57%22%2C%22type%22%3A%22api_event%22%2C%22action%22%3A%22twiml_fetch%22%2C%22sub_action%22%3A%22completed%22%2C%22result%22%3A%22success%22%2C%22metadata%22%3A%7B%22transfer_type%22%3A%22call_transfer_url%22%7D%7D
+[2025-12-07 17:43:07.622] I-Twilio-Idempotency-Token: 3f8217b6-e494-42a9-887f-8590a5992a3b
+[2025-12-07 17:43:07.623] X-Twilio-Signature: 2oNrWxJ2I34YpuXyxiLMD7jXVUk=
+[2025-12-07 17:43:07.623] X-Home-Region: us1
+[2025-12-07 17:43:07.624] --- Request Body ---
+[2025-12-07 17:43:07.625] Called: +16574675972
+[2025-12-07 17:43:07.627] ToState: CA
+[2025-12-07 17:43:07.628] CallerCountry: SA
+[2025-12-07 17:43:07.630] Direction: inbound
+[2025-12-07 17:43:07.632] CallerState: 
+[2025-12-07 17:43:07.635] ToZip: 
+[2025-12-07 17:43:07.636] CallSid: CAa2dc7081825d663d6928ac78ff0fa790
+[2025-12-07 17:43:07.640] To: +16574675972
+[2025-12-07 17:43:07.640] CallerZip: 
+[2025-12-07 17:43:07.642] ToCountry: US
+[2025-12-07 17:43:07.644] CallToken: %7B%22parentCallInfoToken%22%3A%22eyJhbGciOiJFUzI1NiJ9.eyJjYWxsU2lkIjoiQ0FhMmRjNzA4MTgyNWQ2NjNkNjkyOGFjNzhmZjBmYTc5MCIsImZyb20iOiIrOTY2NTQ2NjUyNDEwIiwidG8iOiIrMTY1NzQ2NzU5NzIiLCJpYXQiOiIxNzY1MTI5Mzg3In0.2lSFs-uarOjSy14rkCGpWIDe90zYQJk42ra4gjUkIneVXF34N9JZFUcRaOjzLQfS6ELlFW4VHJLIX6jBckLd6Q%22%2C%22identityHeaderTokens%22%3A%5B%5D%7D
+[2025-12-07 17:43:07.646] CalledZip: 
+[2025-12-07 17:43:07.648] ApiVersion: 2010-04-01
+[2025-12-07 17:43:07.649] CalledCity: 
+[2025-12-07 17:43:07.652] CallStatus: ringing
+[2025-12-07 17:43:07.653] From: +966546652410
+[2025-12-07 17:43:07.656] AccountSid: REDACTED_ACCOUNT_SID
+[2025-12-07 17:43:07.657] CalledCountry: US
+[2025-12-07 17:43:07.658] CallerCity: 
+[2025-12-07 17:43:07.662] ToCity: 
+[2025-12-07 17:43:07.662] FromCountry: SA
+[2025-12-07 17:43:07.664] Caller: +966546652410
+[2025-12-07 17:43:07.667] FromCity: 
+[2025-12-07 17:43:07.668] CalledState: CA
+[2025-12-07 17:43:07.668] FromZip: 
+[2025-12-07 17:43:07.671] FromState: 
+[2025-12-07 17:43:07.673] --- End Request Data ---
+[2025-12-07 17:43:07.675] Validating signature for URL: https://callcenter.ink/api/twilio/voice/incoming
+[2025-12-07 17:43:07.677] Twilio Signature: 2oNrWxJ2I34YpuXyxiLMD7jXVUk=
+[2025-12-07 17:43:07.678] WebhookAuthToken (first 4 chars): d5e3
+[2025-12-07 17:43:07.679] Form Keys: Called, ToState, CallerCountry, Direction, CallerState, ToZip, CallSid, To, CallerZip, ToCountry, CallToken, CalledZip, ApiVersion, CalledCity, CallStatus, From, AccountSid, CalledCountry, CallerCity, ToCity, FromCountry, Caller, FromCity, CalledState, FromZip, FromState
+[2025-12-07 17:43:07.682] Incoming call - From: +966546652410, To: +16574675972, CallSid: CAa2dc7081825d663d6928ac78ff0fa790, Status: ringing
+[2025-12-07 17:43:07.682] Creating call log in database for CallSid: CAa2dc7081825d663d6928ac78ff0fa790
+[2025-12-07 17:43:07.692] Call log created with ID: a9403434-fd8f-4f83-957f-325290f2a792
+[2025-12-07 17:43:07.693] Broadcasting CallCreated event via SignalR for CallSid: CAa2dc7081825d663d6928ac78ff0fa790
+[2025-12-07 17:43:07.693] Selecting available agent for call routing...
+[2025-12-07 17:43:07.704] Assigned call to agent: OmarZahra (omar.zahra@callcenter.com)
+[2025-12-07 17:43:07.705] Returning TwiML response - dialing agent's browser at omar.zahra@callcenter.com
+[2025-12-07 17:43:07.705] Sent IncomingCall notification to agent 11111111-1111-1111-1111-111111111111
+[2025-12-07 17:43:07.706] === IncomingCall Method Completed Successfully ===

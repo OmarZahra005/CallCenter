@@ -24,4 +24,14 @@ public interface IHubNotificationService
     // General notifications
     Task BroadcastNotificationAsync(string title, string message, string type = "info");
     Task SendNotificationToAgentAsync(string agentId, string title, string message, string type = "info");
+
+    // Conversation notifications
+    Task NotifyConversationCreatedAsync(object conversation);
+    Task NotifyConversationUpdatedAsync(object conversation);
+
+    // Timeline notifications
+    Task NotifyTimelineEventAsync(Guid conversationId, object timelineEvent);
+
+    // Notes notifications
+    Task NotifyNoteAddedAsync(Guid conversationId, object note);
 }

@@ -24,4 +24,9 @@ public interface IRecordingStorageService
     /// Delete a recording file from disk and database
     /// </summary>
     Task<bool> DeleteRecordingFileAsync(Guid recordingId);
+
+    /// <summary>
+    /// Get the base storage path for recordings
+    /// </summary>
+    string GetStorageBasePath();
 }

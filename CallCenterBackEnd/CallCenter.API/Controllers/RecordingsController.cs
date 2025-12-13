@@ -11,7 +11,7 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-[RoleAuthorize(AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
+[RoleAuthorize(AgentRole.Agent, AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
 public class RecordingsController : ControllerBase
 {
     private readonly ICallRecordingService _recordingService;
@@ -92,5 +92,31 @@ public class RecordingsController : ControllerBase
         var result = await _recordingService.DeleteRecordingAsync(id);
         if (!result) return NotFound();
         return NoContent();
+    }
+
+    /// <summary>
+    /// Stream recording by relative file path (from CallLog.RecordingUrl)
+    /// </summary>
+    [HttpGet("stream-by-path")]
+    public IActionResult StreamByPath([FromQuery] string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return BadRequest("Path is required");
+
+        // Get base storage path from configuration
+        var storagePath = _recordingStorageService.GetStorageBasePath();
+        var fullPath = Path.Combine(storagePath, path);
+
+        // Security: Ensure path doesn't escape storage directory
+        var normalizedFullPath = Path.GetFullPath(fullPath);
+        var normalizedBasePath = Path.GetFullPath(storagePath);
+        if (!normalizedFullPath.StartsWith(normalizedBasePath))
+            return BadRequest("Invalid path");
+
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound("Recording file not found");
+
+        var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return File(stream, "audio/wav", enableRangeProcessing: true);
     }
 }

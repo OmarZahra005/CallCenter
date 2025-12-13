@@ -4,6 +4,7 @@ type IncomingHandler = (call: Call) => void;
 type DisconnectedHandler = () => void;
 type ErrorHandler = (error: Error) => void;
 type ReadyHandler = () => void;
+type AcceptedHandler = (call: Call) => void;
 
 class TwilioDeviceManager {
   private device: Device | null = null;
@@ -12,6 +13,7 @@ class TwilioDeviceManager {
   private disconnectedHandlers: DisconnectedHandler[] = [];
   private errorHandlers: ErrorHandler[] = [];
   private readyHandlers: ReadyHandler[] = [];
+  private acceptedHandlers: AcceptedHandler[] = [];
 
   initialize(token: string): void {
     if (this.device) {
@@ -49,9 +51,10 @@ class TwilioDeviceManager {
       });
       this.currentCall = call;
 
-      // Listen to call events for debugging
+      // Listen to call events
       call.on('accept', () => {
-        console.log('Call accepted by agent');
+        console.log('Call accepted - audio connected');
+        this.acceptedHandlers.forEach(handler => handler(call));
       });
 
       call.on('disconnect', () => {
@@ -96,6 +99,10 @@ class TwilioDeviceManager {
 
   onReady(handler: ReadyHandler): void {
     this.readyHandlers.push(handler);
+  }
+
+  onAccepted(handler: AcceptedHandler): void {
+    this.acceptedHandlers.push(handler);
   }
 
   answer(call?: Call): void {
@@ -155,6 +162,7 @@ class TwilioDeviceManager {
     this.disconnectedHandlers = [];
     this.errorHandlers = [];
     this.readyHandlers = [];
+    this.acceptedHandlers = [];
   }
 
   isReady(): boolean {

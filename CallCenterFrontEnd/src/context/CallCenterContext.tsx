@@ -177,35 +177,17 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const acceptIncoming = useCallback(() => {
     dispatch({ type: 'SET_IS_ANSWERING', payload: true });
+
+    // Answer the call - activeCall will be set when 'accept' event fires (audio connected)
     twilioDeviceManager.answer(state.incomingTwilioCall || undefined);
 
-    // Move the call to active state
-    if (state.incomingRingingCall) {
-      dispatch({ type: 'SET_ACTIVE_CALL', payload: state.incomingRingingCall });
-      dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
-    } else if (state.incomingTwilioCall) {
-      // Fallback: Build call summary from Twilio call parameters when SignalR hasn't provided it yet
-      const twilioCall = state.incomingTwilioCall;
-      const callSummary: CallSummary = {
-        id: twilioCall.parameters.CallSid || `twilio-${Date.now()}`,
-        providerCallId: twilioCall.parameters.CallSid || '',
-        fromNumber: twilioCall.parameters.From || 'Unknown',
-        toNumber: twilioCall.parameters.To || state.agentIdentity || '',
-        direction: 'inbound',
-        status: 'InProgress',
-        startedAtUtc: new Date().toISOString(),
-        endedAtUtc: null,
-        recordingUrl: null,
-      };
-      dispatch({ type: 'SET_ACTIVE_CALL', payload: callSummary });
-      dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
-    }
-
-    // Clear the incoming call states to close the banner
+    // Clear the incoming call banner immediately (user clicked answer)
     dispatch({ type: 'SET_INCOMING_RINGING_CALL', payload: null });
     dispatch({ type: 'SET_INCOMING_TWILIO_CALL', payload: null });
-    dispatch({ type: 'SET_IS_ANSWERING', payload: false });
-  }, [state.incomingTwilioCall, state.incomingRingingCall, state.agentIdentity]);
+
+    // Note: SET_ACTIVE_CALL and SET_CALL_START_TIME are now set in the onAccepted handler
+    // This ensures the call panel only shows after audio is actually connected
+  }, [state.incomingTwilioCall]);
 
   const rejectIncoming = useCallback(() => {
     twilioDeviceManager.reject();
@@ -257,6 +239,25 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       twilioDeviceManager.onIncoming((call: Call) => {
         console.log('Incoming call from:', call.parameters.From);
         dispatch({ type: 'SET_INCOMING_TWILIO_CALL', payload: call });
+      });
+
+      twilioDeviceManager.onAccepted((call: Call) => {
+        console.log('Call accepted - audio connected, showing call panel');
+        // Build call summary from Twilio call parameters
+        const callSummary: CallSummary = {
+          id: call.parameters.CallSid || `twilio-${Date.now()}`,
+          providerCallId: call.parameters.CallSid || '',
+          fromNumber: call.parameters.From || 'Unknown',
+          toNumber: call.parameters.To || identity || '',
+          direction: 'inbound',
+          status: 'InProgress',
+          startedAtUtc: new Date().toISOString(),
+          endedAtUtc: null,
+          recordingUrl: null,
+        };
+        dispatch({ type: 'SET_ACTIVE_CALL', payload: callSummary });
+        dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
+        dispatch({ type: 'SET_IS_ANSWERING', payload: false });
       });
 
       twilioDeviceManager.onDisconnected(() => {

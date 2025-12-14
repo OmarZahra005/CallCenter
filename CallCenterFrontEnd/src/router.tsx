@@ -21,6 +21,11 @@ const UnifiedInbox = lazy(() => import('./features/communications/pages/UnifiedI
 const QualityAssurance = lazy(() => import('./features/qa/pages/QualityAssurance'));
 const WorkforceManagement = lazy(() => import('./features/wfm/pages/WorkforceManagement'));
 const CallCenter = lazy(() => import('./pages/CallCenterPage').then(m => ({ default: m.CallCenterPage })));
+const CampaignManagement = lazy(() => import('./features/dialer/pages/CampaignManagement').then(m => ({ default: m.CampaignManagement })));
+const AgentDialer = lazy(() => import('./features/dialer/pages/AgentDialer').then(m => ({ default: m.AgentDialer })));
+const DialerAnalytics = lazy(() => import('./features/dialer/pages/DialerAnalytics').then(m => ({ default: m.DialerAnalytics })));
+const IvrFlows = lazy(() => import('./features/ivr/pages/IvrFlows').then(m => ({ default: m.IvrFlows })));
+const IvrFlowBuilder = lazy(() => import('./features/ivr/pages/IvrFlowBuilder').then(m => ({ default: m.IvrFlowBuilder })));
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -195,6 +200,46 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoader />}>
             <CallCenter />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'dialer/campaigns',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <CampaignManagement />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'dialer/agent',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AgentDialer />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'dialer/analytics',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <DialerAnalytics />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'ivr/flows',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <IvrFlows />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'ivr/builder/:flowId',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <IvrFlowBuilder />
           </Suspense>
         ),
       },

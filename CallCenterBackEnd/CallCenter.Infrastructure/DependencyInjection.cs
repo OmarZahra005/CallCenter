@@ -92,6 +92,12 @@ public static class DependencyInjection
         // Timeline Services
         services.AddScoped<ITimelineService, TimelineService>();
 
+        // Dialer Services
+        services.AddScoped<IDialerService, Services.DialerService>();
+
+        // IVR Services
+        services.AddScoped<IIvrService, Services.IvrService>();
+
         // Mock CTI Services
         services.AddScoped<IMockCtiService, MockCtiService>();
 

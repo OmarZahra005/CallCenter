@@ -11,6 +11,11 @@ public class TwilioOptions
     public string AuthToken { get; set; } = string.Empty;
 
     /// <summary>
+    /// Base URL for webhook callbacks (e.g., https://yourserver.com)
+    /// </summary>
+    public string BaseWebhookUrl { get; set; } = string.Empty;
+
+    /// <summary>
     /// Set to true to bypass signature validation (for local development ONLY)
     /// WARNING: Never enable this in production!
     /// </summary>

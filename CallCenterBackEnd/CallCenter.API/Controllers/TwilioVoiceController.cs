@@ -24,6 +24,7 @@ public class TwilioVoiceController : ControllerBase
     private readonly TwilioOptions _twilioOptions;
     private readonly IAgentRoutingService _agentRoutingService;
     private readonly IRecordingStorageService _recordingStorageService;
+    private readonly IIvrService _ivrService;
 
     public TwilioVoiceController(
         ITwilioVoiceService twilioVoiceService,
@@ -34,7 +35,8 @@ public class TwilioVoiceController : ControllerBase
         ILogger<TwilioVoiceController> logger,
         IOptions<TwilioOptions> twilioOptions,
         IAgentRoutingService agentRoutingService,
-        IRecordingStorageService recordingStorageService)
+        IRecordingStorageService recordingStorageService,
+        IIvrService ivrService)
     {
         _twilioVoiceService = twilioVoiceService;
         _callLogService = callLogService;
@@ -45,6 +47,7 @@ public class TwilioVoiceController : ControllerBase
         _twilioOptions = twilioOptions.Value;
         _agentRoutingService = agentRoutingService;
         _recordingStorageService = recordingStorageService;
+        _ivrService = ivrService;
     }
 
     private async System.Threading.Tasks.Task LogToFileAsync(string message)
@@ -207,6 +210,51 @@ public class TwilioVoiceController : ControllerBase
                 "inbound"
             );
             await LogToFileAsync($"Call log created with ID: {callLog.Id}");
+
+            // Check if call should go through IVR first
+            var fromIvr = Request.Query["fromIvr"].ToString().ToLower() == "true";
+            await LogToFileAsync($"fromIvr parameter: {fromIvr}");
+
+            if (!fromIvr)
+            {
+                // Check if an IVR flow exists for this number
+                await LogToFileAsync($"Checking for IVR flow for number: {to}");
+                var ivrFlow = await SafeExecuteAsync(
+                    () => _ivrService.GetFlowForPhoneNumberAsync(to),
+                    "IvrService.GetFlowForPhoneNumber",
+                    callSid, from);
+
+                // If no specific flow for this number, check for default flow
+                if (ivrFlow == null)
+                {
+                    await LogToFileAsync("No specific IVR flow found, checking for default flow");
+                    ivrFlow = await SafeExecuteAsync(
+                        () => _ivrService.GetDefaultFlowAsync(),
+                        "IvrService.GetDefaultFlow",
+                        callSid, from);
+                }
+
+                if (ivrFlow != null && ivrFlow.IsActive)
+                {
+                    await LogToFileAsync($"IVR flow found: {ivrFlow.Name} (ID: {ivrFlow.Id}) - redirecting to IVR");
+
+                    // Redirect to IVR entry webhook
+                    var ivrResponse = new VoiceResponse();
+                    var ivrEntryUrl = $"{Request.Scheme}://{Request.Host}/CallCenter/api/ivr/webhook/entry";
+                    ivrResponse.Redirect(new Uri(ivrEntryUrl), Twilio.Http.HttpMethod.Post);
+
+                    await LogToFileAsync($"Returning TwiML redirect to IVR entry: {ivrEntryUrl}");
+                    return Content(ivrResponse.ToString(), "application/xml");
+                }
+                else
+                {
+                    await LogToFileAsync("No active IVR flow found - proceeding with direct agent routing");
+                }
+            }
+            else
+            {
+                await LogToFileAsync("Call coming from IVR - proceeding with agent routing");
+            }
 
             // SECONDARY: Create voice conversation (auto-creates customer if not found)
             // Call continues even if this fails

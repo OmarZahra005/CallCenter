@@ -87,6 +87,20 @@ public class ApplicationDbContext : DbContext
     // Call Logs
     public DbSet<CallLog> CallLogs => Set<CallLog>();
 
+    // Dialer / Outbound Campaigns
+    public DbSet<DialerCampaign> DialerCampaigns => Set<DialerCampaign>();
+    public DbSet<DialerList> DialerLists => Set<DialerList>();
+    public DbSet<DialerRecord> DialerRecords => Set<DialerRecord>();
+    public DbSet<DialerAttempt> DialerAttempts => Set<DialerAttempt>();
+    public DbSet<DialerCampaignAgent> DialerCampaignAgents => Set<DialerCampaignAgent>();
+    public DbSet<DoNotCallEntry> DoNotCallEntries => Set<DoNotCallEntry>();
+
+    // IVR System
+    public DbSet<IvrFlow> IvrFlows => Set<IvrFlow>();
+    public DbSet<IvrNode> IvrNodes => Set<IvrNode>();
+    public DbSet<IvrMenuOption> IvrMenuOptions => Set<IvrMenuOption>();
+    public DbSet<IvrCallSession> IvrCallSessions => Set<IvrCallSession>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -1,7 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Download, Star, MessageSquare, CheckCircle, Save, FileText, AlertTriangle, ListTodo, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Card, CardContent, CardHeader, Button, Badge, Select, Textarea } from '../../../components/ui';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Download, Star,
+  MessageSquare, CheckCircle, Save, FileText, AlertTriangle, ListTodo,
+  TrendingUp, TrendingDown, Minus, Search, Clock, User, Phone,
+  ChevronDown, ChevronRight, BarChart3, Headphones, ClipboardCheck,
+  Zap, Target, Award, XCircle, RefreshCw
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, Button, Badge, Textarea } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
 import apiClient from '../../../api/client';
 
@@ -100,16 +106,27 @@ const QualityAssurance = () => {
   const [isLoading, setIsLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Enhanced player state
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
   // Scorecard state
   const [evaluationForm, setEvaluationForm] = useState<EvaluationForm | null>(null);
   const [scores, setScores] = useState<CriteriaScore[]>([]);
   const [comments, setComments] = useState('');
   const [existingScorecard, setExistingScorecard] = useState<ExistingScorecard | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
 
   // Transcription state
   const [transcription, setTranscription] = useState<Transcription | null>(null);
   const [isLoadingTranscription, setIsLoadingTranscription] = useState(false);
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'summary' | 'issues' | 'transcript'>('summary');
 
   // Fetch evaluation forms on mount
   useEffect(() => {
@@ -273,6 +290,68 @@ const QualityAssurance = () => {
     ));
   };
 
+  // Filtering logic
+  const filteredRecordings = recordings.filter(recording => {
+    const matchesSearch = searchQuery === '' ||
+      recording.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      recording.customerId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || recording.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Stats calculation
+  const stats = {
+    total: recordings.length,
+    pending: recordings.filter(r => r.status === 'pending').length,
+    reviewed: recordings.filter(r => r.status === 'reviewed').length,
+    flagged: recordings.filter(r => r.status === 'flagged').length,
+    avgScore: recordings.filter(r => r.score !== undefined).length > 0
+      ? Math.round(recordings.filter(r => r.score !== undefined).reduce((sum, r) => sum + (r.score || 0), 0) / recordings.filter(r => r.score !== undefined).length)
+      : 0
+  };
+
+  // Playback speed control
+  const handlePlaybackSpeedChange = useCallback((speed: number) => {
+    setPlaybackSpeed(speed);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speed;
+    }
+  }, []);
+
+  // Volume control
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (audioRef.current) {
+      if (isMuted) {
+        audioRef.current.volume = volume || 0.5;
+        setIsMuted(false);
+      } else {
+        audioRef.current.volume = 0;
+        setIsMuted(true);
+      }
+    }
+  }, [isMuted, volume]);
+
+  // Toggle criteria expansion
+  const toggleCriteriaExpansion = (criteriaId: string) => {
+    setExpandedCriteria(prev =>
+      prev.includes(criteriaId)
+        ? prev.filter(id => id !== criteriaId)
+        : [...prev, criteriaId]
+    );
+  };
+
+  // Score percentage calculation
+  const scorePercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+  const isPassing = evaluationForm ? totalScore >= evaluationForm.passingScore : false;
+
   // Helper functions for transcription analysis
   const parseJsonArray = (jsonStr?: string): string[] => {
     if (!jsonStr) return [];
@@ -388,89 +467,239 @@ const QualityAssurance = () => {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="space-y-6"
+      className="space-y-5"
     >
-      {/* Header */}
-      <motion.div variants={fadeUp} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quality Assurance</h1>
-          <p className="text-gray-500 dark:text-gray-400">Review and score agent interactions</p>
+      {/* Header with Stats */}
+      <motion.div variants={fadeUp}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quality Assurance</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Review and score agent interactions</p>
+          </div>
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
         </div>
-        <div className="flex items-center gap-3">
-          <Select
-            options={[
-              { value: 'all', label: 'All Status' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'reviewed', label: 'Reviewed' },
-              { value: 'flagged', label: 'Flagged' },
-            ]}
-          />
-          <Button>Export Report</Button>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
+              <Headphones className="w-4 h-4" />
+              <span className="text-xs font-medium">Total</span>
+            </div>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
+              <Clock className="w-4 h-4" />
+              <span className="text-xs font-medium">Pending</span>
+            </div>
+            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-xs font-medium">Reviewed</span>
+            </div>
+            <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.reviewed}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-xs font-medium">Flagged</span>
+            </div>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats.flagged}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 mb-1">
+              <Award className="w-4 h-4" />
+              <span className="text-xs font-medium">Avg Score</span>
+            </div>
+            <p className="text-xl font-bold text-primary-600 dark:text-primary-400">{stats.avgScore}%</p>
+          </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recordings List */}
-        <motion.div variants={staggerItem} className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <h2 className="font-semibold">Recordings</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Recordings List - Left Panel */}
+        <motion.div variants={staggerItem} className="lg:col-span-4">
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Headphones className="w-4 h-4" />
+                  Recordings
+                </h2>
+                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                  {filteredRecordings.length} of {recordings.length}
+                </span>
+              </div>
+              {/* Search & Filter */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by agent or customer..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="flex gap-1">
+                  {['all', 'pending', 'reviewed', 'flagged'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        statusFilter === status
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="p-8 text-center text-gray-500">
-                  Loading recordings...
+                <div className="p-8 text-center">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-500" />
+                  <p className="text-sm text-gray-500">Loading recordings...</p>
                 </div>
-              ) : recordings.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  No recordings found. Make test calls to see them here.
+              ) : filteredRecordings.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Headphones className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                  <p className="text-sm text-gray-500">
+                    {recordings.length === 0 ? 'No recordings found' : 'No matching recordings'}
+                  </p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
-                  {recordings.map((recording) => (
+                <div className="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[calc(100vh-380px)] overflow-y-auto">
+                  {filteredRecordings.map((recording) => (
                     <motion.button
                       key={recording.id}
-                      whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
+                      whileHover={{ x: 2 }}
                       onClick={() => handleRecordingSelect(recording)}
-                      className={`w-full p-4 text-start transition-colors ${
-                        selectedRecording?.id === recording.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                      className={`w-full p-3 text-start transition-all border-l-3 ${
+                        selectedRecording?.id === recording.id
+                          ? 'bg-primary-50 dark:bg-primary-900/20 border-l-primary-500'
+                          : 'border-l-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50'
                       }`}
                     >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-gray-900 dark:text-white">{recording.agentName}</span>
-                      <Badge
-                        variant={recording.status === 'reviewed' ? 'success' : recording.status === 'flagged' ? 'danger' : 'default'}
-                        size="sm"
-                      >
-                        {recording.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>{recording.customerId}</span>
-                      <span>{recording.duration}</span>
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">{recording.date}</div>
-                    {recording.score !== undefined && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                        <span className="text-sm font-medium">{recording.score}%</span>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                            recording.status === 'reviewed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                            recording.status === 'flagged' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                            'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                              {recording.agentName}
+                            </p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {recording.customerId}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={recording.status === 'reviewed' ? 'success' : recording.status === 'flagged' ? 'danger' : 'default'}
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          {recording.status}
+                        </Badge>
                       </div>
-                    )}
-                  </motion.button>
-                ))}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-3 text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {recording.duration}
+                          </span>
+                          <span>{recording.date}</span>
+                        </div>
+                        {recording.score !== undefined && (
+                          <div className={`flex items-center gap-1 font-medium ${
+                            recording.score >= 80 ? 'text-green-600' :
+                            recording.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            <Star className="w-3 h-3 fill-current" />
+                            {recording.score}%
+                          </div>
+                        )}
+                      </div>
+                    </motion.button>
+                  ))}
                 </div>
               )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Player & Scorecard */}
-        <motion.div variants={staggerItem} className="lg:col-span-2 space-y-6">
-          {/* Audio Player */}
-          <Card className="glass-card">
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Recording Playback</h3>
+        {/* Player & Scorecard - Right Panel */}
+        <motion.div variants={staggerItem} className="lg:col-span-8 space-y-5">
+          {/* Audio Player - Enhanced */}
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 p-4">
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Headphones className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Recording Playback</h3>
+                    {selectedRecording && (
+                      <p className="text-xs text-white/70">{selectedRecording.agentName} - {selectedRecording.date}</p>
+                    )}
+                  </div>
+                </div>
+                {audioUrl && (
+                  <div className="flex items-center gap-2">
+                    {/* Playback Speed */}
+                    <div className="flex items-center gap-1 bg-white/10 rounded-full px-2 py-1">
+                      <Zap className="w-3 h-3" />
+                      <select
+                        value={playbackSpeed}
+                        onChange={(e) => handlePlaybackSpeedChange(parseFloat(e.target.value))}
+                        className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer"
+                      >
+                        <option value="0.5" className="text-gray-900">0.5x</option>
+                        <option value="0.75" className="text-gray-900">0.75x</option>
+                        <option value="1" className="text-gray-900">1x</option>
+                        <option value="1.25" className="text-gray-900">1.25x</option>
+                        <option value="1.5" className="text-gray-900">1.5x</option>
+                        <option value="2" className="text-gray-900">2x</option>
+                      </select>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20"
+                      onClick={() => {
+                        if (audioUrl) {
+                          const a = document.createElement('a');
+                          a.href = audioUrl;
+                          a.download = `recording-${selectedRecording?.id}.wav`;
+                          a.click();
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
 
+            <CardContent className="p-4">
               {audioUrl ? (
                 <>
                   <audio
@@ -485,28 +714,28 @@ const QualityAssurance = () => {
                     onEnded={() => setIsPlaying(false)}
                   />
 
-                  {/* Waveform Visualization */}
-                  <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
-                    <div className="flex items-end gap-0.5 h-16">
-                      {Array.from({ length: 60 }).map((_, i) => (
+                  {/* Waveform Visualization - Compact */}
+                  <div className="h-16 bg-gray-50 dark:bg-gray-800/50 rounded-lg mb-3 flex items-center justify-center overflow-hidden px-2">
+                    <div className="flex items-end gap-0.5 h-12 w-full">
+                      {Array.from({ length: 80 }).map((_, i) => (
                         <motion.div
                           key={i}
                           animate={{
                             height: `${20 + Math.random() * 80}%`,
-                            opacity: i < (currentTime / duration) * 60 ? 1 : 0.3
+                            opacity: i < (currentTime / duration) * 80 ? 1 : 0.3
                           }}
                           transition={{ duration: 0.1 }}
-                          className={`w-1 rounded-full ${
-                            i < (currentTime / duration) * 60 ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                          className={`flex-1 max-w-1 rounded-full ${
+                            i < (currentTime / duration) * 80 ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
                           }`}
                         />
                       ))}
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
+                  {/* Progress Bar with better interaction */}
                   <div
-                    className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 cursor-pointer"
+                    className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 cursor-pointer relative group"
                     onClick={(e) => {
                       if (audioRef.current) {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -516,20 +745,28 @@ const QualityAssurance = () => {
                     }}
                   >
                     <motion.div
-                      className="h-full bg-primary-500 rounded-full"
+                      className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full relative"
                       style={{ width: `${(currentTime / duration) * 100}%` }}
-                    />
+                    >
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border-2 border-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </motion.div>
                   </div>
 
-                  {/* Controls */}
+                  {/* Controls - Better Layout */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm font-mono text-gray-600 dark:text-gray-400 w-24">
                       {formatTime(currentTime)} / {formatTime(duration)}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        if (audioRef.current) audioRef.current.currentTime = Math.max(0, currentTime - 10);
-                      }}>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (audioRef.current) audioRef.current.currentTime = Math.max(0, currentTime - 10);
+                        }}
+                        title="Skip back 10s"
+                      >
                         <SkipBack className="w-4 h-4" />
                       </Button>
                       <Button
@@ -539,255 +776,438 @@ const QualityAssurance = () => {
                             setIsPlaying(!isPlaying);
                           }
                         }}
-                        className="w-10 h-10 rounded-full"
+                        className="w-12 h-12 rounded-full"
                       >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        if (audioRef.current) audioRef.current.currentTime = Math.min(duration, currentTime + 10);
-                      }}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (audioRef.current) audioRef.current.currentTime = Math.min(duration, currentTime + 10);
+                        }}
+                        title="Skip forward 10s"
+                      >
                         <SkipForward className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Volume2 className="w-4 h-4 text-gray-400" />
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        if (audioUrl) {
-                          const a = document.createElement('a');
-                          a.href = audioUrl;
-                          a.download = `recording-${selectedRecording?.id}.wav`;
-                          a.click();
-                        }
-                      }}>
-                        <Download className="w-4 h-4" />
-                      </Button>
+
+                    {/* Volume Control */}
+                    <div className="flex items-center gap-2 w-24 justify-end">
+                      <button onClick={toggleMute} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                      </button>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={isMuted ? 0 : volume}
+                        onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                        className="w-16 h-1 accent-primary-500"
+                      />
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="text-center text-gray-500 py-8">
-                  Select a recording to play
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                    <Play className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500">Select a recording to play</p>
+                  <p className="text-xs text-gray-400 mt-1">Choose from the list on the left</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Scorecard */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">
-                  Scorecard {evaluationForm ? `- ${evaluationForm.name}` : ''}
-                </h3>
-                <div className="text-2xl font-bold gradient-text">
-                  {totalScore}/{maxScore}
+          {/* Scorecard & Analysis - Side by Side on larger screens */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            {/* Scorecard */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-primary-600" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      Scorecard
+                    </h3>
+                  </div>
+                  {existingScorecard && (
+                    <Badge variant="info" size="sm">
+                      Previously: {existingScorecard.percentage.toFixed(0)}%
+                    </Badge>
+                  )}
                 </div>
-              </div>
-              {existingScorecard && (
-                <Badge variant="info" size="sm" className="mt-2">
-                  Previously scored: {existingScorecard.percentage.toFixed(0)}%
-                </Badge>
-              )}
-            </CardHeader>
-            <CardContent>
-              {!evaluationForm ? (
-                <div className="text-center text-gray-500 py-8">
-                  No evaluation form available. Please create one first.
-                </div>
-              ) : !selectedRecording ? (
-                <div className="text-center text-gray-500 py-8">
-                  Select a recording to start scoring
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4">
-                    {scores.map((score) => (
-                      <div key={score.criteriaId}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {score.criteriaName}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="0"
-                              max={score.maxPoints}
-                              value={score.pointsEarned}
-                              onChange={(e) => handleScoreChange(score.criteriaId, parseInt(e.target.value) || 0)}
-                              className="w-16 px-2 py-1 text-center border rounded-md dark:bg-gray-800 dark:border-gray-600"
-                            />
-                            <span className="text-sm text-gray-500">/ {score.maxPoints}</span>
-                          </div>
-                        </div>
-                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(score.pointsEarned / score.maxPoints) * 100}%` }}
-                            transition={{ duration: 0.3 }}
-                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                {evaluationForm && (
+                  <p className="text-xs text-gray-500 mt-1">{evaluationForm.name}</p>
+                )}
+              </CardHeader>
+              <CardContent className="pt-0">
+                {!evaluationForm ? (
+                  <div className="text-center py-6">
+                    <ClipboardCheck className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-500">No evaluation form available</p>
+                  </div>
+                ) : !selectedRecording ? (
+                  <div className="text-center py-6">
+                    <Target className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-500">Select a recording to start scoring</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Score Summary Ring */}
+                    <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg mb-4">
+                      <div className="relative w-16 h-16">
+                        <svg className="w-16 h-16 transform -rotate-90">
+                          <circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            stroke="currentColor"
+                            strokeWidth="6"
+                            fill="none"
+                            className="text-gray-200 dark:text-gray-700"
                           />
+                          <circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            stroke="currentColor"
+                            strokeWidth="6"
+                            fill="none"
+                            strokeDasharray={`${scorePercentage * 1.76} 176`}
+                            className={`${
+                              isPassing ? 'text-green-500' : scorePercentage >= 50 ? 'text-yellow-500' : 'text-red-500'
+                            } transition-all duration-500`}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-sm font-bold ${
+                            isPassing ? 'text-green-600' : scorePercentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {scorePercentage}%
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Comments */}
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      <MessageSquare className="w-4 h-4 inline mr-2" />
-                      Supervisor Comments
-                    </label>
-                    <Textarea
-                      placeholder="Add feedback for the agent..."
-                      rows={3}
-                      value={comments}
-                      onChange={(e) => setComments(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-3 mt-4">
-                    <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Draft
-                    </Button>
-                    <Button onClick={handleSubmitReview} disabled={isSaving}>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Submit Review
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Transcription & Analysis */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Call Analysis
-                </h3>
-                {transcription && (
-                  <Badge
-                    variant={transcription.status === 2 ? 'success' : transcription.status === 3 ? 'danger' : 'warning'}
-                    size="sm"
-                  >
-                    {getTranscriptionStatusText(transcription.status)}
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!selectedRecording ? (
-                <div className="text-center text-gray-500 py-8">
-                  Select a recording to view analysis
-                </div>
-              ) : isLoadingTranscription ? (
-                <div className="text-center text-gray-500 py-8">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-2" />
-                  Loading transcription...
-                </div>
-              ) : !transcription ? (
-                <div className="text-center text-gray-500 py-8">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  No transcription available for this recording
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Sentiment & Summary Section */}
-                  {(transcription.sentiment || transcription.summary) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Sentiment Badge */}
-                      {transcription.sentiment && (
-                        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                          <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Sentiment</h4>
-                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${getSentimentColor(transcription.sentiment)}`}>
-                            {getSentimentIcon(transcription.sentiment)}
-                            <span className="font-medium capitalize">{transcription.sentiment}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Summary */}
-                      {transcription.summary && (
-                        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                          <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Summary</h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{transcription.summary}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Detected Issues */}
-                  {transcription.detectedIssues && parseJsonArray(transcription.detectedIssues).length > 0 && (
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <h4 className="text-sm font-medium text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        Detected Issues
-                      </h4>
-                      <ul className="space-y-2">
-                        {parseJsonArray(transcription.detectedIssues).map((issue, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-red-600 dark:text-red-300">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-                            {issue}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Action Items */}
-                  {transcription.actionItems && parseJsonArray(transcription.actionItems).length > 0 && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <h4 className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-3 flex items-center gap-2">
-                        <ListTodo className="w-4 h-4" />
-                        Suggested Action Items
-                      </h4>
-                      <ul className="space-y-2">
-                        {parseJsonArray(transcription.actionItems).map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-blue-600 dark:text-blue-300">
-                            <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Full Transcript */}
-                  {transcription.content && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <MessageSquare className="w-4 h-4" />
-                          Full Transcript
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {transcription.wordCount} words
-                        </span>
-                      </h4>
-                      <div className="max-h-64 overflow-y-auto">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                          {transcription.content}
+                      <div className="flex-1">
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {totalScore}<span className="text-sm font-normal text-gray-500">/{maxScore}</span>
+                        </p>
+                        <p className={`text-xs font-medium ${isPassing ? 'text-green-600' : 'text-red-600'}`}>
+                          {isPassing ? 'Passing' : 'Below Passing'} (min: {evaluationForm.passingScore})
                         </p>
                       </div>
                     </div>
-                  )}
 
-                  {/* Confidence & Metadata */}
-                  <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    {transcription.confidence && (
-                      <span>Confidence: {(transcription.confidence * 100).toFixed(0)}%</span>
-                    )}
-                    {transcription.completedAt && (
-                      <span>Processed: {new Date(transcription.completedAt).toLocaleString()}</span>
-                    )}
+                    {/* Criteria List - Compact */}
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                      {scores.map((score) => {
+                        const percentage = Math.round((score.pointsEarned / score.maxPoints) * 100);
+                        const isExpanded = expandedCriteria.includes(score.criteriaId);
+                        return (
+                          <div
+                            key={score.criteriaId}
+                            className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden"
+                          >
+                            <button
+                              onClick={() => toggleCriteriaExpansion(score.criteriaId)}
+                              className="w-full p-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                                )}
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                                  {score.criteriaName}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${
+                                      percentage >= 80 ? 'bg-green-500' :
+                                      percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-12 text-right">
+                                  {score.pointsEarned}/{score.maxPoints}
+                                </span>
+                              </div>
+                            </button>
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="border-t border-gray-100 dark:border-gray-700"
+                                >
+                                  <div className="p-3 bg-gray-50 dark:bg-gray-800/30">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-xs text-gray-500">Score:</span>
+                                      <div className="flex items-center gap-1">
+                                        {[...Array(score.maxPoints)].map((_, i) => (
+                                          <button
+                                            key={i}
+                                            onClick={() => handleScoreChange(score.criteriaId, i + 1)}
+                                            className={`w-6 h-6 rounded text-xs font-medium transition-colors ${
+                                              i < score.pointsEarned
+                                                ? 'bg-primary-500 text-white'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-300'
+                                            }`}
+                                          >
+                                            {i + 1}
+                                          </button>
+                                        ))}
+                                        <button
+                                          onClick={() => handleScoreChange(score.criteriaId, 0)}
+                                          className="ml-1 text-xs text-gray-400 hover:text-gray-600"
+                                        >
+                                          Clear
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Comments */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Supervisor Comments
+                      </label>
+                      <Textarea
+                        placeholder="Add feedback for the agent..."
+                        rows={2}
+                        value={comments}
+                        onChange={(e) => setComments(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 mt-3">
+                      <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving}>
+                        <Save className="w-3.5 h-3.5 mr-1.5" />
+                        Draft
+                      </Button>
+                      <Button size="sm" onClick={handleSubmitReview} disabled={isSaving}>
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Submit
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Call Analysis - Tabbed Interface */}
+            <Card>
+              <CardHeader className="pb-0">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary-600" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Call Analysis</h3>
                   </div>
+                  {transcription && (
+                    <Badge
+                      variant={transcription.status === 2 ? 'success' : transcription.status === 3 ? 'danger' : 'default'}
+                      size="sm"
+                    >
+                      {getTranscriptionStatusText(transcription.status)}
+                    </Badge>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                {/* Tabs */}
+                {selectedRecording && transcription && (
+                  <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-4 px-4">
+                    {[
+                      { id: 'summary', label: 'Summary', icon: FileText },
+                      { id: 'issues', label: 'Issues', icon: AlertTriangle, count: parseJsonArray(transcription.detectedIssues).length },
+                      { id: 'transcript', label: 'Transcript', icon: MessageSquare },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveAnalysisTab(tab.id as 'summary' | 'issues' | 'transcript')}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          activeAnalysisTab === tab.id
+                            ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        <tab.icon className="w-3.5 h-3.5" />
+                        {tab.label}
+                        {tab.count !== undefined && tab.count > 0 && (
+                          <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
+                            tab.id === 'issues' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent className="pt-4">
+                {!selectedRecording ? (
+                  <div className="text-center py-6">
+                    <BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-500">Select a recording to view analysis</p>
+                  </div>
+                ) : isLoadingTranscription ? (
+                  <div className="text-center py-6">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-500" />
+                    <p className="text-sm text-gray-500">Loading analysis...</p>
+                  </div>
+                ) : !transcription ? (
+                  <div className="text-center py-6">
+                    <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-500">No transcription available</p>
+                  </div>
+                ) : (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeAnalysisTab}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {/* Summary Tab */}
+                      {activeAnalysisTab === 'summary' && (
+                        <div className="space-y-4">
+                          {/* Sentiment */}
+                          {transcription.sentiment && (
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getSentimentColor(transcription.sentiment)}`}>
+                                {getSentimentIcon(transcription.sentiment)}
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Overall Sentiment</p>
+                                <p className="font-medium text-gray-900 dark:text-white capitalize">{transcription.sentiment}</p>
+                              </div>
+                              {transcription.confidence && (
+                                <div className="ml-auto text-right">
+                                  <p className="text-xs text-gray-500">Confidence</p>
+                                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {(transcription.confidence * 100).toFixed(0)}%
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Summary */}
+                          {transcription.summary && (
+                            <div>
+                              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Summary</h4>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{transcription.summary}</p>
+                            </div>
+                          )}
+
+                          {/* Action Items */}
+                          {transcription.actionItems && parseJsonArray(transcription.actionItems).length > 0 && (
+                            <div>
+                              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1">
+                                <ListTodo className="w-3 h-3" />
+                                Action Items
+                              </h4>
+                              <div className="space-y-1.5">
+                                {parseJsonArray(transcription.actionItems).map((item, index) => (
+                                  <div key={index} className="flex items-start gap-2 text-sm">
+                                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Metadata Footer */}
+                          {transcription.completedAt && (
+                            <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                              <p className="text-xs text-gray-400">
+                                Analyzed {new Date(transcription.completedAt).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Issues Tab */}
+                      {activeAnalysisTab === 'issues' && (
+                        <div className="space-y-3">
+                          {parseJsonArray(transcription.detectedIssues).length > 0 ? (
+                            <>
+                              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-3">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                  {parseJsonArray(transcription.detectedIssues).length} issue(s) detected
+                                </span>
+                              </div>
+                              {parseJsonArray(transcription.detectedIssues).map((issue, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30"
+                                >
+                                  <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                                  <p className="text-sm text-red-700 dark:text-red-300">{issue}</p>
+                                </div>
+                              ))}
+                            </>
+                          ) : (
+                            <div className="text-center py-6">
+                              <CheckCircle className="w-10 h-10 mx-auto mb-2 text-green-500" />
+                              <p className="text-sm font-medium text-green-600 dark:text-green-400">No issues detected</p>
+                              <p className="text-xs text-gray-500 mt-1">This call appears to meet quality standards</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Transcript Tab */}
+                      {activeAnalysisTab === 'transcript' && (
+                        <div>
+                          {transcription.content ? (
+                            <>
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs text-gray-500">{transcription.wordCount} words</span>
+                                {transcription.language && (
+                                  <Badge variant="default" size="sm">{transcription.language}</Badge>
+                                )}
+                              </div>
+                              <div className="max-h-[300px] overflow-y-auto bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed font-mono">
+                                  {transcription.content}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-center py-6">
+                              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                              <p className="text-sm text-gray-500">Transcript not available</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
       </div>
     </motion.div>

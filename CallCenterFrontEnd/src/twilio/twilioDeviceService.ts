@@ -14,12 +14,20 @@ class TwilioDeviceManager {
   private errorHandlers: ErrorHandler[] = [];
   private readyHandlers: ReadyHandler[] = [];
   private acceptedHandlers: AcceptedHandler[] = [];
+  private isInitializing: boolean = false;
 
   initialize(token: string): void {
+    // Prevent double initialization (especially from React Strict Mode)
+    if (this.isInitializing) {
+      console.log('Twilio Device is already initializing, skipping...');
+      return;
+    }
+
     if (this.device) {
       this.destroy();
     }
 
+    this.isInitializing = true;
     this.device = new Device(token, {
       codecPreferences: [Call.Codec.Opus, Call.Codec.PCMU],
       enableImprovedSignalingErrorPrecision: true,
@@ -29,11 +37,13 @@ class TwilioDeviceManager {
     // Use 'registered' event (modern SDK) with fallback to 'ready' (older SDK)
     this.device.on('registered', () => {
       console.log('Twilio Device is registered and ready');
+      this.isInitializing = false;
       this.readyHandlers.forEach(handler => handler());
     });
 
     this.device.on('error', (error: Error) => {
       console.error('Twilio Device error:', error);
+      this.isInitializing = false;
       this.errorHandlers.forEach(handler => handler(error));
     });
 
@@ -153,11 +163,26 @@ class TwilioDeviceManager {
     }
 
     if (this.device) {
-      this.device.unregister();
-      this.device.destroy();
+      // Only unregister if device is in a registered state
+      // Avoid error when device is still "registering"
+      const deviceState = this.device.state;
+      if (deviceState === Device.State.Registered) {
+        try {
+          this.device.unregister();
+        } catch (error) {
+          console.warn('Error unregistering device:', error);
+        }
+      }
+
+      try {
+        this.device.destroy();
+      } catch (error) {
+        console.warn('Error destroying device:', error);
+      }
       this.device = null;
     }
 
+    this.isInitializing = false;
     this.incomingHandlers = [];
     this.disconnectedHandlers = [];
     this.errorHandlers = [];
@@ -167,6 +192,10 @@ class TwilioDeviceManager {
 
   isReady(): boolean {
     return this.device?.state === Device.State.Registered;
+  }
+
+  getIsInitializing(): boolean {
+    return this.isInitializing;
   }
 
   getCurrentCall(): Call | null {

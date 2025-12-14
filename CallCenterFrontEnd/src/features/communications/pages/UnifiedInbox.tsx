@@ -1,10 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, Button, Badge, Avatar, Input } from '../../../components/ui';
-import { ConversationItem, MessageBubble, LiveIndicator } from '../../../components/ui';
+import { MessageBubble, LiveIndicator } from '../../../components/ui';
 import apiClient from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
+import { createNotificationHubConnection } from '../../../realtime/notificationHubClient';
+import * as signalR from '@microsoft/signalr';
+import {
+  MessageCircle,
+  MessageSquare,
+  Smartphone,
+  Mail,
+  Phone,
+  Send,
+  Search,
+  Paperclip,
+  X,
+  RefreshCw,
+  Inbox,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 
 type Channel = 'all' | 'Voice' | 'Whatsapp' | 'Email' | 'Sms' | 'Webchat';
 
@@ -35,11 +54,61 @@ const UnifiedInbox = () => {
   const { t: _t } = useTranslation();
   void _t; // Translation hook available for future use
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, accessToken } = useAuthStore();
   const [selectedChannel, setSelectedChannel] = useState<Channel>('all');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hubConnectionRef = useRef<signalR.HubConnection | null>(null);
+
+  // Format relative time
+  const formatRelativeTime = useCallback((dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  }, []);
+
+  // Get channel icon
+  const getChannelIcon = useCallback((channel: string | undefined | null) => {
+    const channelStr = typeof channel === 'string' ? channel.toLowerCase() : '';
+    switch (channelStr) {
+      case 'whatsapp': return <MessageCircle className="w-4 h-4 text-green-500" />;
+      case 'sms': return <Smartphone className="w-4 h-4 text-blue-500" />;
+      case 'email': return <Mail className="w-4 h-4 text-orange-500" />;
+      case 'voice': return <Phone className="w-4 h-4 text-purple-500" />;
+      case 'webchat': return <MessageSquare className="w-4 h-4 text-indigo-500" />;
+      default: return <MessageCircle className="w-4 h-4 text-gray-500" />;
+    }
+  }, []);
+
+  // Get state badge
+  const getStateBadge = useCallback((state: string | undefined | null) => {
+    const stateStr = state || '';
+    switch (stateStr) {
+      case 'Active': return <Badge variant="success" dot pulse size="sm">Active</Badge>;
+      case 'Waiting': return <Badge variant="warning" dot size="sm">Waiting</Badge>;
+      case 'WrapUp': return <Badge variant="info" size="sm">Wrap Up</Badge>;
+      case 'Closed': return <Badge variant="default" size="sm">Closed</Badge>;
+      case 'Abandoned': return <Badge variant="danger" size="sm">Abandoned</Badge>;
+      default: return <Badge variant="default" size="sm">{stateStr || 'Unknown'}</Badge>;
+    }
+  }, []);
+
+  // Auto-scroll to bottom
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
   // Fetch conversations
   const { data: conversationsData, isLoading: conversationsLoading } = useQuery({
@@ -100,6 +169,79 @@ const UnifiedInbox = () => {
     }
   }, [selectedConversationId, conversationDetail]);
 
+  // SignalR connection for real-time updates
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const connection = createNotificationHubConnection(() => accessToken);
+    hubConnectionRef.current = connection;
+
+    connection.on('ReceiveMessage', (message: ConversationMessage & { conversationId: string }) => {
+      console.log('Received message via SignalR:', message);
+      // Refresh the conversation detail if it's the current one
+      if (selectedConversationId === message.conversationId) {
+        queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+      }
+      // Always refresh the conversations list
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    });
+
+    connection.on('ConversationUpdated', (conversation: Conversation) => {
+      console.log('Conversation updated via SignalR:', conversation);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      if (selectedConversationId === conversation.id) {
+        queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+      }
+    });
+
+    connection.on('NewConversation', (conversation: Conversation) => {
+      console.log('New conversation via SignalR:', conversation);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    });
+
+    connection.onreconnecting(() => {
+      console.log('SignalR reconnecting...');
+      setIsConnected(false);
+    });
+
+    connection.onreconnected(() => {
+      console.log('SignalR reconnected');
+      setIsConnected(true);
+    });
+
+    connection.onclose(() => {
+      console.log('SignalR connection closed');
+      setIsConnected(false);
+    });
+
+    connection.start()
+      .then(() => {
+        console.log('SignalR connected to callcenter hub');
+        setIsConnected(true);
+      })
+      .catch((err) => {
+        console.error('SignalR connection error:', err);
+        setIsConnected(false);
+      });
+
+    return () => {
+      connection.stop();
+    };
+  }, [accessToken, selectedConversationId, queryClient]);
+
+  // Join conversation room when selected
+  useEffect(() => {
+    if (selectedConversationId && hubConnectionRef.current?.state === signalR.HubConnectionState.Connected) {
+      hubConnectionRef.current.invoke('JoinConversation', selectedConversationId)
+        .catch((err) => console.error('Error joining conversation:', err));
+    }
+  }, [selectedConversationId]);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversationDetail?.messages, scrollToBottom]);
+
   const conversations: Conversation[] = conversationsData || [];
 
   // Filter conversations by channel and search
@@ -110,22 +252,15 @@ const UnifiedInbox = () => {
       c.customerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  // Calculate unread count (simplified - would need backend support for accurate count)
-  const getUnreadCount = (_conv: Conversation) => {
-    // Without messages in list, we can't count unread
-    // This would need backend enhancement to return unread count per conversation
-    return 0;
-  };
-
-  // Channel filters
-  const channels: { id: Channel; label: string; count: number }[] = [
-    { id: 'all', label: 'All', count: conversations.length },
-    { id: 'Whatsapp', label: 'WhatsApp', count: conversations.filter(c => c.channel === 'Whatsapp').length },
-    { id: 'Email', label: 'Email', count: conversations.filter(c => c.channel === 'Email').length },
-    { id: 'Sms', label: 'SMS', count: conversations.filter(c => c.channel === 'Sms').length },
-    { id: 'Voice', label: 'Voice', count: conversations.filter(c => c.channel === 'Voice').length },
-    { id: 'Webchat', label: 'Chat', count: conversations.filter(c => c.channel === 'Webchat').length },
-  ];
+  // Channel filters with icons
+  const channels: { id: Channel; label: string; count: number; icon: React.ReactNode }[] = useMemo(() => [
+    { id: 'all', label: 'All', count: conversations.length, icon: <Inbox className="w-4 h-4" /> },
+    { id: 'Whatsapp', label: 'WhatsApp', count: conversations.filter(c => c.channel === 'Whatsapp').length, icon: <MessageCircle className="w-4 h-4 text-green-500" /> },
+    { id: 'Email', label: 'Email', count: conversations.filter(c => c.channel === 'Email').length, icon: <Mail className="w-4 h-4 text-orange-500" /> },
+    { id: 'Sms', label: 'SMS', count: conversations.filter(c => c.channel === 'Sms').length, icon: <Smartphone className="w-4 h-4 text-blue-500" /> },
+    { id: 'Voice', label: 'Voice', count: conversations.filter(c => c.channel === 'Voice').length, icon: <Phone className="w-4 h-4 text-purple-500" /> },
+    { id: 'Webchat', label: 'Chat', count: conversations.filter(c => c.channel === 'Webchat').length, icon: <MessageSquare className="w-4 h-4 text-indigo-500" /> },
+  ], [conversations]);
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedConversationId) return;
@@ -179,12 +314,29 @@ const UnifiedInbox = () => {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Unified Inbox</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <Inbox className="w-7 h-7 text-primary-600" />
+            Unified Inbox
+          </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage all customer conversations across channels
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {/* Connection status indicator */}
+          <div className="flex items-center gap-2 text-sm">
+            {isConnected ? (
+              <>
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-green-600 dark:text-green-400">Live</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 bg-yellow-500 rounded-full" />
+                <span className="text-yellow-600 dark:text-yellow-400">Connecting...</span>
+              </>
+            )}
+          </div>
           <Badge variant="info" size="lg">
             {conversations.length} conversations
           </Badge>
@@ -199,10 +351,16 @@ const UnifiedInbox = () => {
             variant={selectedChannel === channel.id ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setSelectedChannel(channel.id)}
+            className="flex items-center gap-2"
           >
+            {channel.icon}
             {channel.label}
             {channel.count > 0 && (
-              <span className="ms-2 px-1.5 py-0.5 text-xs rounded-full bg-white/20">
+              <span className={`ms-1 px-1.5 py-0.5 text-xs rounded-full ${
+                selectedChannel === channel.id
+                  ? 'bg-white/20'
+                  : 'bg-gray-100 dark:bg-gray-700'
+              }`}>
                 {channel.count}
               </span>
             )}
@@ -215,30 +373,67 @@ const UnifiedInbox = () => {
         {/* Conversation list */}
         <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
           <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-            <Input
-              placeholder="Search conversations..."
-              className="w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search conversations..."
+                className="w-full pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.map((conv) => (
-              <ConversationItem
+              <div
                 key={conv.id}
-                id={conv.id}
-                customerName={conv.customerName}
-                lastMessage={`${conv.messageCount} messages`}
-                timestamp={new Date(conv.startTime)}
-                channel={mapChannelDisplay(conv.channel)}
-                unreadCount={getUnreadCount(conv)}
-                isActive={selectedConversationId === conv.id}
                 onClick={() => setSelectedConversationId(conv.id)}
-              />
+                className={`p-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer transition-colors ${
+                  selectedConversationId === conv.id
+                    ? 'bg-primary-50 dark:bg-primary-900/20'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="relative">
+                    <Avatar name={conv.customerName} size="sm" />
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center">
+                      {getChannelIcon(conv.channel)}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900 dark:text-white truncate">
+                        {conv.customerName}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatRelativeTime(conv.startTime)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {conv.messageCount} messages
+                      </p>
+                      {getStateBadge(conv.state)}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
             {filteredConversations.length === 0 && (
-              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                No conversations found
+              <div className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600" />
+                <p className="mt-2 text-gray-500 dark:text-gray-400">
+                  {searchTerm ? 'No conversations match your search' : 'No conversations found'}
+                </p>
               </div>
             )}
           </div>
@@ -250,15 +445,22 @@ const UnifiedInbox = () => {
             {/* Chat header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Avatar name={selectedConversation.customerName} size="md" />
+                <div className="relative">
+                  <Avatar name={selectedConversation.customerName} size="md" />
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center shadow-sm">
+                    {getChannelIcon(selectedConversation.channel)}
+                  </div>
+                </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     {selectedConversation.customerName}
                   </h3>
                   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="capitalize">{mapChannelDisplay(selectedConversation.channel)}</span>
+                    <span className="capitalize flex items-center gap-1">
+                      {mapChannelDisplay(selectedConversation.channel)}
+                    </span>
                     <span>•</span>
-                    <span>{selectedConversation.state}</span>
+                    {getStateBadge(selectedConversation.state)}
                   </div>
                 </div>
               </div>
@@ -266,29 +468,40 @@ const UnifiedInbox = () => {
                 {selectedConversation.state === 'Active' && (
                   <LiveIndicator variant="live" />
                 )}
+                {selectedConversation.channel === 'Voice' && (
+                  <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    Call
+                  </Button>
+                )}
                 <Button variant="outline" size="sm">View Profile</Button>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {detailLoading ? (
                 <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
                 </div>
               ) : conversationDetail?.messages?.length > 0 ? (
-                conversationDetail.messages.map((message: ConversationMessage) => (
-                  <MessageBubble
-                    key={message.id}
-                    content={message.message}
-                    sender={mapSenderType(message.senderType)}
-                    timestamp={new Date(message.createdAt)}
-                    status={message.isRead ? 'read' : 'delivered'}
-                  />
-                ))
+                <>
+                  {conversationDetail.messages.map((message: ConversationMessage) => (
+                    <MessageBubble
+                      key={message.id}
+                      content={message.message}
+                      sender={mapSenderType(message.senderType)}
+                      timestamp={new Date(message.createdAt)}
+                      status={message.isRead ? 'read' : 'delivered'}
+                    />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
               ) : (
-                <div className="text-center text-gray-500 py-8">
-                  No messages yet
+                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-2" />
+                  <p>No messages yet</p>
+                  <p className="text-sm">Start the conversation by sending a message</p>
                 </div>
               )}
             </div>
@@ -307,36 +520,39 @@ const UnifiedInbox = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="px-3">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                    </svg>
+                  <Button variant="outline" size="sm" className="px-3" title="Attach file">
+                    <Paperclip className="w-5 h-5" />
                   </Button>
                   <Button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                    className="flex items-center gap-2"
                   >
-                    {sendMessageMutation.isPending ? 'Sending...' : 'Send'}
+                    {sendMessageMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                <button className="hover:text-primary-500 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+                <button className="hover:text-primary-500 flex items-center gap-1 transition-colors">
+                  <MessageSquare className="w-4 h-4" />
                   Quick Replies
                 </button>
-                <button className="hover:text-primary-500 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
+                <button className="hover:text-primary-500 flex items-center gap-1 transition-colors">
+                  <Search className="w-4 h-4" />
                   Knowledge Base
                 </button>
-                <button className="hover:text-primary-500 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                  </svg>
+                <button className="hover:text-primary-500 flex items-center gap-1 transition-colors">
+                  <RefreshCw className="w-4 h-4" />
                   Transfer
                 </button>
               </div>
@@ -345,9 +561,9 @@ const UnifiedInbox = () => {
         ) : (
           <Card variant="bordered" className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
+              <div className="w-20 h-20 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                <Inbox className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+              </div>
               <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">Select a conversation</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Choose a conversation from the list to view messages
@@ -362,53 +578,65 @@ const UnifiedInbox = () => {
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Customer Info</h3>
 
             <div className="flex flex-col items-center mb-4">
-              <Avatar name={selectedConversation.customerName} size="xl" />
-              <h4 className="mt-2 font-medium text-gray-900 dark:text-white">
+              <div className="relative">
+                <Avatar name={selectedConversation.customerName} size="xl" />
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center shadow-sm">
+                  {getChannelIcon(selectedConversation.channel)}
+                </div>
+              </div>
+              <h4 className="mt-3 font-medium text-gray-900 dark:text-white">
                 {selectedConversation.customerName}
               </h4>
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 ID: {selectedConversation.customerId.slice(0, 8)}...
               </span>
+              <div className="mt-2">
+                {getStateBadge(selectedConversation.state)}
+              </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-4">
               <div className="flex items-center gap-2 text-sm">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+                <MessageSquare className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-700 dark:text-gray-300">{selectedConversation.messageCount} messages</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Clock className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-700 dark:text-gray-300">
-                  Started {new Date(selectedConversation.startTime).toLocaleString()}
+                  {formatRelativeTime(selectedConversation.startTime)}
                 </span>
               </div>
+              {selectedConversation.agentName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Assigned to {selectedConversation.agentName}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="mt-6">
               <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Actions</h5>
               <div className="space-y-2">
                 <Button variant="outline" size="sm" className="w-full justify-start">
-                  <svg className="w-4 h-4 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+                  <AlertCircle className="w-4 h-4 me-2" />
                   Create Ticket
                 </Button>
                 <Button variant="outline" size="sm" className="w-full justify-start">
-                  <svg className="w-4 h-4 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <Clock className="w-4 h-4 me-2" />
                   View History
                 </Button>
                 <Button variant="outline" size="sm" className="w-full justify-start">
-                  <svg className="w-4 h-4 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  <Search className="w-4 h-4 me-2" />
                   View Profile
                 </Button>
+                {selectedConversation.state !== 'Closed' && (
+                  <Button variant="danger" size="sm" className="w-full justify-start">
+                    <X className="w-4 h-4 me-2" />
+                    Close Conversation
+                  </Button>
+                )}
               </div>
             </div>
           </div>

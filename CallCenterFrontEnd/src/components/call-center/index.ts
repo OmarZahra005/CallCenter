@@ -1,4 +1,4 @@
-export { AgentIdentityForm } from './AgentIdentityForm';
+export { AgentStatusBar } from './AgentStatusBar';
 export { IncomingCallBanner } from './IncomingCallBanner';
 export { ActiveCallsList } from './ActiveCallsList';
 export { CallHistoryList } from './CallHistoryList';

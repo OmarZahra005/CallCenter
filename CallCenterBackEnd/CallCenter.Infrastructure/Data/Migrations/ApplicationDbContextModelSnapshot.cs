@@ -265,6 +265,44 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.ToTable("agent_kpis");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.AgentRoleAssignment", b =>
+                {
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("agent_id");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("role_id");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<Guid?>("AssignedById")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_by_id");
+
+                    b.HasKey("AgentId", "RoleId")
+                        .HasName("p_k_agent_role_assignments");
+
+                    b.HasIndex("AssignedById")
+                        .HasDatabaseName("i_x_agent_role_assignments_assigned_by_id");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("i_x_agent_role_assignments_role_id");
+
+                    b.ToTable("agent_role_assignments");
+
+                    b.HasData(
+                        new
+                        {
+                            AgentId = new Guid("00000000-0000-0000-0000-000000000001"),
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.AgentShift", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2734,6 +2772,649 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.ToTable("notifications");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.Permission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("display_order");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("module");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("SystemName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("system_name");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_permissions");
+
+                    b.HasIndex("Module")
+                        .HasDatabaseName("i_x_permissions_module");
+
+                    b.HasIndex("SystemName")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_permissions_system_name");
+
+                    b.ToTable("permissions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Access the main dashboard",
+                            DisplayOrder = 1,
+                            Module = "Dashboard",
+                            Name = "View Dashboard",
+                            SystemName = "dashboard.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("cd542d26-3b9f-bc98-3914-e8410672bd6b"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View agent list and details",
+                            DisplayOrder = 2,
+                            Module = "Agents",
+                            Name = "View Agents",
+                            SystemName = "agents.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("7c48439a-4ae6-f9ac-3a75-0aa7640e69e3"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create new agents",
+                            DisplayOrder = 3,
+                            Module = "Agents",
+                            Name = "Create Agents",
+                            SystemName = "agents.create"
+                        },
+                        new
+                        {
+                            Id = new Guid("9cbf5fe8-88a3-a716-9fe2-85d1d4d08a2c"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Edit agent information",
+                            DisplayOrder = 4,
+                            Module = "Agents",
+                            Name = "Edit Agents",
+                            SystemName = "agents.edit"
+                        },
+                        new
+                        {
+                            Id = new Guid("e381414f-e3aa-20ab-7238-ed2c947e51b6"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Delete agents",
+                            DisplayOrder = 5,
+                            Module = "Agents",
+                            Name = "Delete Agents",
+                            SystemName = "agents.delete"
+                        },
+                        new
+                        {
+                            Id = new Guid("87370f03-9a1b-ccbd-190f-c70e9e8b9453"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Assign roles to agents",
+                            DisplayOrder = 6,
+                            Module = "Agents",
+                            Name = "Assign Roles",
+                            SystemName = "agents.assign_roles"
+                        },
+                        new
+                        {
+                            Id = new Guid("d42a9c93-73a6-14a9-1517-43df13632dcb"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View team list and details",
+                            DisplayOrder = 7,
+                            Module = "Teams",
+                            Name = "View Teams",
+                            SystemName = "teams.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("2bc87b8a-5e13-0774-bb00-780bf3a09d8e"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create new teams",
+                            DisplayOrder = 8,
+                            Module = "Teams",
+                            Name = "Create Teams",
+                            SystemName = "teams.create"
+                        },
+                        new
+                        {
+                            Id = new Guid("afe62c2a-d8ee-1107-d73e-001c752777db"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Edit team information",
+                            DisplayOrder = 9,
+                            Module = "Teams",
+                            Name = "Edit Teams",
+                            SystemName = "teams.edit"
+                        },
+                        new
+                        {
+                            Id = new Guid("c6a00de2-109a-4eab-0120-b3edb11434e9"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Delete teams",
+                            DisplayOrder = 10,
+                            Module = "Teams",
+                            Name = "Delete Teams",
+                            SystemName = "teams.delete"
+                        },
+                        new
+                        {
+                            Id = new Guid("cced7ee9-45a3-40d8-49f1-edc79b45790a"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Add/remove team members",
+                            DisplayOrder = 11,
+                            Module = "Teams",
+                            Name = "Manage Members",
+                            SystemName = "teams.manage_members"
+                        },
+                        new
+                        {
+                            Id = new Guid("d7ed0a74-9b46-6850-213d-1637c7d1c318"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View call logs and history",
+                            DisplayOrder = 12,
+                            Module = "Calls",
+                            Name = "View Calls",
+                            SystemName = "calls.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("150df259-5ebf-bfea-035a-82ff7de4b85f"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Initiate outbound calls",
+                            DisplayOrder = 13,
+                            Module = "Calls",
+                            Name = "Make Calls",
+                            SystemName = "calls.make"
+                        },
+                        new
+                        {
+                            Id = new Guid("2660f3eb-d851-035a-bd9e-610ae59d867a"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Transfer calls to other agents/queues",
+                            DisplayOrder = 14,
+                            Module = "Calls",
+                            Name = "Transfer Calls",
+                            SystemName = "calls.transfer"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a048e9a-986c-bd44-374f-db19f0209d82"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Listen to live calls (silent)",
+                            DisplayOrder = 15,
+                            Module = "Calls",
+                            Name = "Monitor Calls",
+                            SystemName = "calls.monitor"
+                        },
+                        new
+                        {
+                            Id = new Guid("a27dcfdc-af86-ce2c-6893-9dd600c58e8f"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Join live calls",
+                            DisplayOrder = 16,
+                            Module = "Calls",
+                            Name = "Barge Calls",
+                            SystemName = "calls.barge"
+                        },
+                        new
+                        {
+                            Id = new Guid("87b43a70-c07b-a17d-ddb5-c567ce9b2361"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Coach agents during calls",
+                            DisplayOrder = 17,
+                            Module = "Calls",
+                            Name = "Whisper Calls",
+                            SystemName = "calls.whisper"
+                        },
+                        new
+                        {
+                            Id = new Guid("b55ae5bc-6877-12a9-6991-8107f1467eb0"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View recording list",
+                            DisplayOrder = 18,
+                            Module = "Recordings",
+                            Name = "View Recordings",
+                            SystemName = "recordings.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("6bffb0a5-9486-bf30-5191-d16afcca3934"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Play call recordings",
+                            DisplayOrder = 19,
+                            Module = "Recordings",
+                            Name = "Play Recordings",
+                            SystemName = "recordings.play"
+                        },
+                        new
+                        {
+                            Id = new Guid("a516df2b-0c8e-ac69-4626-8951561ba3fb"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Download recording files",
+                            DisplayOrder = 20,
+                            Module = "Recordings",
+                            Name = "Download Recordings",
+                            SystemName = "recordings.download"
+                        },
+                        new
+                        {
+                            Id = new Guid("72cff6fe-4c5c-6cf0-26fc-ddac2e97d8a1"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Delete recordings",
+                            DisplayOrder = 21,
+                            Module = "Recordings",
+                            Name = "Delete Recordings",
+                            SystemName = "recordings.delete"
+                        },
+                        new
+                        {
+                            Id = new Guid("886d0b0c-1f65-6fbc-ed99-c6c9dc4b6112"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View QA scorecards and evaluations",
+                            DisplayOrder = 22,
+                            Module = "QA",
+                            Name = "View QA",
+                            SystemName = "qa.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("d04ef1fc-e6e0-ef4e-18ab-5ccb9bed2165"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create QA evaluations",
+                            DisplayOrder = 23,
+                            Module = "QA",
+                            Name = "Evaluate Calls",
+                            SystemName = "qa.evaluate"
+                        },
+                        new
+                        {
+                            Id = new Guid("3a1e6ef8-898e-759e-0853-4da8267b98b9"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create evaluation forms",
+                            DisplayOrder = 24,
+                            Module = "QA",
+                            Name = "Create Forms",
+                            SystemName = "qa.create_forms"
+                        },
+                        new
+                        {
+                            Id = new Guid("e5071018-88b2-b4c7-44ec-f1f4b114d372"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Edit and delete evaluation forms",
+                            DisplayOrder = 25,
+                            Module = "QA",
+                            Name = "Manage Forms",
+                            SystemName = "qa.manage_forms"
+                        },
+                        new
+                        {
+                            Id = new Guid("d0d45e1d-45b5-8a53-d313-322d377e01c8"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View all agents' QA scores",
+                            DisplayOrder = 26,
+                            Module = "QA",
+                            Name = "View All Scores",
+                            SystemName = "qa.view_all_scores"
+                        },
+                        new
+                        {
+                            Id = new Guid("d184b1c8-14dc-78ca-4b12-1b86e8a1247a"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View dialer campaigns and lists",
+                            DisplayOrder = 27,
+                            Module = "Dialer",
+                            Name = "View Dialer",
+                            SystemName = "dialer.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("79f070a0-eb4c-e61e-8982-a485bf311e52"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create, edit, start/stop campaigns",
+                            DisplayOrder = 28,
+                            Module = "Dialer",
+                            Name = "Manage Campaigns",
+                            SystemName = "dialer.campaigns_manage"
+                        },
+                        new
+                        {
+                            Id = new Guid("6c7e8a5a-4c21-d805-289e-36f629c13f52"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create, edit, import dialer lists",
+                            DisplayOrder = 29,
+                            Module = "Dialer",
+                            Name = "Manage Lists",
+                            SystemName = "dialer.lists_manage"
+                        },
+                        new
+                        {
+                            Id = new Guid("2318fa37-bbf1-82f3-cda1-9b8101244808"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Manage Do Not Call list",
+                            DisplayOrder = 30,
+                            Module = "Dialer",
+                            Name = "Manage DNC",
+                            SystemName = "dialer.dnc_manage"
+                        },
+                        new
+                        {
+                            Id = new Guid("dce84885-dc98-47a9-98c8-bcce0c3d0537"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View schedules and time-off requests",
+                            DisplayOrder = 31,
+                            Module = "WFM",
+                            Name = "View WFM",
+                            SystemName = "wfm.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("74da3950-424d-7b5f-a037-e7ff772ae950"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create and edit agent schedules",
+                            DisplayOrder = 32,
+                            Module = "WFM",
+                            Name = "Manage Schedules",
+                            SystemName = "wfm.schedules_manage"
+                        },
+                        new
+                        {
+                            Id = new Guid("eda0d27a-ee01-ba05-d993-04976f9c79b2"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Approve/reject time-off requests",
+                            DisplayOrder = 33,
+                            Module = "WFM",
+                            Name = "Approve Time-Off",
+                            SystemName = "wfm.timeoff_approve"
+                        },
+                        new
+                        {
+                            Id = new Guid("ecff27d6-035f-6cfe-747b-ff1be9340247"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View schedule adherence reports",
+                            DisplayOrder = 34,
+                            Module = "WFM",
+                            Name = "View Adherence",
+                            SystemName = "wfm.adherence_view"
+                        },
+                        new
+                        {
+                            Id = new Guid("358f7969-35bf-20de-7727-a8002341d2f3"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View ticket list and details",
+                            DisplayOrder = 35,
+                            Module = "Tickets",
+                            Name = "View Tickets",
+                            SystemName = "tickets.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("83377373-98ee-7050-7962-cc454c69274d"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create new tickets",
+                            DisplayOrder = 36,
+                            Module = "Tickets",
+                            Name = "Create Tickets",
+                            SystemName = "tickets.create"
+                        },
+                        new
+                        {
+                            Id = new Guid("c2675598-37f0-27bb-37bb-3804a480d7b6"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Edit ticket information",
+                            DisplayOrder = 37,
+                            Module = "Tickets",
+                            Name = "Edit Tickets",
+                            SystemName = "tickets.edit"
+                        },
+                        new
+                        {
+                            Id = new Guid("2851532c-8565-0683-0099-d4df8a16380c"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Delete tickets",
+                            DisplayOrder = 38,
+                            Module = "Tickets",
+                            Name = "Delete Tickets",
+                            SystemName = "tickets.delete"
+                        },
+                        new
+                        {
+                            Id = new Guid("782a2ea6-8120-c4fc-76b5-085f31843c9b"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Assign tickets to agents",
+                            DisplayOrder = 39,
+                            Module = "Tickets",
+                            Name = "Assign Tickets",
+                            SystemName = "tickets.assign"
+                        },
+                        new
+                        {
+                            Id = new Guid("e917205c-73cc-536f-eb11-f08f5dd8fc2f"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View customer list and details",
+                            DisplayOrder = 40,
+                            Module = "Customers",
+                            Name = "View Customers",
+                            SystemName = "customers.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("26727ed9-4ced-3837-240f-c17b950cbdd5"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create new customers",
+                            DisplayOrder = 41,
+                            Module = "Customers",
+                            Name = "Create Customers",
+                            SystemName = "customers.create"
+                        },
+                        new
+                        {
+                            Id = new Guid("e8b9eabe-ba23-ea46-4352-a6068cfeb627"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Edit customer information",
+                            DisplayOrder = 42,
+                            Module = "Customers",
+                            Name = "Edit Customers",
+                            SystemName = "customers.edit"
+                        },
+                        new
+                        {
+                            Id = new Guid("5b50ebfc-6162-733a-327c-9190a969657b"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Delete customers",
+                            DisplayOrder = 43,
+                            Module = "Customers",
+                            Name = "Delete Customers",
+                            SystemName = "customers.delete"
+                        },
+                        new
+                        {
+                            Id = new Guid("e9e023f4-429c-1245-434e-79ff9718ec10"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View reports and dashboards",
+                            DisplayOrder = 44,
+                            Module = "Reports",
+                            Name = "View Reports",
+                            SystemName = "reports.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("40283c6a-fca2-b710-bd7f-cddf62aca1b9"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Export reports to files",
+                            DisplayOrder = 45,
+                            Module = "Reports",
+                            Name = "Export Reports",
+                            SystemName = "reports.export"
+                        },
+                        new
+                        {
+                            Id = new Guid("8516b726-1622-fac7-7869-87a88179a833"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View analytics dashboards",
+                            DisplayOrder = 46,
+                            Module = "Analytics",
+                            Name = "View Analytics",
+                            SystemName = "analytics.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("5c55a758-1c14-0ada-f3a6-031e2c9006a4"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View agent performance analytics",
+                            DisplayOrder = 47,
+                            Module = "Analytics",
+                            Name = "Agent Analytics",
+                            SystemName = "analytics.agents"
+                        },
+                        new
+                        {
+                            Id = new Guid("abd509c9-e6cc-8087-1b5e-b3022e9695d6"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View team performance analytics",
+                            DisplayOrder = 48,
+                            Module = "Analytics",
+                            Name = "Team Analytics",
+                            SystemName = "analytics.teams"
+                        },
+                        new
+                        {
+                            Id = new Guid("f84fc2ff-e68c-fb78-5a7a-53033eb7a606"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View queue performance analytics",
+                            DisplayOrder = 49,
+                            Module = "Analytics",
+                            Name = "Queue Analytics",
+                            SystemName = "analytics.queues"
+                        },
+                        new
+                        {
+                            Id = new Guid("6068ae6f-8c24-10a8-2f90-a748db0e3931"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View IVR flows",
+                            DisplayOrder = 50,
+                            Module = "IVR",
+                            Name = "View IVR",
+                            SystemName = "ivr.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("d1ee3a22-99c3-307e-8112-9cd54a433363"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create, edit, delete IVR flows",
+                            DisplayOrder = 51,
+                            Module = "IVR",
+                            Name = "Manage IVR",
+                            SystemName = "ivr.manage"
+                        },
+                        new
+                        {
+                            Id = new Guid("aa646765-6738-521c-20dc-df9df6f1daac"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Access and modify system settings",
+                            DisplayOrder = 52,
+                            Module = "Admin",
+                            Name = "System Settings",
+                            SystemName = "admin.settings"
+                        },
+                        new
+                        {
+                            Id = new Guid("e8330f06-3147-5980-b919-04aa547962c6"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View system audit logs",
+                            DisplayOrder = 53,
+                            Module = "Admin",
+                            Name = "View Audit Logs",
+                            SystemName = "admin.audit_logs"
+                        },
+                        new
+                        {
+                            Id = new Guid("a0e76814-f452-de78-a582-27acd0793035"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create and edit SLA rules",
+                            DisplayOrder = 54,
+                            Module = "Admin",
+                            Name = "Manage SLA Rules",
+                            SystemName = "admin.sla_rules"
+                        },
+                        new
+                        {
+                            Id = new Guid("e2db533a-9ef9-e7d0-387a-ba8e394e49fa"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create and edit call queues",
+                            DisplayOrder = 55,
+                            Module = "Admin",
+                            Name = "Manage Queues",
+                            SystemName = "admin.queues"
+                        },
+                        new
+                        {
+                            Id = new Guid("993cb8aa-8d1e-0484-eba4-5b3dc713eae7"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create and edit system alerts",
+                            DisplayOrder = 56,
+                            Module = "Admin",
+                            Name = "Manage Alerts",
+                            SystemName = "admin.alerts"
+                        },
+                        new
+                        {
+                            Id = new Guid("e8c12788-2cea-dac1-a0b9-eb9ed0f65ea8"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Configure external integrations",
+                            DisplayOrder = 57,
+                            Module = "Admin",
+                            Name = "Manage Integrations",
+                            SystemName = "admin.integrations"
+                        },
+                        new
+                        {
+                            Id = new Guid("884d0d86-67dc-5322-4601-9c532412a23c"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create, edit, delete roles and assign permissions",
+                            DisplayOrder = 58,
+                            Module = "System",
+                            Name = "Manage Roles",
+                            SystemName = "system.roles_manage"
+                        },
+                        new
+                        {
+                            Id = new Guid("a7b80797-6662-2714-c7db-fdd89a770200"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View available permissions",
+                            DisplayOrder = 59,
+                            Module = "System",
+                            Name = "View Permissions",
+                            SystemName = "system.permissions_view"
+                        });
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.QaEvaluationForm", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3111,6 +3792,1097 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasDatabaseName("i_x_refresh_tokens_agent_id");
 
                     b.ToTable("refresh_tokens");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsSuperAdmin")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_super_admin");
+
+                    b.Property<bool>("IsSystemRole")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_system_role");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("SystemName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("system_name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_roles");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("i_x_roles_created_by_id");
+
+                    b.HasIndex("SystemName")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_roles_system_name");
+
+                    b.ToTable("roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000001"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Full system access, bypasses all permission checks",
+                            IsActive = true,
+                            IsSuperAdmin = true,
+                            IsSystemRole = true,
+                            Name = "Super Admin",
+                            SystemName = "super_admin",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000002"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Full system access with explicit permissions",
+                            IsActive = true,
+                            IsSuperAdmin = false,
+                            IsSystemRole = true,
+                            Name = "Administrator",
+                            SystemName = "administrator",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000003"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Team management, QA, WFM, and most operations",
+                            IsActive = true,
+                            IsSuperAdmin = false,
+                            IsSystemRole = true,
+                            Name = "Supervisor",
+                            SystemName = "supervisor",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000004"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Quality assurance, recordings, and limited analytics",
+                            IsActive = true,
+                            IsSuperAdmin = false,
+                            IsSystemRole = true,
+                            Name = "QA Evaluator",
+                            SystemName = "qa_evaluator",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000005"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Team management, WFM, and tickets",
+                            IsActive = true,
+                            IsSuperAdmin = false,
+                            IsSystemRole = true,
+                            Name = "Team Lead",
+                            SystemName = "team_lead",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000006"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Basic call operations and ticket handling",
+                            IsActive = true,
+                            IsSuperAdmin = false,
+                            IsSystemRole = true,
+                            Name = "Agent",
+                            SystemName = "agent",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("role_id");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("permission_id");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<Guid?>("AssignedById")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_by_id");
+
+                    b.HasKey("RoleId", "PermissionId")
+                        .HasName("p_k_role_permissions");
+
+                    b.HasIndex("AssignedById")
+                        .HasDatabaseName("i_x_role_permissions_assigned_by_id");
+
+                    b.HasIndex("PermissionId")
+                        .HasDatabaseName("i_x_role_permissions_permission_id");
+
+                    b.ToTable("role_permissions");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("cd542d26-3b9f-bc98-3914-e8410672bd6b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("7c48439a-4ae6-f9ac-3a75-0aa7640e69e3"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("9cbf5fe8-88a3-a716-9fe2-85d1d4d08a2c"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e381414f-e3aa-20ab-7238-ed2c947e51b6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("87370f03-9a1b-ccbd-190f-c70e9e8b9453"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("d42a9c93-73a6-14a9-1517-43df13632dcb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("2bc87b8a-5e13-0774-bb00-780bf3a09d8e"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("afe62c2a-d8ee-1107-d73e-001c752777db"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("c6a00de2-109a-4eab-0120-b3edb11434e9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("cced7ee9-45a3-40d8-49f1-edc79b45790a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("d7ed0a74-9b46-6850-213d-1637c7d1c318"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("150df259-5ebf-bfea-035a-82ff7de4b85f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("2660f3eb-d851-035a-bd9e-610ae59d867a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("7a048e9a-986c-bd44-374f-db19f0209d82"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("a27dcfdc-af86-ce2c-6893-9dd600c58e8f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("87b43a70-c07b-a17d-ddb5-c567ce9b2361"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("b55ae5bc-6877-12a9-6991-8107f1467eb0"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("6bffb0a5-9486-bf30-5191-d16afcca3934"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("a516df2b-0c8e-ac69-4626-8951561ba3fb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("72cff6fe-4c5c-6cf0-26fc-ddac2e97d8a1"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("886d0b0c-1f65-6fbc-ed99-c6c9dc4b6112"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("d04ef1fc-e6e0-ef4e-18ab-5ccb9bed2165"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("3a1e6ef8-898e-759e-0853-4da8267b98b9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e5071018-88b2-b4c7-44ec-f1f4b114d372"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("d0d45e1d-45b5-8a53-d313-322d377e01c8"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("d184b1c8-14dc-78ca-4b12-1b86e8a1247a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("79f070a0-eb4c-e61e-8982-a485bf311e52"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("6c7e8a5a-4c21-d805-289e-36f629c13f52"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("2318fa37-bbf1-82f3-cda1-9b8101244808"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("dce84885-dc98-47a9-98c8-bcce0c3d0537"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("74da3950-424d-7b5f-a037-e7ff772ae950"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("eda0d27a-ee01-ba05-d993-04976f9c79b2"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("ecff27d6-035f-6cfe-747b-ff1be9340247"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("358f7969-35bf-20de-7727-a8002341d2f3"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("83377373-98ee-7050-7962-cc454c69274d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("c2675598-37f0-27bb-37bb-3804a480d7b6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("2851532c-8565-0683-0099-d4df8a16380c"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("782a2ea6-8120-c4fc-76b5-085f31843c9b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e917205c-73cc-536f-eb11-f08f5dd8fc2f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("26727ed9-4ced-3837-240f-c17b950cbdd5"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e8b9eabe-ba23-ea46-4352-a6068cfeb627"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("5b50ebfc-6162-733a-327c-9190a969657b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e9e023f4-429c-1245-434e-79ff9718ec10"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("40283c6a-fca2-b710-bd7f-cddf62aca1b9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("8516b726-1622-fac7-7869-87a88179a833"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("5c55a758-1c14-0ada-f3a6-031e2c9006a4"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("abd509c9-e6cc-8087-1b5e-b3022e9695d6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("f84fc2ff-e68c-fb78-5a7a-53033eb7a606"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("6068ae6f-8c24-10a8-2f90-a748db0e3931"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("d1ee3a22-99c3-307e-8112-9cd54a433363"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("aa646765-6738-521c-20dc-df9df6f1daac"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e8330f06-3147-5980-b919-04aa547962c6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("a0e76814-f452-de78-a582-27acd0793035"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e2db533a-9ef9-e7d0-387a-ba8e394e49fa"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("993cb8aa-8d1e-0484-eba4-5b3dc713eae7"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("e8c12788-2cea-dac1-a0b9-eb9ed0f65ea8"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("884d0d86-67dc-5322-4601-9c532412a23c"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("a7b80797-6662-2714-c7db-fdd89a770200"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("cd542d26-3b9f-bc98-3914-e8410672bd6b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("7c48439a-4ae6-f9ac-3a75-0aa7640e69e3"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("9cbf5fe8-88a3-a716-9fe2-85d1d4d08a2c"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("e381414f-e3aa-20ab-7238-ed2c947e51b6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("87370f03-9a1b-ccbd-190f-c70e9e8b9453"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("d42a9c93-73a6-14a9-1517-43df13632dcb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("2bc87b8a-5e13-0774-bb00-780bf3a09d8e"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("afe62c2a-d8ee-1107-d73e-001c752777db"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("c6a00de2-109a-4eab-0120-b3edb11434e9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("cced7ee9-45a3-40d8-49f1-edc79b45790a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("d7ed0a74-9b46-6850-213d-1637c7d1c318"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("150df259-5ebf-bfea-035a-82ff7de4b85f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("2660f3eb-d851-035a-bd9e-610ae59d867a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("7a048e9a-986c-bd44-374f-db19f0209d82"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("a27dcfdc-af86-ce2c-6893-9dd600c58e8f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("87b43a70-c07b-a17d-ddb5-c567ce9b2361"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("b55ae5bc-6877-12a9-6991-8107f1467eb0"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("6bffb0a5-9486-bf30-5191-d16afcca3934"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("a516df2b-0c8e-ac69-4626-8951561ba3fb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("72cff6fe-4c5c-6cf0-26fc-ddac2e97d8a1"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("886d0b0c-1f65-6fbc-ed99-c6c9dc4b6112"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("d04ef1fc-e6e0-ef4e-18ab-5ccb9bed2165"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("3a1e6ef8-898e-759e-0853-4da8267b98b9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("e5071018-88b2-b4c7-44ec-f1f4b114d372"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("d0d45e1d-45b5-8a53-d313-322d377e01c8"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("d184b1c8-14dc-78ca-4b12-1b86e8a1247a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("79f070a0-eb4c-e61e-8982-a485bf311e52"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("6c7e8a5a-4c21-d805-289e-36f629c13f52"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("2318fa37-bbf1-82f3-cda1-9b8101244808"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("dce84885-dc98-47a9-98c8-bcce0c3d0537"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("74da3950-424d-7b5f-a037-e7ff772ae950"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("eda0d27a-ee01-ba05-d993-04976f9c79b2"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("ecff27d6-035f-6cfe-747b-ff1be9340247"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("358f7969-35bf-20de-7727-a8002341d2f3"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("83377373-98ee-7050-7962-cc454c69274d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("c2675598-37f0-27bb-37bb-3804a480d7b6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("2851532c-8565-0683-0099-d4df8a16380c"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("782a2ea6-8120-c4fc-76b5-085f31843c9b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("e917205c-73cc-536f-eb11-f08f5dd8fc2f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("26727ed9-4ced-3837-240f-c17b950cbdd5"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("e8b9eabe-ba23-ea46-4352-a6068cfeb627"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("5b50ebfc-6162-733a-327c-9190a969657b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("e9e023f4-429c-1245-434e-79ff9718ec10"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("40283c6a-fca2-b710-bd7f-cddf62aca1b9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("8516b726-1622-fac7-7869-87a88179a833"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("5c55a758-1c14-0ada-f3a6-031e2c9006a4"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("abd509c9-e6cc-8087-1b5e-b3022e9695d6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("f84fc2ff-e68c-fb78-5a7a-53033eb7a606"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("cd542d26-3b9f-bc98-3914-e8410672bd6b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("d42a9c93-73a6-14a9-1517-43df13632dcb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("b55ae5bc-6877-12a9-6991-8107f1467eb0"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("6bffb0a5-9486-bf30-5191-d16afcca3934"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("a516df2b-0c8e-ac69-4626-8951561ba3fb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("72cff6fe-4c5c-6cf0-26fc-ddac2e97d8a1"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("886d0b0c-1f65-6fbc-ed99-c6c9dc4b6112"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("d04ef1fc-e6e0-ef4e-18ab-5ccb9bed2165"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("3a1e6ef8-898e-759e-0853-4da8267b98b9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("e5071018-88b2-b4c7-44ec-f1f4b114d372"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("d0d45e1d-45b5-8a53-d313-322d377e01c8"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
+                            PermissionId = new Guid("8516b726-1622-fac7-7869-87a88179a833"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("cd542d26-3b9f-bc98-3914-e8410672bd6b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("d42a9c93-73a6-14a9-1517-43df13632dcb"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("2bc87b8a-5e13-0774-bb00-780bf3a09d8e"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("afe62c2a-d8ee-1107-d73e-001c752777db"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("c6a00de2-109a-4eab-0120-b3edb11434e9"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("cced7ee9-45a3-40d8-49f1-edc79b45790a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("d7ed0a74-9b46-6850-213d-1637c7d1c318"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("dce84885-dc98-47a9-98c8-bcce0c3d0537"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("74da3950-424d-7b5f-a037-e7ff772ae950"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("eda0d27a-ee01-ba05-d993-04976f9c79b2"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("ecff27d6-035f-6cfe-747b-ff1be9340247"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("358f7969-35bf-20de-7727-a8002341d2f3"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("83377373-98ee-7050-7962-cc454c69274d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("c2675598-37f0-27bb-37bb-3804a480d7b6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("2851532c-8565-0683-0099-d4df8a16380c"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("782a2ea6-8120-c4fc-76b5-085f31843c9b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("e917205c-73cc-536f-eb11-f08f5dd8fc2f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("26727ed9-4ced-3837-240f-c17b950cbdd5"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("e8b9eabe-ba23-ea46-4352-a6068cfeb627"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("5b50ebfc-6162-733a-327c-9190a969657b"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("e9e023f4-429c-1245-434e-79ff9718ec10"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("8516b726-1622-fac7-7869-87a88179a833"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("d7ed0a74-9b46-6850-213d-1637c7d1c318"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("150df259-5ebf-bfea-035a-82ff7de4b85f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("2660f3eb-d851-035a-bd9e-610ae59d867a"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("358f7969-35bf-20de-7727-a8002341d2f3"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("83377373-98ee-7050-7962-cc454c69274d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("c2675598-37f0-27bb-37bb-3804a480d7b6"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("e917205c-73cc-536f-eb11-f08f5dd8fc2f"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("26727ed9-4ced-3837-240f-c17b950cbdd5"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("e8b9eabe-ba23-ea46-4352-a6068cfeb627"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.SlaRule", b =>
@@ -3857,6 +5629,35 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Agent");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.AgentRoleAssignment", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "Agent")
+                        .WithMany("RoleAssignments")
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_agent_role_assignments_agents_agent_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "AssignedBy")
+                        .WithMany()
+                        .HasForeignKey("AssignedById")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("f_k_agent_role_assignments_agents_assigned_by_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Role", "Role")
+                        .WithMany("AgentRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_agent_role_assignments__roles_role_id");
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("AssignedBy");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.AgentShift", b =>
                 {
                     b.HasOne("CallCenter.Domain.Entities.Agent", "Agent")
@@ -4528,6 +6329,46 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Agent");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.Role", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_roles_agents_created_by_id");
+
+                    b.Navigation("CreatedBy");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.RolePermission", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "AssignedBy")
+                        .WithMany()
+                        .HasForeignKey("AssignedById")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("f_k_role_permissions_agents_assigned_by_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_role_permissions_permissions_permission_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_role_permissions_roles_role_id");
+
+                    b.Navigation("AssignedBy");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.SystemSetting", b =>
                 {
                     b.HasOne("CallCenter.Domain.Entities.Agent", "UpdatedByAgent")
@@ -4727,6 +6568,8 @@ namespace CallCenter.Infrastructure.Data.Migrations
                 {
                     b.Navigation("Kpis");
 
+                    b.Navigation("RoleAssignments");
+
                     b.Navigation("Shifts");
 
                     b.Navigation("Skills");
@@ -4808,6 +6651,11 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("SearchLogs");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.QaEvaluationForm", b =>
                 {
                     b.Navigation("Criteria");
@@ -4832,6 +6680,13 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Conversations");
 
                     b.Navigation("Metrics");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.Role", b =>
+                {
+                    b.Navigation("AgentRoles");
+
+                    b.Navigation("RolePermissions");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.SlaRule", b =>

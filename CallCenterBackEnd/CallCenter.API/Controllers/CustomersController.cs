@@ -1,12 +1,15 @@
+using CallCenter.API.Authorization;
 using CallCenter.Application.DTOs.Common;
 using CallCenter.Application.DTOs.Customers;
 using CallCenter.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CallCenter.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class CustomersController : ControllerBase
 {
     private readonly ICustomerService _customerService;
@@ -17,6 +20,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet]
+    [RequirePermission("customers.view")]
     public async Task<ActionResult<PagedResponse<CustomerDto>>> GetCustomers(
         [FromQuery] PagedRequest request,
         [FromQuery] string? search = null)
@@ -26,6 +30,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [RequirePermission("customers.view")]
     public async Task<ActionResult<CustomerDetailDto>> GetCustomer(Guid id)
     {
         var customer = await _customerService.GetCustomerByIdAsync(id);
@@ -34,6 +39,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("customers.create")]
     public async Task<ActionResult<CustomerDto>> CreateCustomer(CreateCustomerRequest request)
     {
         var customer = await _customerService.CreateCustomerAsync(request);
@@ -41,6 +47,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("customers.edit")]
     public async Task<ActionResult<CustomerDto>> UpdateCustomer(Guid id, UpdateCustomerRequest request)
     {
         var customer = await _customerService.UpdateCustomerAsync(id, request);
@@ -49,6 +56,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [RequirePermission("customers.delete")]
     public async Task<ActionResult> DeleteCustomer(Guid id)
     {
         var result = await _customerService.DeleteCustomerAsync(id);
@@ -57,6 +65,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet("phone/{phone}")]
+    [RequirePermission("customers.view")]
     public async Task<ActionResult<CustomerDto>> GetByPhone(string phone)
     {
         var customer = await _customerService.GetByPhoneAsync(phone);
@@ -65,6 +74,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet("email/{email}")]
+    [RequirePermission("customers.view")]
     public async Task<ActionResult<CustomerDto>> GetByEmail(string email)
     {
         var customer = await _customerService.GetByEmailAsync(email);
@@ -73,6 +83,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet("{id}/stats")]
+    [RequirePermission("customers.view")]
     public async Task<ActionResult<CustomerStatsDto>> GetCustomerStats(Guid id)
     {
         // First verify customer exists

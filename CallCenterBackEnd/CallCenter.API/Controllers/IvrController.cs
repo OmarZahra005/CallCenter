@@ -1,3 +1,4 @@
+using CallCenter.API.Authorization;
 using CallCenter.Application.DTOs.Ivr;
 using CallCenter.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/ivr")]
 [Authorize]
+[RequirePermission("ivr.view")]
 public class IvrController : ControllerBase
 {
     private readonly IIvrService _ivrService;
@@ -66,6 +68,7 @@ public class IvrController : ControllerBase
     /// Create a new IVR flow
     /// </summary>
     [HttpPost("flows")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> CreateFlow([FromBody] CreateIvrFlowRequest request)
     {
         var flow = await _ivrService.CreateFlowAsync(request);
@@ -76,6 +79,7 @@ public class IvrController : ControllerBase
     /// Update an existing IVR flow
     /// </summary>
     [HttpPut("flows/{flowId:guid}")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> UpdateFlow(Guid flowId, [FromBody] UpdateIvrFlowRequest request)
     {
         var flow = await _ivrService.UpdateFlowAsync(flowId, request);
@@ -90,6 +94,7 @@ public class IvrController : ControllerBase
     /// Delete an IVR flow
     /// </summary>
     [HttpDelete("flows/{flowId:guid}")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> DeleteFlow(Guid flowId)
     {
         var result = await _ivrService.DeleteFlowAsync(flowId);
@@ -104,6 +109,7 @@ public class IvrController : ControllerBase
     /// Duplicate an IVR flow
     /// </summary>
     [HttpPost("flows/{flowId:guid}/duplicate")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> DuplicateFlow(Guid flowId, [FromQuery] string newName)
     {
         var flow = await _ivrService.DuplicateFlowAsync(flowId, newName);
@@ -145,6 +151,7 @@ public class IvrController : ControllerBase
     /// Import an IVR flow from JSON
     /// </summary>
     [HttpPost("flows/import")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> ImportFlow([FromBody] IvrFlowExportDto importData, [FromQuery] string? newName = null)
     {
         var flow = await _ivrService.ImportFlowAsync(importData, newName);
@@ -171,6 +178,7 @@ public class IvrController : ControllerBase
     /// Create a new node in a flow
     /// </summary>
     [HttpPost("nodes")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> CreateNode([FromBody] CreateIvrNodeRequest request)
     {
         var node = await _ivrService.CreateNodeAsync(request);
@@ -181,6 +189,7 @@ public class IvrController : ControllerBase
     /// Update an existing node
     /// </summary>
     [HttpPut("nodes/{nodeId:guid}")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> UpdateNode(Guid nodeId, [FromBody] UpdateIvrNodeRequest request)
     {
         var node = await _ivrService.UpdateNodeAsync(nodeId, request);
@@ -195,6 +204,7 @@ public class IvrController : ControllerBase
     /// Delete a node
     /// </summary>
     [HttpDelete("nodes/{nodeId:guid}")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> DeleteNode(Guid nodeId)
     {
         var result = await _ivrService.DeleteNodeAsync(nodeId);
@@ -211,6 +221,7 @@ public class IvrController : ControllerBase
     /// Create a menu option for a node
     /// </summary>
     [HttpPost("menu-options")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> CreateMenuOption([FromBody] CreateMenuOptionRequest request)
     {
         var option = await _ivrService.CreateMenuOptionAsync(request);
@@ -221,6 +232,7 @@ public class IvrController : ControllerBase
     /// Update a menu option
     /// </summary>
     [HttpPut("menu-options/{optionId:guid}")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> UpdateMenuOption(Guid optionId, [FromBody] UpdateMenuOptionRequest request)
     {
         var option = await _ivrService.UpdateMenuOptionAsync(optionId, request);
@@ -235,6 +247,7 @@ public class IvrController : ControllerBase
     /// Delete a menu option
     /// </summary>
     [HttpDelete("menu-options/{optionId:guid}")]
+    [RequirePermission("ivr.manage")]
     public async Task<IActionResult> DeleteMenuOption(Guid optionId)
     {
         var result = await _ivrService.DeleteMenuOptionAsync(optionId);

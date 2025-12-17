@@ -26,6 +26,26 @@ const AgentDialer = lazy(() => import('./features/dialer/pages/AgentDialer').the
 const DialerAnalytics = lazy(() => import('./features/dialer/pages/DialerAnalytics').then(m => ({ default: m.DialerAnalytics })));
 const IvrFlows = lazy(() => import('./features/ivr/pages/IvrFlows').then(m => ({ default: m.IvrFlows })));
 const IvrFlowBuilder = lazy(() => import('./features/ivr/pages/IvrFlowBuilder').then(m => ({ default: m.IvrFlowBuilder })));
+const ListManagement = lazy(() => import('./features/dialer/pages/ListManagement').then(m => ({ default: m.ListManagement })));
+const DncManagement = lazy(() => import('./features/dialer/pages/DncManagement').then(m => ({ default: m.DncManagement })));
+const AgentKpis = lazy(() => import('./features/analytics/pages/AgentKpis').then(m => ({ default: m.AgentKpis })));
+const QueueMetrics = lazy(() => import('./features/analytics/pages/QueueMetrics').then(m => ({ default: m.QueueMetrics })));
+const TeamAnalytics = lazy(() => import('./features/analytics/pages/TeamAnalytics').then(m => ({ default: m.TeamAnalytics })));
+const QueueManagement = lazy(() => import('./features/admin/pages/QueueManagement').then(m => ({ default: m.QueueManagement })));
+const SlaRules = lazy(() => import('./features/admin/pages/SlaRules').then(m => ({ default: m.SlaRules })));
+const AdherenceTracking = lazy(() => import('./features/wfm/pages/AdherenceTracking').then(m => ({ default: m.AdherenceTracking })));
+const Recordings = lazy(() => import('./features/recordings/pages/Recordings'));
+const EvaluationForms = lazy(() => import('./features/qa/pages/EvaluationForms').then(m => ({ default: m.EvaluationForms })));
+const CoachingSessions = lazy(() => import('./features/qa/pages/CoachingSessions').then(m => ({ default: m.CoachingSessions })));
+const Surveys = lazy(() => import('./features/surveys/pages/Surveys').then(m => ({ default: m.Surveys })));
+const AuditLogs = lazy(() => import('./features/admin/pages/AuditLogs').then(m => ({ default: m.AuditLogs })));
+const SystemSettings = lazy(() => import('./features/admin/pages/SystemSettings').then(m => ({ default: m.SystemSettings })));
+const AlertRules = lazy(() => import('./features/admin/pages/AlertRules').then(m => ({ default: m.AlertRules })));
+const DataExports = lazy(() => import('./features/admin/pages/DataExports').then(m => ({ default: m.DataExports })));
+const WhatsAppConfig = lazy(() => import('./features/admin/pages/WhatsAppConfig').then(m => ({ default: m.WhatsAppConfig })));
+const CtiEvents = lazy(() => import('./features/admin/pages/CtiEvents').then(m => ({ default: m.CtiEvents })));
+const NotificationSettings = lazy(() => import('./features/settings/pages/NotificationSettings').then(m => ({ default: m.NotificationSettings })));
+const RolesPermissions = lazy(() => import('./features/admin/pages/RolesPermissions'));
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -228,6 +248,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'dialer/lists',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ListManagement />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'dialer/dnc',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <DncManagement />
+          </Suspense>
+        ),
+      },
+      {
         path: 'ivr/flows',
         element: (
           <Suspense fallback={<PageLoader />}>
@@ -240,6 +276,174 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoader />}>
             <IvrFlowBuilder />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'analytics/agents',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AgentKpis />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'analytics/agents/:agentId',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AgentKpis />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'analytics/queues',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <QueueMetrics />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'analytics/queues/:queueId',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <QueueMetrics />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'analytics/teams',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <TeamAnalytics />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'analytics/teams/:teamId',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <TeamAnalytics />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/queues',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <QueueManagement />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/sla-rules',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <SlaRules />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'wfm/adherence',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AdherenceTracking />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'recordings',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <Recordings />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'qa/forms',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <EvaluationForms />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'qa/coaching',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <CoachingSessions />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'surveys',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <Surveys />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/audit-logs',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AuditLogs />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/system-settings',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <SystemSettings />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/alerts',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AlertRules />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/exports',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <DataExports />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/whatsapp',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <WhatsAppConfig />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/cti-events',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <CtiEvents />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'settings/notifications',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <NotificationSettings />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'admin/roles',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <RolesPermissions />
           </Suspense>
         ),
       },

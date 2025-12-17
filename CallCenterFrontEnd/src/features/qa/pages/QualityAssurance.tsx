@@ -5,11 +5,12 @@ import {
   MessageSquare, CheckCircle, Save, FileText, AlertTriangle, ListTodo,
   TrendingUp, TrendingDown, Minus, Search, Clock, User, Phone,
   ChevronDown, ChevronRight, BarChart3, Headphones, ClipboardCheck,
-  Zap, Target, Award, XCircle, RefreshCw
+  Zap, Target, Award, XCircle, RefreshCw, LayoutDashboard, ClipboardList
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, Button, Badge, Textarea } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
 import apiClient from '../../../api/client';
+import { QaDashboardStats } from '../components/QaDashboardStats';
 
 interface CallLog {
   id: string;
@@ -97,6 +98,9 @@ interface Transcription {
 }
 
 const QualityAssurance = () => {
+  // View toggle state
+  const [activeView, setActiveView] = useState<'dashboard' | 'evaluations'>('dashboard');
+
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -469,60 +473,103 @@ const QualityAssurance = () => {
       animate="animate"
       className="space-y-5"
     >
-      {/* Header with Stats */}
+      {/* Header with View Toggle */}
       <motion.div variants={fadeUp}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quality Assurance</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Review and score agent interactions</p>
           </div>
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-              <Headphones className="w-4 h-4" />
-              <span className="text-xs font-medium">Total</span>
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setActiveView('dashboard')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeView === 'dashboard'
+                    ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveView('evaluations')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeView === 'evaluations'
+                    ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                Evaluations
+              </button>
             </div>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
-              <Clock className="w-4 h-4" />
-              <span className="text-xs font-medium">Pending</span>
-            </div>
-            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-xs font-medium">Reviewed</span>
-            </div>
-            <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.reviewed}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-xs font-medium">Flagged</span>
-            </div>
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats.flagged}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 mb-1">
-              <Award className="w-4 h-4" />
-              <span className="text-xs font-medium">Avg Score</span>
-            </div>
-            <p className="text-xl font-bold text-primary-600 dark:text-primary-400">{stats.avgScore}%</p>
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export Report
+            </Button>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* Dashboard View */}
+      {activeView === 'dashboard' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <QaDashboardStats />
+        </motion.div>
+      )}
+
+      {/* Evaluations View */}
+      {activeView === 'evaluations' && (
+        <>
+          {/* Stats Cards */}
+          <motion.div variants={fadeUp}>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
+                  <Headphones className="w-4 h-4" />
+                  <span className="text-xs font-medium">Total</span>
+                </div>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-xs font-medium">Pending</span>
+                </div>
+                <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-xs font-medium">Reviewed</span>
+                </div>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.reviewed}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-xs font-medium">Flagged</span>
+                </div>
+                <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats.flagged}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 mb-1">
+                  <Award className="w-4 h-4" />
+                  <span className="text-xs font-medium">Avg Score</span>
+                </div>
+                <p className="text-xl font-bold text-primary-600 dark:text-primary-400">{stats.avgScore}%</p>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Recordings List - Left Panel */}
         <motion.div variants={staggerItem} className="lg:col-span-4">
           <Card className="h-full">
@@ -1210,6 +1257,8 @@ const QualityAssurance = () => {
           </div>
         </motion.div>
       </div>
+        </>
+      )}
     </motion.div>
   );
 };

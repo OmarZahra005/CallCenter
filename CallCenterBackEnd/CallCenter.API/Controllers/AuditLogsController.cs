@@ -1,3 +1,4 @@
+using CallCenter.API.Authorization;
 using CallCenter.Application.DTOs.AuditLogs;
 using CallCenter.Application.DTOs.Common;
 using CallCenter.Application.Services;
@@ -10,6 +11,7 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RequirePermission("admin.audit_logs")]
 public class AuditLogsController : ControllerBase
 {
     private readonly IAuditLogService _auditLogService;

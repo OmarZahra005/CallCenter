@@ -12,6 +12,7 @@ import { ConversationTimeline } from '../components/ConversationTimeline';
 import { LinkedTicketsList } from '../components/LinkedTicketsList';
 import { Customer360Card } from '../components/Customer360Card';
 import { NotesPanel } from '../components/NotesPanel';
+import { AiSuggestionsPanel } from '../components/AiSuggestionsPanel';
 import { IncomingCallBanner } from '../../../components/call-center';
 import { CallCenterProvider, useCallCenter } from '../../../context/CallCenterContext';
 import { useAuthStore } from '../../../store/authStore';
@@ -148,37 +149,37 @@ const AgentDesktopContent = () => {
       {/* Incoming Call Banner */}
       <IncomingCallBanner />
 
-      <div className="flex-1 flex gap-4">
+      <div className="flex-1 flex gap-4 min-h-0">
         {/* Left Sidebar - Conversation List */}
-        <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.conversations')}</h2>
-          {isConnected && (
-            <span className="flex items-center gap-1 text-xs text-green-600">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              {t('agentDesktop.live')}
-            </span>
-          )}
+        <div className="w-80 flex-shrink-0 h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+            <h2 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.conversations')}</h2>
+            {isConnected && (
+              <span className="flex items-center gap-1 text-xs text-green-600">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                {t('agentDesktop.live')}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {conversations.length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm">
+                {t('agentDesktop.noActiveConversations')}
+              </div>
+            ) : (
+              conversations.map((conv: ConversationInfo) => (
+                <ConversationItem
+                  key={conv.id}
+                  {...conv}
+                  onClick={() => {}}
+                />
+              ))
+            )}
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 text-sm">
-              {t('agentDesktop.noActiveConversations')}
-            </div>
-          ) : (
-            conversations.map((conv: ConversationInfo) => (
-              <ConversationItem
-                key={conv.id}
-                {...conv}
-                onClick={() => {}}
-              />
-            ))
-          )}
-        </div>
-      </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
         {/* Agent Control Bar - Always visible */}
         <AgentControlBar
           agentName={agentName}
@@ -258,51 +259,67 @@ const AgentDesktopContent = () => {
               </div>
             </div>
 
-            {/* Timeline, Linked Tickets and Notes for completed call during ACW */}
+            {/* Timeline, Linked Tickets, Notes and AI Suggestions for completed call during ACW */}
             {lastConversationId && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <ConversationTimeline
+              <div className="space-y-4">
+                {/* AI Suggestions - Collapsed by default during ACW */}
+                <AiSuggestionsPanel
                   conversationId={lastConversationId}
                   isCollapsible={true}
-                  defaultExpanded={true}
+                  defaultExpanded={false}
                 />
-                <LinkedTicketsList
-                  conversationId={lastConversationId}
-                  customerId={effectiveCustomerId || null}
-                  isCollapsible={true}
-                  defaultExpanded={true}
-                  onViewTicket={(ticketId) => window.open(`/tickets/${ticketId}`, '_blank')}
-                />
-                <NotesPanel
-                  conversationId={lastConversationId}
-                  isCollapsible={true}
-                  defaultExpanded={true}
-                />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <ConversationTimeline
+                    conversationId={lastConversationId}
+                    isCollapsible={true}
+                    defaultExpanded={true}
+                  />
+                  <LinkedTicketsList
+                    conversationId={lastConversationId}
+                    customerId={effectiveCustomerId || null}
+                    isCollapsible={true}
+                    defaultExpanded={true}
+                    onViewTicket={(ticketId) => window.open(`/tickets/${ticketId}`, '_blank')}
+                  />
+                  <NotesPanel
+                    conversationId={lastConversationId}
+                    isCollapsible={true}
+                    defaultExpanded={true}
+                  />
+                </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Timeline, Linked Tickets and Notes for active call (when not in ACW) */}
+        {/* Timeline, Linked Tickets, Notes and AI Suggestions for active call (when not in ACW) */}
         {!isACWActive && activeConversationId && twilioActiveCall && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ConversationTimeline
+          <div className="space-y-4">
+            {/* AI Suggestions - Prominent during active call */}
+            <AiSuggestionsPanel
               conversationId={activeConversationId}
-              isCollapsible={true}
-              defaultExpanded={false}
-            />
-            <LinkedTicketsList
-              conversationId={activeConversationId}
-              customerId={effectiveCustomerId || null}
               isCollapsible={true}
               defaultExpanded={true}
-              onViewTicket={(ticketId) => window.open(`/tickets/${ticketId}`, '_blank')}
             />
-            <NotesPanel
-              conversationId={activeConversationId}
-              isCollapsible={true}
-              defaultExpanded={false}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <ConversationTimeline
+                conversationId={activeConversationId}
+                isCollapsible={true}
+                defaultExpanded={false}
+              />
+              <LinkedTicketsList
+                conversationId={activeConversationId}
+                customerId={effectiveCustomerId || null}
+                isCollapsible={true}
+                defaultExpanded={true}
+                onViewTicket={(ticketId) => window.open(`/tickets/${ticketId}`, '_blank')}
+              />
+              <NotesPanel
+                conversationId={activeConversationId}
+                isCollapsible={true}
+                defaultExpanded={false}
+              />
+            </div>
           </div>
         )}
 

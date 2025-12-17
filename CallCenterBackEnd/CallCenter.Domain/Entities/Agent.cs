@@ -11,7 +11,10 @@ public class Agent
     public string? PasswordHash { get; set; }
     public string? Phone { get; set; }
     public Guid? TeamId { get; set; }
+
+    [Obsolete("Use RoleAssignments for RBAC. This property is kept for backward compatibility during migration.")]
     public AgentRole Role { get; set; }
+
     public int SkillLevel { get; set; } = 1;
     public string? Languages { get; set; }
     public DateOnly? HireDate { get; set; }
@@ -25,4 +28,7 @@ public class Agent
     public virtual ICollection<AgentState> States { get; set; } = new List<AgentState>();
     public virtual ICollection<AgentShift> Shifts { get; set; } = new List<AgentShift>();
     public virtual ICollection<AgentKpi> Kpis { get; set; } = new List<AgentKpi>();
+
+    // RBAC - Role-Based Access Control
+    public virtual ICollection<AgentRoleAssignment> RoleAssignments { get; set; } = new List<AgentRoleAssignment>();
 }

@@ -6,8 +6,13 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
   teamId?: string;
+  /** @deprecated Use roles instead */
+  role: string;
+  // RBAC properties
+  isSuperAdmin: boolean;
+  roles: string[];
+  permissions: string[];
 }
 
 interface AuthState {
@@ -21,11 +26,12 @@ interface AuthState {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  refreshPermissions: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
@@ -37,13 +43,33 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await apiClient.post('/auth/login', { email, password });
-          const { id, name, email: userEmail, role, accessToken, refreshToken } = response.data;
+          const {
+            id,
+            name,
+            email: userEmail,
+            teamId,
+            role,
+            isSuperAdmin,
+            roles,
+            permissions,
+            accessToken,
+            refreshToken,
+          } = response.data;
 
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', refreshToken);
 
           set({
-            user: { id, name, email: userEmail, role },
+            user: {
+              id,
+              name,
+              email: userEmail,
+              teamId,
+              role,
+              isSuperAdmin: isSuperAdmin ?? false,
+              roles: roles ?? [],
+              permissions: permissions ?? [],
+            },
             accessToken,
             refreshToken,
             isAuthenticated: true,
@@ -62,13 +88,32 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await apiClient.post('/auth/register', { name, email, password });
-          const { id, email: userEmail, role, accessToken, refreshToken } = response.data;
+          const {
+            id,
+            email: userEmail,
+            teamId,
+            role,
+            isSuperAdmin,
+            roles,
+            permissions,
+            accessToken,
+            refreshToken,
+          } = response.data;
 
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', refreshToken);
 
           set({
-            user: { id, name, email: userEmail, role },
+            user: {
+              id,
+              name,
+              email: userEmail,
+              teamId,
+              role,
+              isSuperAdmin: isSuperAdmin ?? false,
+              roles: roles ?? [],
+              permissions: permissions ?? [],
+            },
             accessToken,
             refreshToken,
             isAuthenticated: true,
@@ -95,6 +140,29 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearError: () => set({ error: null }),
+
+      refreshPermissions: async () => {
+        const state = get();
+        if (!state.isAuthenticated || !state.accessToken) return;
+
+        try {
+          const response = await apiClient.get('/permissions/me');
+          const { isSuperAdmin, roles, permissions } = response.data;
+
+          set({
+            user: state.user
+              ? {
+                  ...state.user,
+                  isSuperAdmin: isSuperAdmin ?? state.user.isSuperAdmin,
+                  roles: roles ?? state.user.roles,
+                  permissions: permissions ?? state.user.permissions,
+                }
+              : null,
+          });
+        } catch (error) {
+          console.error('Failed to refresh permissions:', error);
+        }
+      },
     }),
     {
       name: 'auth-storage',

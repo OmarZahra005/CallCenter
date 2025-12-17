@@ -9,10 +9,14 @@ export type CallState = 'idle' | 'ringing' | 'active' | 'onhold' | 'dialing';
 export type AgentState = 'available' | 'busy' | 'break' | 'acw' | 'offline';
 
 export interface ACWData {
-  disposition: string;
+  dispositionId: string;
+  dispositionCategory: string;
+  dispositionName: string;
   notes: string;
+  sentiment: 'Positive' | 'Neutral' | 'Negative';
   followUpRequired: boolean;
   followUpDate?: string;
+  tags?: string[];
 }
 
 export interface CallInfo {
@@ -745,21 +749,28 @@ export const useAgentDesktop = () => {
       // Save ACW data to conversation if we have a conversation ID
       if (lastConversationId) {
         await apiClient.put(`/conversations/${lastConversationId}/acw`, {
-          disposition: acwData.disposition,
+          dispositionId: acwData.dispositionId,
+          dispositionCategory: acwData.dispositionCategory,
+          dispositionName: acwData.dispositionName,
           notes: acwData.notes,
+          sentiment: acwData.sentiment,
           followUpRequired: acwData.followUpRequired,
           followUpDate: acwData.followUpDate,
+          tags: acwData.tags,
         });
-      } else {
-        // Fallback to old endpoint if no conversation ID
-        await apiClient.post('/calls/acw', {
-          callId: lastCallId,
-          agentId,
-          disposition: acwData.disposition,
-          notes: acwData.notes,
-          followUpRequired: acwData.followUpRequired,
-          followUpDate: acwData.followUpDate,
-        });
+      }
+
+      // Also save disposition to conversation disposition table
+      if (lastConversationId && acwData.dispositionId) {
+        try {
+          await apiClient.post(`/conversations/${lastConversationId}/disposition`, {
+            dispositionId: acwData.dispositionId,
+            agentId,
+            notes: acwData.notes,
+          });
+        } catch (dispError) {
+          console.warn('Error saving conversation disposition:', dispError);
+        }
       }
     } catch (error) {
       console.error('Error saving ACW data:', error);

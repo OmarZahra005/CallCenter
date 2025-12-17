@@ -9,7 +9,6 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-[RoleAuthorize(AgentRole.Agent, AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
 public class QaController : ControllerBase
 {
     private readonly IQaService _qaService;
@@ -21,6 +20,7 @@ public class QaController : ControllerBase
 
     // Scorecards
     [HttpGet("scorecards/{id}")]
+    [RequirePermission("qa.view")]
     public async Task<ActionResult<QaScorecardDto>> GetScorecard(Guid id)
     {
         var scorecard = await _qaService.GetScorecardByIdAsync(id);
@@ -29,6 +29,7 @@ public class QaController : ControllerBase
     }
 
     [HttpGet("scorecards/agent/{agentId}")]
+    [RequirePermission("qa.view_all_scores")]
     public async Task<ActionResult<List<QaScorecardDto>>> GetScorecardsByAgent(Guid agentId)
     {
         var scorecards = await _qaService.GetScorecardsByAgentAsync(agentId);
@@ -36,6 +37,7 @@ public class QaController : ControllerBase
     }
 
     [HttpGet("scorecards/evaluator/{evaluatorId}")]
+    [RequirePermission("qa.view")]
     public async Task<ActionResult<List<QaScorecardDto>>> GetScorecardsByEvaluator(Guid evaluatorId)
     {
         var scorecards = await _qaService.GetScorecardsByEvaluatorAsync(evaluatorId);
@@ -43,6 +45,7 @@ public class QaController : ControllerBase
     }
 
     [HttpGet("scorecards/recording/{recordingId}")]
+    [RequirePermission("qa.view")]
     public async Task<ActionResult<QaScorecardDto>> GetScorecardByRecordingId(Guid recordingId)
     {
         var scorecard = await _qaService.GetScorecardByRecordingIdAsync(recordingId);
@@ -51,6 +54,7 @@ public class QaController : ControllerBase
     }
 
     [HttpGet("scorecards/call/{callSid}")]
+    [RequirePermission("qa.view")]
     public async Task<ActionResult<QaScorecardDto>> GetScorecardByCallSid(string callSid)
     {
         var scorecard = await _qaService.GetScorecardByCallSidAsync(callSid);
@@ -59,6 +63,7 @@ public class QaController : ControllerBase
     }
 
     [HttpPost("scorecards")]
+    [RequirePermission("qa.evaluate")]
     public async Task<ActionResult<QaScorecardDto>> CreateScorecard(CreateScorecardRequest request)
     {
         var scorecard = await _qaService.CreateScorecardAsync(request);
@@ -66,6 +71,7 @@ public class QaController : ControllerBase
     }
 
     [HttpPut("scorecards/{id}")]
+    [RequirePermission("qa.evaluate")]
     public async Task<ActionResult<QaScorecardDto>> UpdateScorecard(Guid id, UpdateScorecardRequest request)
     {
         var scorecard = await _qaService.UpdateScorecardAsync(id, request);
@@ -74,6 +80,7 @@ public class QaController : ControllerBase
     }
 
     [HttpDelete("scorecards/{id}")]
+    [RequirePermission("qa.manage_forms")]
     public async Task<ActionResult> DeleteScorecard(Guid id)
     {
         var result = await _qaService.DeleteScorecardAsync(id);
@@ -83,6 +90,7 @@ public class QaController : ControllerBase
 
     // Evaluation Forms
     [HttpGet("forms/{id}")]
+    [RequirePermission("qa.view")]
     public async Task<ActionResult<QaEvaluationFormDto>> GetForm(Guid id)
     {
         var form = await _qaService.GetFormByIdAsync(id);
@@ -91,6 +99,7 @@ public class QaController : ControllerBase
     }
 
     [HttpGet("forms")]
+    [RequirePermission("qa.view")]
     public async Task<ActionResult<List<QaEvaluationFormDto>>> GetActiveForms()
     {
         var forms = await _qaService.GetActiveFormsAsync();
@@ -98,6 +107,7 @@ public class QaController : ControllerBase
     }
 
     [HttpPost("forms")]
+    [RequirePermission("qa.create_forms")]
     public async Task<ActionResult<QaEvaluationFormDto>> CreateForm(CreateEvaluationFormRequest request)
     {
         var form = await _qaService.CreateFormAsync(request);
@@ -105,6 +115,7 @@ public class QaController : ControllerBase
     }
 
     [HttpPut("forms/{id}")]
+    [RequirePermission("qa.manage_forms")]
     public async Task<ActionResult<QaEvaluationFormDto>> UpdateForm(Guid id, UpdateEvaluationFormRequest request)
     {
         var form = await _qaService.UpdateFormAsync(id, request);
@@ -113,6 +124,7 @@ public class QaController : ControllerBase
     }
 
     [HttpDelete("forms/{id}")]
+    [RequirePermission("qa.manage_forms")]
     public async Task<ActionResult> DeleteForm(Guid id)
     {
         var result = await _qaService.DeleteFormAsync(id);

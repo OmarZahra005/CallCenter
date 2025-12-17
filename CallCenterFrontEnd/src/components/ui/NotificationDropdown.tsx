@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
 interface Notification {
@@ -8,11 +9,13 @@ interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   timestamp: Date;
   read: boolean;
+  actionUrl?: string;
 }
 
 interface NotificationDropdownProps {
   notifications: Notification[];
   onMarkRead: (id: string) => void;
+  onMarkAllRead?: () => void;
   onClear: () => void;
   className?: string;
 }
@@ -20,11 +23,26 @@ interface NotificationDropdownProps {
 export const NotificationDropdown = ({
   notifications,
   onMarkRead,
+  onMarkAllRead,
   onClear,
   className,
 }: NotificationDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleNotificationClick = (notification: Notification) => {
+    onMarkRead(notification.id);
+    if (notification.actionUrl) {
+      setIsOpen(false);
+      // Handle internal vs external URLs
+      if (notification.actionUrl.startsWith('/')) {
+        navigate(notification.actionUrl);
+      } else {
+        window.open(notification.actionUrl, '_blank');
+      }
+    }
+  };
 
   const typeColors = {
     info: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
@@ -78,14 +96,24 @@ export const NotificationDropdown = ({
           <div className="absolute end-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
-              {notifications.length > 0 && (
-                <button
-                  onClick={onClear}
-                  className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                >
-                  Clear all
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && onMarkAllRead && (
+                  <button
+                    onClick={onMarkAllRead}
+                    className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                  >
+                    Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={onClear}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
             <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 ? (
@@ -99,10 +127,11 @@ export const NotificationDropdown = ({
                 notifications.map((notification) => (
                   <button
                     key={notification.id}
-                    onClick={() => onMarkRead(notification.id)}
+                    onClick={() => handleNotificationClick(notification)}
                     className={cn(
                       'w-full text-start p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0',
-                      !notification.read && 'bg-blue-50/50 dark:bg-blue-900/10'
+                      !notification.read && 'bg-blue-50/50 dark:bg-blue-900/10',
+                      notification.actionUrl && 'cursor-pointer'
                     )}
                   >
                     <div className="flex items-start gap-3">

@@ -11,7 +11,6 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-[RoleAuthorize(AgentRole.Agent, AgentRole.Supervisor, AgentRole.QaEvaluator, AgentRole.Admin)]
 public class RecordingsController : ControllerBase
 {
     private readonly ICallRecordingService _recordingService;
@@ -26,6 +25,7 @@ public class RecordingsController : ControllerBase
     }
 
     [HttpGet]
+    [RequirePermission("recordings.view")]
     public async Task<ActionResult<PagedResponse<CallRecordingDto>>> GetRecordings([FromQuery] PagedRequest request)
     {
         var result = await _recordingService.GetRecordingsAsync(request);
@@ -33,6 +33,7 @@ public class RecordingsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [RequirePermission("recordings.view")]
     public async Task<ActionResult<CallRecordingDto>> GetRecording(Guid id)
     {
         var result = await _recordingService.GetRecordingByIdAsync(id);
@@ -41,6 +42,7 @@ public class RecordingsController : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("recordings.view")]
     public async Task<ActionResult<CallRecordingDto>> CreateRecording(CreateRecordingRequest request)
     {
         var result = await _recordingService.CreateRecordingAsync(request);
@@ -48,6 +50,7 @@ public class RecordingsController : ControllerBase
     }
 
     [HttpGet("call/{callId}")]
+    [RequirePermission("recordings.view")]
     public async Task<ActionResult<List<CallRecordingDto>>> GetByCallId(string callId)
     {
         var result = await _recordingService.GetByCallIdAsync(callId);
@@ -55,6 +58,7 @@ public class RecordingsController : ControllerBase
     }
 
     [HttpGet("conversation/{conversationId:guid}")]
+    [RequirePermission("recordings.view")]
     public async Task<ActionResult<List<CallRecordingDto>>> GetByConversationId(Guid conversationId)
     {
         var result = await _recordingService.GetByConversationIdAsync(conversationId);
@@ -65,6 +69,7 @@ public class RecordingsController : ControllerBase
     /// Stream recording audio file
     /// </summary>
     [HttpGet("{id:guid}/stream")]
+    [RequirePermission("recordings.play")]
     public async Task<IActionResult> StreamRecording(Guid id)
     {
         var stream = await _recordingStorageService.GetRecordingStreamAsync(id);
@@ -78,6 +83,7 @@ public class RecordingsController : ControllerBase
     /// Get recording by CallSid
     /// </summary>
     [HttpGet("call-sid/{callSid}")]
+    [RequirePermission("recordings.view")]
     public async Task<ActionResult<CallRecordingDto>> GetByCallSid(string callSid)
     {
         var recordings = await _recordingService.GetByCallIdAsync(callSid);
@@ -87,6 +93,7 @@ public class RecordingsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [RequirePermission("recordings.delete")]
     public async Task<ActionResult> DeleteRecording(Guid id)
     {
         var result = await _recordingService.DeleteRecordingAsync(id);
@@ -98,6 +105,7 @@ public class RecordingsController : ControllerBase
     /// Stream recording by relative file path (from CallLog.RecordingUrl)
     /// </summary>
     [HttpGet("stream-by-path")]
+    [RequirePermission("recordings.play")]
     public IActionResult StreamByPath([FromQuery] string path)
     {
         if (string.IsNullOrEmpty(path))

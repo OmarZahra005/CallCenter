@@ -71,5 +71,11 @@ public enum AuditEntityType
 
     // General
     System = 42,
-    Authentication = 43
+    Authentication = 43,
+
+    // RBAC (Role-Based Access Control)
+    Role = 44,
+    Permission = 45,
+    RolePermission = 46,
+    AgentRoleAssignment = 47
 }

@@ -5,8 +5,10 @@ using CallCenter.Application.DTOs.Transcription;
 using CallCenter.Application.Interfaces;
 using CallCenter.Application.Services;
 using CallCenter.Infrastructure;
+using CallCenter.API.Authorization;
 using CallCenter.API.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -16,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddMemoryCache(); // For permission caching
 
 // Add Swagger configuration with JWT support
 builder.Services.AddSwaggerGen(c =>
@@ -59,6 +62,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Configure Authorization with permission-based policies
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 builder.Services.AddAuthorization();
 
 // Configure CORS
@@ -68,7 +74,9 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                   "http://localhost:5173",   // Vite dev server (HTTP)
-                  "http://localhost:5175",   // Vite dev server alternate port
+                  "http://localhost:5175",
+                  "http://localhost:5174",
+                  "https://localhost:5174",// Vite dev server alternate port
                   "https://localhost:5173",  // Vite dev server (HTTPS)
                   "https://localhost:5175")  // Vite dev server alternate port (HTTPS)
               .AllowAnyHeader()

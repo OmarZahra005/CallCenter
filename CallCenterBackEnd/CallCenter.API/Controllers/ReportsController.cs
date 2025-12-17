@@ -1,3 +1,4 @@
+using CallCenter.API.Authorization;
 using CallCenter.Application.DTOs.Reports;
 using CallCenter.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ namespace CallCenter.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RequirePermission("reports.view")]
 public class ReportsController : ControllerBase
 {
     private readonly IReportService _reportService;

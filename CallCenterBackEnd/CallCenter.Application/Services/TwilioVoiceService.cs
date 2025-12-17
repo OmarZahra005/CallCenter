@@ -9,6 +9,7 @@ public interface ITwilioVoiceService
 {
     string GenerateAccessToken(string identity);
     bool ValidateSignature(string signature, string url, IDictionary<string, string> parameters);
+    Task<string> InitiateOutboundCallAsync(string toNumber, string fromNumber, string agentIdentity);
 }
 
 public class TwilioVoiceService : ITwilioVoiceService
@@ -81,6 +82,37 @@ public class TwilioVoiceService : ITwilioVoiceService
         {
             _logger.LogError(ex, "Error validating Twilio signature");
             return false;
+        }
+    }
+
+    public async Task<string> InitiateOutboundCallAsync(string toNumber, string fromNumber, string agentIdentity)
+    {
+        try
+        {
+            // Initialize Twilio client
+            Twilio.TwilioClient.Init(_options.AccountSid, _options.WebhookAuthToken);
+
+            // Create the outbound call
+            // The call will connect to the agent via the TwiML app
+            var call = await Twilio.Rest.Api.V2010.Account.CallResource.CreateAsync(
+                to: new Twilio.Types.PhoneNumber(toNumber),
+                from: new Twilio.Types.PhoneNumber(fromNumber),
+                url: new Uri($"{_options.BaseWebhookUrl}/api/twilio/voice/dialer-connect?agentIdentity={Uri.EscapeDataString(agentIdentity)}"),
+                statusCallback: new Uri($"{_options.BaseWebhookUrl}/api/twilio/voice/status"),
+                statusCallbackEvent: new List<string> { "initiated", "ringing", "answered", "completed" },
+                record: true,
+                recordingStatusCallback: $"{_options.BaseWebhookUrl}/api/twilio/voice/recording-status"
+            );
+
+            _logger.LogInformation("Initiated outbound call {CallSid} to {ToNumber} for agent {AgentIdentity}",
+                call.Sid, toNumber, agentIdentity);
+
+            return call.Sid;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initiate outbound call to {ToNumber}", toNumber);
+            throw;
         }
     }
 }

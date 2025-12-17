@@ -68,6 +68,10 @@ public static class DependencyInjection
         // Auth Services
         services.AddScoped<IAuthService, AuthService>();
 
+        // RBAC Services
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IRoleService, RoleService>();
+
         // Phase 5 Services
         services.AddScoped<ICallRecordingService, CallRecordingService>();
         services.AddScoped<IRecordingStorageService, RecordingStorageService>();

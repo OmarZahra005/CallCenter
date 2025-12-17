@@ -1,22 +1,69 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useCallback } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../hooks/useTheme';
 import { useSignalR } from '../../hooks/useSignalR';
 import { useCallCenterShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { usePermissions } from '../../hooks/usePermissions';
 import { NotificationDropdown, Toast, SkipLink, KeyboardShortcutsDialog } from '../ui';
 import { cn } from '../../utils/cn';
 import { pageVariants, pageTransition } from '../../utils/animations';
+import {
+  LayoutDashboard,
+  Headphones,
+  Phone,
+  Inbox,
+  Users,
+  UsersRound,
+  Calendar,
+  UserCircle,
+  Ticket,
+  Mic,
+  ClipboardCheck,
+  FileQuestion,
+  BookOpen,
+  BarChart3,
+  Download,
+  MessageCircle,
+  Zap,
+  Bell,
+  AlertTriangle,
+  UserCog,
+  Shield,
+  Settings,
+  FileText,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
+
+interface NavChild {
+  path: string;
+  label: string;
+  icon: React.ReactNode;
+  permission?: string;
+}
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  path?: string;
+  children?: NavChild[];
+  permission?: string;
+}
 
 const MainLayout = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
-  const { isConnected, notifications, markNotificationRead, clearNotifications } = useSignalR();
+  const { isConnected, notifications, markNotificationRead, markAllAsRead, clearNotifications } = useSignalR();
+  const { hasPermission, isSuperAdmin } = usePermissions();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['operations', 'workforce']);
 
   // Keyboard shortcuts
   const shortcuts = useCallCenterShortcuts({
@@ -37,25 +84,138 @@ const MainLayout = () => {
     i18n.changeLanguage(newLang);
   };
 
+  const { i18n } = useTranslation();
+
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  const navItems = [
-    { path: '/dashboard', label: t('nav.dashboard'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { path: '/agent-desktop', label: 'Agent Desktop', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
-    { path: '/call-center', label: t('nav.calls'), icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
-    { path: '/communications', label: 'Inbox', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-    { path: '/agents', label: t('nav.agents'), icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-    { path: '/tickets', label: t('nav.tickets'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-    { path: '/customers', label: t('nav.customers'), icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-    { path: '/teams', label: 'Teams', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { path: '/knowledge-base', label: t('nav.knowledgeBase'), icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-    { path: '/reports', label: t('nav.reports'), icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-    { path: '/qa', label: 'QA', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { path: '/wfm', label: 'WFM', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { path: '/settings', label: t('nav.settings'), icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(menuId)
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  // Navigation structure with parent/child hierarchy
+  const navItems: NavItem[] = [
+    {
+      id: 'dashboard',
+      label: t('nav.dashboard'),
+      icon: <LayoutDashboard className="w-5 h-5" />,
+      path: '/dashboard',
+    },
+    {
+      id: 'operations',
+      label: 'Operations',
+      icon: <Headphones className="w-5 h-5" />,
+      children: [
+        { path: '/agent-desktop', label: 'Agent Desktop', icon: <Headphones className="w-4 h-4" /> },
+        { path: '/call-center', label: t('nav.calls'), icon: <Phone className="w-4 h-4" /> },
+        { path: '/communications', label: 'Inbox', icon: <Inbox className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'workforce',
+      label: 'Workforce',
+      icon: <Users className="w-5 h-5" />,
+      children: [
+        { path: '/agents', label: t('nav.agents'), icon: <UserCircle className="w-4 h-4" /> },
+        { path: '/teams', label: 'Teams', icon: <UsersRound className="w-4 h-4" /> },
+        { path: '/wfm', label: 'WFM', icon: <Calendar className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'customers',
+      label: t('nav.customers'),
+      icon: <UserCircle className="w-5 h-5" />,
+      children: [
+        { path: '/customers', label: t('nav.customers'), icon: <UserCircle className="w-4 h-4" /> },
+        { path: '/tickets', label: t('nav.tickets'), icon: <Ticket className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'quality',
+      label: 'Quality',
+      icon: <ClipboardCheck className="w-5 h-5" />,
+      children: [
+        { path: '/recordings', label: 'Recordings', icon: <Mic className="w-4 h-4" /> },
+        { path: '/qa', label: 'QA', icon: <ClipboardCheck className="w-4 h-4" /> },
+        { path: '/surveys', label: 'Surveys', icon: <FileQuestion className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'knowledge',
+      label: 'Knowledge',
+      icon: <BookOpen className="w-5 h-5" />,
+      children: [
+        { path: '/knowledge-base', label: t('nav.knowledgeBase'), icon: <BookOpen className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'reports',
+      label: t('nav.reports'),
+      icon: <BarChart3 className="w-5 h-5" />,
+      children: [
+        { path: '/reports', label: t('nav.reports'), icon: <BarChart3 className="w-4 h-4" /> },
+        { path: '/admin/exports', label: 'Data Exports', icon: <Download className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'integrations',
+      label: 'Integrations',
+      icon: <Zap className="w-5 h-5" />,
+      children: [
+        { path: '/admin/whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
+        { path: '/admin/cti-events', label: 'CTI Events', icon: <Zap className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: <Bell className="w-5 h-5" />,
+      children: [
+        { path: '/settings/notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+        { path: '/admin/alerts', label: 'Alert Rules', icon: <AlertTriangle className="w-4 h-4" /> },
+      ],
+    },
+    {
+      id: 'settings',
+      label: t('nav.settings'),
+      icon: <Settings className="w-5 h-5" />,
+      children: [
+        { path: '/agents', label: 'Users', icon: <UserCog className="w-4 h-4" />, permission: 'agents.view' },
+        { path: '/admin/roles', label: 'Roles & Permissions', icon: <Shield className="w-4 h-4" />, permission: 'system.roles_manage' },
+        { path: '/admin/system-settings', label: 'System Settings', icon: <Settings className="w-4 h-4" />, permission: 'admin.settings' },
+        { path: '/admin/audit-logs', label: 'Audit Logs', icon: <FileText className="w-4 h-4" />, permission: 'admin.audit_logs' },
+      ],
+    },
   ];
+
+  // Check if a parent menu has an active child
+  const isParentActive = (children: NavChild[] | undefined) => {
+    if (!children) return false;
+    return children.some(child => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
+  };
+
+  // Filter visible children based on permissions
+  const getVisibleChildren = useCallback((children: NavChild[] | undefined) => {
+    if (!children) return [];
+    // Super admin sees everything
+    if (isSuperAdmin) return children;
+    // Filter children based on permission
+    return children.filter(child => !child.permission || hasPermission(child.permission));
+  }, [isSuperAdmin, hasPermission]);
+
+  // Filter nav items to hide parents with no visible children
+  const visibleNavItems = useMemo(() => {
+    return navItems.filter(item => {
+      if (item.path) return true; // Standalone items always visible
+      const visibleChildren = getVisibleChildren(item.children);
+      return visibleChildren.length > 0;
+    });
+  }, [navItems]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -81,51 +241,106 @@ const MainLayout = () => {
           {/* Navigation */}
           <nav id="navigation" className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin">
             <ul className="space-y-1" role="list">
-              {navItems.map((item, index) => (
+              {visibleNavItems.map((item, index) => (
                 <motion.li
-                  key={item.path}
+                  key={item.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.03 }}
                 >
-                  <NavLink
-                    to={item.path}
-                    className={({ isActive }) =>
-                      cn(
-                        'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                        isActive
-                          ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <motion.svg
-                          className={cn(
-                            'w-5 h-5 flex-shrink-0 transition-colors',
-                            isActive && 'text-primary-500'
-                          )}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          whileHover={{ scale: 1.1 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                        </motion.svg>
-                        <span>{item.label}</span>
-                        {isActive && (
-                          <motion.div
-                            className="absolute left-0 w-1 h-6 bg-primary-500 rounded-r-full"
-                            layoutId="activeIndicator"
-                            initial={false}
-                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                          />
+                  {/* Standalone item (no children) */}
+                  {item.path ? (
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
+                        cn(
+                          'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 shadow-sm'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <span className={cn('flex-shrink-0 transition-colors', isActive && 'text-primary-500')}>
+                            {item.icon}
+                          </span>
+                          <span>{item.label}</span>
+                        </>
+                      )}
+                    </NavLink>
+                  ) : (
+                    /* Parent item with children */
+                    <div>
+                      <button
+                        onClick={() => toggleMenu(item.id)}
+                        className={cn(
+                          'w-full group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                          isParentActive(item.children)
+                            ? 'bg-primary-50/50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
                         )}
-                      </>
-                    )}
-                  </NavLink>
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={cn('flex-shrink-0 transition-colors', isParentActive(item.children) && 'text-primary-500')}>
+                            {item.icon}
+                          </span>
+                          <span>{item.label}</span>
+                        </div>
+                        <motion.span
+                          animate={{ rotate: expandedMenus.includes(item.id) ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex-shrink-0"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </motion.span>
+                      </button>
+
+                      {/* Children */}
+                      <AnimatePresence>
+                        {expandedMenus.includes(item.id) && (
+                          <motion.ul
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden mt-1 ms-4 ps-3 border-s-2 border-gray-200 dark:border-gray-700 space-y-1"
+                          >
+                            {getVisibleChildren(item.children).map((child) => (
+                              <motion.li
+                                key={child.path}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                              >
+                                <NavLink
+                                  to={child.path}
+                                  className={({ isActive }) =>
+                                    cn(
+                                      'group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200',
+                                      isActive
+                                        ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium'
+                                        : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                                    )
+                                  }
+                                >
+                                  {({ isActive }) => (
+                                    <>
+                                      <span className={cn('flex-shrink-0 transition-colors', isActive && 'text-primary-500')}>
+                                        {child.icon}
+                                      </span>
+                                      <span>{child.label}</span>
+                                    </>
+                                  )}
+                                </NavLink>
+                              </motion.li>
+                            ))}
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
                 </motion.li>
               ))}
             </ul>
@@ -180,6 +395,7 @@ const MainLayout = () => {
             <NotificationDropdown
               notifications={notifications}
               onMarkRead={markNotificationRead}
+              onMarkAllRead={markAllAsRead}
               onClear={clearNotifications}
             />
 

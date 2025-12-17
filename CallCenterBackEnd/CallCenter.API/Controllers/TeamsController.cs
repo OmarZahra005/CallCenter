@@ -1,12 +1,15 @@
+using CallCenter.API.Authorization;
 using CallCenter.Application.DTOs.Common;
 using CallCenter.Application.DTOs.Teams;
 using CallCenter.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CallCenter.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TeamsController : ControllerBase
 {
     private readonly ITeamService _teamService;
@@ -17,6 +20,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpGet]
+    [RequirePermission("teams.view")]
     public async Task<ActionResult<PagedResponse<TeamDto>>> GetTeams([FromQuery] PagedRequest request)
     {
         var result = await _teamService.GetTeamsAsync(request);
@@ -24,6 +28,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [RequirePermission("teams.view")]
     public async Task<ActionResult<TeamDetailDto>> GetTeam(Guid id)
     {
         var team = await _teamService.GetTeamByIdAsync(id);
@@ -32,6 +37,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("teams.create")]
     public async Task<ActionResult<TeamDto>> CreateTeam(CreateTeamRequest request)
     {
         var team = await _teamService.CreateTeamAsync(request);
@@ -39,6 +45,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("teams.edit")]
     public async Task<ActionResult<TeamDto>> UpdateTeam(Guid id, UpdateTeamRequest request)
     {
         var team = await _teamService.UpdateTeamAsync(id, request);
@@ -47,6 +54,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [RequirePermission("teams.delete")]
     public async Task<ActionResult> DeleteTeam(Guid id)
     {
         var result = await _teamService.DeleteTeamAsync(id);
@@ -55,6 +63,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpGet("active")]
+    [RequirePermission("teams.view")]
     public async Task<ActionResult<List<TeamDto>>> GetActiveTeams()
     {
         var teams = await _teamService.GetActiveTeamsAsync();

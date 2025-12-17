@@ -1,61 +1,237 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, Button, Badge, Select } from '../../../components/ui';
+import { Calendar, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Plus, CheckCircle, XCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, Button, Badge, Modal, Input } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
+import apiClient from '../../../api/client';
 
 interface Shift {
   id: string;
   agentId: string;
-  agentName: string;
-  start: number; // hour
-  duration: number; // hours
-  type: 'regular' | 'overtime' | 'training';
+  agentName?: string;
+  startTime: string;
+  endTime: string;
+  shiftType: number; // 0=Regular, 1=Overtime, 2=Training
+  notes?: string;
+  createdAtUtc: string;
+}
+
+interface TimeOffRequest {
+  id: string;
+  agentId: string;
+  agentName?: string;
+  requestType: number; // 0=Vacation, 1=Sick, 2=Personal, 3=Other
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status: number; // 0=Pending, 1=Approved, 2=Rejected
+  createdAtUtc: string;
 }
 
 interface Agent {
   id: string;
   name: string;
-  adherence: number;
-  status: 'on-schedule' | 'early' | 'late' | 'absent';
+  email: string;
 }
 
+const shiftTypes = ['Regular', 'Overtime', 'Training'];
+const requestTypes = ['Vacation', 'Sick', 'Personal', 'Other'];
+const requestStatuses = ['Pending', 'Approved', 'Rejected'];
+
 const WorkforceManagement = () => {
-  const [_currentWeek, _setCurrentWeek] = useState(new Date());
-  void _currentWeek; // Week state available for future navigation
-  void _setCurrentWeek;
+  const queryClient = useQueryClient();
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [isTimeOffModalOpen, setIsTimeOffModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'schedule' | 'timeoff'>('schedule');
+
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
 
-  const shifts: Shift[] = [
-    { id: '1', agentId: '1', agentName: 'John Smith', start: 8, duration: 8, type: 'regular' },
-    { id: '2', agentId: '2', agentName: 'Sarah Johnson', start: 9, duration: 8, type: 'regular' },
-    { id: '3', agentId: '3', agentName: 'Mike Brown', start: 12, duration: 6, type: 'overtime' },
-    { id: '4', agentId: '4', agentName: 'Emily Davis', start: 8, duration: 4, type: 'training' },
-    { id: '5', agentId: '1', agentName: 'John Smith', start: 14, duration: 2, type: 'overtime' },
-  ];
+  const [newShift, setNewShift] = useState({
+    agentId: '',
+    startTime: '',
+    endTime: '',
+    shiftType: 0,
+    notes: '',
+  });
 
-  const agents: Agent[] = [
-    { id: '1', name: 'John Smith', adherence: 98, status: 'on-schedule' },
-    { id: '2', name: 'Sarah Johnson', adherence: 95, status: 'on-schedule' },
-    { id: '3', name: 'Mike Brown', adherence: 87, status: 'late' },
-    { id: '4', name: 'Emily Davis', adherence: 100, status: 'on-schedule' },
-    { id: '5', name: 'Chris Wilson', adherence: 0, status: 'absent' },
-  ];
+  const [newTimeOff, setNewTimeOff] = useState({
+    agentId: '',
+    requestType: 0,
+    startDate: '',
+    endDate: '',
+    reason: '',
+  });
 
-  const getShiftColor = (type: Shift['type']) => {
+  // Fetch shifts from backend
+  const { data: shiftsData, isLoading: shiftsLoading } = useQuery({
+    queryKey: ['shifts'],
+    queryFn: async () => {
+      const response = await apiClient.get('/workforce/shifts', {
+        params: { pageNumber: 1, pageSize: 100 }
+      });
+      return response.data;
+    }
+  });
+
+  // Fetch time-off requests
+  const { data: timeOffData, isLoading: timeOffLoading } = useQuery({
+    queryKey: ['timeoff-requests'],
+    queryFn: async () => {
+      const response = await apiClient.get('/workforce/timeoff', {
+        params: { pageNumber: 1, pageSize: 100 }
+      });
+      return response.data;
+    }
+  });
+
+  // Fetch pending time-off requests
+  const { data: pendingTimeOff } = useQuery({
+    queryKey: ['timeoff-pending'],
+    queryFn: async () => {
+      const response = await apiClient.get('/workforce/timeoff/pending');
+      return response.data;
+    }
+  });
+
+  // Fetch agents for dropdown
+  const { data: agentsData } = useQuery({
+    queryKey: ['agents'],
+    queryFn: async () => {
+      const response = await apiClient.get('/agents');
+      return response.data;
+    }
+  });
+
+  // Ensure agents is always an array
+  const agents: Agent[] = Array.isArray(agentsData)
+    ? agentsData
+    : Array.isArray(agentsData?.items)
+      ? agentsData.items
+      : [];
+
+  // Create shift mutation
+  const createShiftMutation = useMutation({
+    mutationFn: async (data: typeof newShift) => {
+      return apiClient.post('/workforce/shifts', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      setIsShiftModalOpen(false);
+      setNewShift({
+        agentId: '',
+        startTime: '',
+        endTime: '',
+        shiftType: 0,
+        notes: '',
+      });
+    }
+  });
+
+  // Delete shift mutation
+  const deleteShiftMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient.delete(`/workforce/shifts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+    }
+  });
+
+  // Create time-off request mutation
+  const createTimeOffMutation = useMutation({
+    mutationFn: async (data: typeof newTimeOff) => {
+      return apiClient.post('/workforce/timeoff', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeoff-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['timeoff-pending'] });
+      setIsTimeOffModalOpen(false);
+      setNewTimeOff({
+        agentId: '',
+        requestType: 0,
+        startDate: '',
+        endDate: '',
+        reason: '',
+      });
+    }
+  });
+
+  // Approve time-off mutation
+  const approveTimeOffMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient.post(`/workforce/timeoff/${id}/approve`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeoff-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['timeoff-pending'] });
+    }
+  });
+
+  // Reject time-off mutation
+  const rejectTimeOffMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient.post(`/workforce/timeoff/${id}/reject`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeoff-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['timeoff-pending'] });
+    }
+  });
+
+  const shifts: Shift[] = shiftsData?.items || shiftsData || [];
+  const timeOffRequests: TimeOffRequest[] = timeOffData?.items || timeOffData || [];
+
+  const getShiftColor = (type: number) => {
     switch (type) {
-      case 'regular': return 'bg-blue-500';
-      case 'overtime': return 'bg-purple-500';
-      case 'training': return 'bg-green-500';
+      case 0: return 'bg-blue-500';
+      case 1: return 'bg-purple-500';
+      case 2: return 'bg-green-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getAdherenceColor = (adherence: number) => {
-    if (adherence >= 95) return 'text-green-500';
-    if (adherence >= 85) return 'text-yellow-500';
-    return 'text-red-500';
+  const getStatusColor = (status: number): 'warning' | 'success' | 'danger' => {
+    switch (status) {
+      case 0: return 'warning';
+      case 1: return 'success';
+      case 2: return 'danger';
+      default: return 'warning';
+    }
   };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getWeekDates = () => {
+    const start = new Date(currentWeek);
+    start.setDate(start.getDate() - start.getDay() + 1); // Start from Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      return date;
+    });
+  };
+
+  const weekDates = getWeekDates();
+
+  // Calculate stats
+  const totalShifts = shifts.length;
+  const pendingRequests = (pendingTimeOff as TimeOffRequest[] || []).length;
+  const overtimeShifts = shifts.filter(s => s.shiftType === 1).length;
 
   return (
     <motion.div
@@ -68,167 +244,422 @@ const WorkforceManagement = () => {
       <motion.div variants={fadeUp} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workforce Management</h1>
-          <p className="text-gray-500 dark:text-gray-400">Schedule shifts and monitor adherence</p>
+          <p className="text-gray-500 dark:text-gray-400">Schedule shifts and manage time-off requests</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select
-            options={[
-              { value: 'week', label: 'Week View' },
-              { value: 'day', label: 'Day View' },
-              { value: 'month', label: 'Month View' },
-            ]}
-          />
-          <Button>
+          <div className="flex border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setActiveTab('schedule')}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'schedule'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Schedule
+            </button>
+            <button
+              onClick={() => setActiveTab('timeoff')}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'timeoff'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Time Off {pendingRequests > 0 && (
+                <Badge variant="danger" size="sm" className="ml-2">{pendingRequests}</Badge>
+              )}
+            </button>
+          </div>
+          <Button onClick={() => activeTab === 'schedule' ? setIsShiftModalOpen(true) : setIsTimeOffModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Shift
+            {activeTab === 'schedule' ? 'Add Shift' : 'Request Time Off'}
           </Button>
         </div>
       </motion.div>
 
       {/* Stats Cards */}
       <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Scheduled Agents', value: '24', icon: Users, color: 'blue' },
-          { label: 'Avg Adherence', value: '94%', icon: TrendingUp, color: 'green' },
-          { label: 'Open Shifts', value: '3', icon: Calendar, color: 'purple' },
-          { label: 'Overtime Hours', value: '12h', icon: Clock, color: 'orange' },
-        ].map((stat, index) => (
-          <Card key={index} className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                </div>
-                <div className={`w-10 h-10 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30 flex items-center justify-center`}>
-                  <stat.icon className={`w-5 h-5 text-${stat.color}-500`} />
-                </div>
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Shifts</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalShifts}</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Pending Requests</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{pendingRequests}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Overtime Shifts</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overtimeShifts}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Agents</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{(agents as Agent[] || []).length}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Users className="w-5 h-5 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Schedule Calendar */}
-        <motion.div variants={staggerItem} className="lg:col-span-3">
+      {activeTab === 'schedule' ? (
+        /* Schedule Calendar */
+        <motion.div variants={staggerItem}>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold">Weekly Schedule</h2>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newDate = new Date(currentWeek);
+                      newDate.setDate(newDate.getDate() - 7);
+                      setCurrentWeek(newDate);
+                    }}
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <span className="text-sm font-medium">Jan 15 - 21, 2024</span>
-                  <Button variant="ghost" size="sm">
+                  <span className="text-sm font-medium">
+                    {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newDate = new Date(currentWeek);
+                      newDate.setDate(newDate.getDate() + 7);
+                      setCurrentWeek(newDate);
+                    }}
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <div className="min-w-[800px]">
-                  {/* Header */}
-                  <div className="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
-                    <div className="p-3 text-sm font-medium text-gray-500">Time</div>
-                    {days.map((day) => (
-                      <div key={day} className="p-3 text-sm font-medium text-gray-900 dark:text-white text-center">
-                        {day}
-                      </div>
-                    ))}
+              {shiftsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="p-3 text-left text-sm font-medium text-gray-500">Agent</th>
+                          {weekDates.map((date, i) => (
+                            <th key={i} className="p-3 text-center text-sm font-medium text-gray-900 dark:text-white">
+                              <div>{days[i]}</div>
+                              <div className="text-xs text-gray-500">{date.getDate()}</div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(agents as Agent[] || []).map((agent) => {
+                          const agentShifts = shifts.filter(s => s.agentId === agent.id);
+                          return (
+                            <tr key={agent.id} className="border-b border-gray-100 dark:border-gray-800">
+                              <td className="p-3 text-sm font-medium text-gray-900 dark:text-white">
+                                {agent.name}
+                              </td>
+                              {weekDates.map((date, i) => {
+                                const dayShifts = agentShifts.filter(s => {
+                                  const shiftDate = new Date(s.startTime);
+                                  return shiftDate.toDateString() === date.toDateString();
+                                });
+                                return (
+                                  <td key={i} className="p-2 text-center">
+                                    {dayShifts.map(shift => (
+                                      <div
+                                        key={shift.id}
+                                        className={`${getShiftColor(shift.shiftType)} text-white text-xs p-1 rounded mb-1 cursor-pointer`}
+                                        onClick={() => {
+                                          if (confirm('Delete this shift?')) {
+                                            deleteShiftMutation.mutate(shift.id);
+                                          }
+                                        }}
+                                      >
+                                        {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+                                      </div>
+                                    ))}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
 
-                  {/* Time slots */}
-                  {hours.map((hour) => (
-                    <div key={hour} className="grid grid-cols-8 border-b border-gray-100 dark:border-gray-800">
-                      <div className="p-2 text-xs text-gray-500 border-e border-gray-100 dark:border-gray-800">
-                        {hour}:00
-                      </div>
-                      {days.map((day, dayIndex) => {
-                        const dayShifts = shifts.filter(
-                          (s) => s.start <= hour && s.start + s.duration > hour
-                        );
-                        return (
-                          <div
-                            key={`${day}-${hour}`}
-                            className="p-1 min-h-[40px] border-e border-gray-100 dark:border-gray-800 relative"
-                          >
-                            {dayIndex === 0 && dayShifts.map((shift) => (
-                              shift.start === hour && (
-                                <motion.div
-                                  key={shift.id}
-                                  initial={{ opacity: 0, scale: 0.9 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  whileHover={{ scale: 1.02 }}
-                                  className={`absolute inset-x-1 ${getShiftColor(shift.type)} text-white text-xs p-1 rounded cursor-pointer`}
-                                  style={{ height: `${shift.duration * 40 - 4}px` }}
-                                >
-                                  <div className="font-medium truncate">{shift.agentName}</div>
-                                  <div className="opacity-75">{shift.duration}h</div>
-                                </motion.div>
-                              )
-                            ))}
-                          </div>
-                        );
-                      })}
+                  {/* Legend */}
+                  <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-blue-500" />
+                      <span className="text-xs text-gray-500">Regular</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-blue-500" />
-                  <span className="text-xs text-gray-500">Regular</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-purple-500" />
-                  <span className="text-xs text-gray-500">Overtime</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-green-500" />
-                  <span className="text-xs text-gray-500">Training</span>
-                </div>
-              </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-purple-500" />
+                      <span className="text-xs text-gray-500">Overtime</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-green-500" />
+                      <span className="text-xs text-gray-500">Training</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Adherence Panel */}
+      ) : (
+        /* Time Off Requests */
         <motion.div variants={staggerItem}>
           <Card>
             <CardHeader>
-              <h2 className="font-semibold">Today's Adherence</h2>
+              <h2 className="font-semibold">Time Off Requests</h2>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {agents.map((agent) => (
-                  <div key={agent.id} className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{agent.name}</p>
-                      <Badge
-                        variant={
-                          agent.status === 'on-schedule' ? 'success' :
-                          agent.status === 'late' ? 'warning' : 'danger'
-                        }
-                        size="sm"
-                      >
-                        {agent.status.replace('-', ' ')}
-                      </Badge>
+              {timeOffLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {timeOffRequests.length > 0 ? (
+                    timeOffRequests.map((request) => (
+                      <div key={request.id} className="p-4 flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {request.agentName || `Agent ${request.agentId.substring(0, 8)}`}
+                            </p>
+                            <Badge variant={getStatusColor(request.status)}>
+                              {requestStatuses[request.status]}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {requestTypes[request.requestType]} - {formatDate(request.startDate)} to {formatDate(request.endDate)}
+                          </p>
+                          {request.reason && (
+                            <p className="text-sm text-gray-400 mt-1">{request.reason}</p>
+                          )}
+                        </div>
+                        {request.status === 0 && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => approveTimeOffMutation.mutate(request.id)}
+                              disabled={approveTimeOffMutation.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => rejectTimeOffMutation.mutate(request.id)}
+                              disabled={rejectTimeOffMutation.isPending}
+                            >
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-gray-500">
+                      No time-off requests found.
                     </div>
-                    <span className={`text-lg font-bold ${getAdherenceColor(agent.adherence)}`}>
-                      {agent.adherence}%
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
-      </div>
+      )}
+
+      {/* Create Shift Modal */}
+      <Modal
+        isOpen={isShiftModalOpen}
+        onClose={() => setIsShiftModalOpen(false)}
+        title="Add New Shift"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Agent
+            </label>
+            <select
+              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+              value={newShift.agentId}
+              onChange={(e) => setNewShift({ ...newShift, agentId: e.target.value })}
+            >
+              <option value="">Select an agent</option>
+              {(agents as Agent[] || []).map((agent) => (
+                <option key={agent.id} value={agent.id}>{agent.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Time"
+              type="datetime-local"
+              value={newShift.startTime}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewShift({ ...newShift, startTime: e.target.value })}
+            />
+            <Input
+              label="End Time"
+              type="datetime-local"
+              value={newShift.endTime}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewShift({ ...newShift, endTime: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Shift Type
+            </label>
+            <select
+              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+              value={newShift.shiftType}
+              onChange={(e) => setNewShift({ ...newShift, shiftType: parseInt(e.target.value) })}
+            >
+              {shiftTypes.map((type, i) => (
+                <option key={i} value={i}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <Input
+            label="Notes"
+            value={newShift.notes}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewShift({ ...newShift, notes: e.target.value })}
+            placeholder="Optional notes"
+          />
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="secondary" onClick={() => setIsShiftModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createShiftMutation.mutate(newShift)}
+              disabled={!newShift.agentId || !newShift.startTime || !newShift.endTime || createShiftMutation.isPending}
+            >
+              {createShiftMutation.isPending ? 'Creating...' : 'Create Shift'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Time Off Request Modal */}
+      <Modal
+        isOpen={isTimeOffModalOpen}
+        onClose={() => setIsTimeOffModalOpen(false)}
+        title="Request Time Off"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Agent
+            </label>
+            <select
+              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+              value={newTimeOff.agentId}
+              onChange={(e) => setNewTimeOff({ ...newTimeOff, agentId: e.target.value })}
+            >
+              <option value="">Select an agent</option>
+              {(agents as Agent[] || []).map((agent) => (
+                <option key={agent.id} value={agent.id}>{agent.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Request Type
+            </label>
+            <select
+              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+              value={newTimeOff.requestType}
+              onChange={(e) => setNewTimeOff({ ...newTimeOff, requestType: parseInt(e.target.value) })}
+            >
+              {requestTypes.map((type, i) => (
+                <option key={i} value={i}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Date"
+              type="date"
+              value={newTimeOff.startDate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, startDate: e.target.value })}
+            />
+            <Input
+              label="End Date"
+              type="date"
+              value={newTimeOff.endDate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, endDate: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Reason
+            </label>
+            <textarea
+              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+              rows={3}
+              value={newTimeOff.reason}
+              onChange={(e) => setNewTimeOff({ ...newTimeOff, reason: e.target.value })}
+              placeholder="Optional reason for time off"
+            />
+          </div>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="secondary" onClick={() => setIsTimeOffModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createTimeOffMutation.mutate(newTimeOff)}
+              disabled={!newTimeOff.agentId || !newTimeOff.startDate || !newTimeOff.endDate || createTimeOffMutation.isPending}
+            >
+              {createTimeOffMutation.isPending ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </motion.div>
   );
 };

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using CallCenter.Application.DTOs.Auth;
+using CallCenter.Domain.Constants;
 using CallCenter.Domain.Entities;
 using CallCenter.Domain.Enums;
 using CallCenter.Domain.Interfaces;
@@ -24,15 +25,21 @@ public class AuthService : IAuthService
 {
     private readonly IRepository<Agent> _agentRepository;
     private readonly IRepository<RefreshToken> _refreshTokenRepository;
+    private readonly IRepository<AgentRoleAssignment> _agentRoleRepository;
+    private readonly IPermissionService _permissionService;
     private readonly IConfiguration _configuration;
 
     public AuthService(
         IRepository<Agent> agentRepository,
         IRepository<RefreshToken> refreshTokenRepository,
+        IRepository<AgentRoleAssignment> agentRoleRepository,
+        IPermissionService permissionService,
         IConfiguration configuration)
     {
         _agentRepository = agentRepository;
         _refreshTokenRepository = refreshTokenRepository;
+        _agentRoleRepository = agentRoleRepository;
+        _permissionService = permissionService;
         _configuration = configuration;
     }
 
@@ -47,7 +54,10 @@ public class AuthService : IAuthService
         if (!VerifyPassword(request.Password, agent.PasswordHash))
             return null;
 
-        var accessToken = GenerateJwtToken(agent);
+        // Get RBAC info
+        var permissionsSummary = await _permissionService.GetAgentPermissionsSummaryAsync(agent.Id);
+
+        var accessToken = await GenerateJwtTokenAsync(agent);
         var refreshToken = await GenerateRefreshTokenAsync(agent.Id, ipAddress);
 
         return new AuthResponse
@@ -55,7 +65,13 @@ public class AuthService : IAuthService
             Id = agent.Id,
             Name = agent.Name,
             Email = agent.Email,
-            Role = agent.Role.ToString(),
+            TeamId = agent.TeamId?.ToString(),
+            IsSuperAdmin = permissionsSummary.IsSuperAdmin,
+            Roles = permissionsSummary.Roles,
+            Permissions = permissionsSummary.Permissions,
+#pragma warning disable CS0618 // Type or member is obsolete
+            Role = agent.Role.ToString(), // Legacy support
+#pragma warning restore CS0618
             AccessToken = accessToken,
             RefreshToken = refreshToken.Token,
             TokenExpires = DateTime.UtcNow.AddMinutes(GetTokenExpirationMinutes())
@@ -77,7 +93,9 @@ public class AuthService : IAuthService
             PasswordHash = HashPassword(request.Password),
             Phone = request.Phone,
             TeamId = request.TeamId,
-            Role = AgentRole.Agent,
+#pragma warning disable CS0618
+            Role = AgentRole.Agent, // Legacy field
+#pragma warning restore CS0618
             Status = AgentStatus.Active,
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
             CreatedAt = DateTime.UtcNow,
@@ -87,7 +105,20 @@ public class AuthService : IAuthService
         await _agentRepository.AddAsync(agent);
         await _agentRepository.SaveChangesAsync();
 
-        var accessToken = GenerateJwtToken(agent);
+        // Assign default Agent role
+        var agentRoleAssignment = new AgentRoleAssignment
+        {
+            AgentId = agent.Id,
+            RoleId = RbacConstants.AgentRoleId, // Default Agent role
+            AssignedAt = DateTime.UtcNow
+        };
+        await _agentRoleRepository.AddAsync(agentRoleAssignment);
+        await _agentRoleRepository.SaveChangesAsync();
+
+        // Get RBAC info
+        var permissionsSummary = await _permissionService.GetAgentPermissionsSummaryAsync(agent.Id);
+
+        var accessToken = await GenerateJwtTokenAsync(agent);
         var refreshToken = await GenerateRefreshTokenAsync(agent.Id, ipAddress);
 
         return new AuthResponse
@@ -95,7 +126,13 @@ public class AuthService : IAuthService
             Id = agent.Id,
             Name = agent.Name,
             Email = agent.Email,
-            Role = agent.Role.ToString(),
+            TeamId = agent.TeamId?.ToString(),
+            IsSuperAdmin = permissionsSummary.IsSuperAdmin,
+            Roles = permissionsSummary.Roles,
+            Permissions = permissionsSummary.Permissions,
+#pragma warning disable CS0618
+            Role = agent.Role.ToString(), // Legacy support
+#pragma warning restore CS0618
             AccessToken = accessToken,
             RefreshToken = refreshToken.Token,
             TokenExpires = DateTime.UtcNow.AddMinutes(GetTokenExpirationMinutes())
@@ -125,14 +162,23 @@ public class AuthService : IAuthService
         refreshToken.ReplacedByToken = newRefreshToken.Token;
         await _refreshTokenRepository.SaveChangesAsync();
 
-        var accessToken = GenerateJwtToken(agent);
+        // Get RBAC info
+        var permissionsSummary = await _permissionService.GetAgentPermissionsSummaryAsync(agent.Id);
+
+        var accessToken = await GenerateJwtTokenAsync(agent);
 
         return new AuthResponse
         {
             Id = agent.Id,
             Name = agent.Name,
             Email = agent.Email,
-            Role = agent.Role.ToString(),
+            TeamId = agent.TeamId?.ToString(),
+            IsSuperAdmin = permissionsSummary.IsSuperAdmin,
+            Roles = permissionsSummary.Roles,
+            Permissions = permissionsSummary.Permissions,
+#pragma warning disable CS0618
+            Role = agent.Role.ToString(), // Legacy support
+#pragma warning restore CS0618
             AccessToken = accessToken,
             RefreshToken = newRefreshToken.Token,
             TokenExpires = DateTime.UtcNow.AddMinutes(GetTokenExpirationMinutes())
@@ -174,20 +220,35 @@ public class AuthService : IAuthService
         return true;
     }
 
-    private string GenerateJwtToken(Agent agent)
+    private async Task<string> GenerateJwtTokenAsync(Agent agent)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
             _configuration["Jwt:Key"] ?? "DefaultSecretKeyThatShouldBeChangedInProduction123!"));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        // Get RBAC info for JWT claims
+        var isSuperAdmin = await _permissionService.IsSuperAdminAsync(agent.Id);
+        var roles = await _permissionService.GetAgentRolesAsync(agent.Id);
+
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, agent.Id.ToString()),
             new Claim(ClaimTypes.Name, agent.Name),
             new Claim(ClaimTypes.Email, agent.Email),
-            new Claim(ClaimTypes.Role, agent.Role.ToString()),
-            new Claim("TeamId", agent.TeamId?.ToString() ?? string.Empty)
+            new Claim("TeamId", agent.TeamId?.ToString() ?? string.Empty),
+            new Claim("IsSuperAdmin", isSuperAdmin.ToString().ToLower())
         };
+
+        // Add role claims (multiple roles supported)
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role.SystemName));
+        }
+
+        // Legacy: Add old enum role for backward compatibility
+#pragma warning disable CS0618
+        claims.Add(new Claim("LegacyRole", agent.Role.ToString()));
+#pragma warning restore CS0618
 
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"] ?? "CallCenterAPI",

@@ -1,4 +1,5 @@
 using CallCenter.Domain.Entities;
+using CallCenter.Infrastructure.Data.Seeds;
 using Microsoft.EntityFrameworkCore;
 
 namespace CallCenter.Infrastructure.Data;
@@ -101,6 +102,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<IvrMenuOption> IvrMenuOptions => Set<IvrMenuOption>();
     public DbSet<IvrCallSession> IvrCallSessions => Set<IvrCallSession>();
 
+    // RBAC (Role-Based Access Control)
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<AgentRoleAssignment> AgentRoleAssignments => Set<AgentRoleAssignment>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -137,6 +144,9 @@ public class ApplicationDbContext : DbContext
             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
+
+        // Seed RBAC (Roles, Permissions, RolePermissions, AgentRoleAssignment)
+        RbacSeedData.SeedRbac(modelBuilder);
 
         // Configure table names to use snake_case
         foreach (var entity in modelBuilder.Model.GetEntityTypes())

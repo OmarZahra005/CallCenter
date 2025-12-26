@@ -150,6 +150,67 @@ class TwilioDeviceManager {
     }
   }
 
+  /**
+   * Initiate a direct outbound call from the browser
+   * This connects the agent directly without needing to accept an incoming call
+   * @param params - Parameters to pass to TwiML endpoint (To, callLogId)
+   * @returns The Call object or null if device not ready
+   */
+  async connectOutbound(params: { To: string; callLogId: string }): Promise<Call | null> {
+    if (!this.device || this.device.state !== Device.State.Registered) {
+      console.error('Cannot connect outbound: Device not ready');
+      return null;
+    }
+
+    try {
+      console.log('Initiating direct outbound call with params:', params);
+
+      // device.connect() initiates an outbound call from the browser
+      // The params are sent to the TwiML application endpoint
+      const call = await this.device.connect({ params });
+
+      this.currentCall = call;
+      console.log('Outbound call initiated:', {
+        callSid: call.parameters.CallSid,
+        status: call.status(),
+      });
+
+      // Set up call event handlers
+      call.on('accept', () => {
+        console.log('Outbound call accepted - audio connected');
+        this.acceptedHandlers.forEach(handler => handler(call));
+      });
+
+      call.on('disconnect', () => {
+        console.log('Outbound call disconnected');
+        this.currentCall = null;
+        this.disconnectedHandlers.forEach(handler => handler());
+      });
+
+      call.on('cancel', () => {
+        console.log('Outbound call cancelled');
+        this.currentCall = null;
+        this.disconnectedHandlers.forEach(handler => handler());
+      });
+
+      call.on('error', (error: Error) => {
+        console.error('Outbound call error:', error);
+        this.errorHandlers.forEach(handler => handler(error));
+      });
+
+      // Listen for ringing status (when customer's phone rings)
+      call.on('ringing', () => {
+        console.log('Outbound call ringing - customer phone is ringing');
+      });
+
+      return call;
+    } catch (error) {
+      console.error('Error initiating outbound call:', error);
+      this.errorHandlers.forEach(handler => handler(error as Error));
+      return null;
+    }
+  }
+
   mute(isMuted: boolean): void {
     if (this.currentCall) {
       this.currentCall.mute(isMuted);

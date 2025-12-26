@@ -11,4 +11,6 @@ public interface IConversationRepository : IRepository<Conversation>
     Task<IReadOnlyList<Conversation>> GetActiveByAgentIdAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Conversation>> GetByStateAsync(ConversationState state, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Conversation>> GetByChannelAsync(Channel channel, CancellationToken cancellationToken = default);
+    Task AddMessageAsync(Guid conversationId, ConversationMessage message, CancellationToken cancellationToken = default);
+    Task UpdateStateAsync(Guid conversationId, ConversationState newState, CancellationToken cancellationToken = default);
 }

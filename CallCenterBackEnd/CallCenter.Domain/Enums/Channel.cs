@@ -6,5 +6,6 @@ public enum Channel
     Whatsapp,
     Email,
     Sms,
-    Webchat
+    Webchat,
+    SmartBot
 }

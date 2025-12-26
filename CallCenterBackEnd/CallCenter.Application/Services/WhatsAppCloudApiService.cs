@@ -9,40 +9,59 @@ using CallCenter.Domain.Entities;
 using CallCenter.Domain.Enums;
 using CallCenter.Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace CallCenter.Application.Services;
 
 public class WhatsAppCloudApiService : IWhatsAppService
 {
     private readonly HttpClient _httpClient;
-    private readonly WhatsAppOptions _options;
+    private readonly IDatabaseOptionsProvider _optionsProvider;
     private readonly IConversationRepository _conversationRepository;
     private readonly ICustomerRepository _customerRepository;
     private readonly ILogger<WhatsAppCloudApiService> _logger;
+    private WhatsAppOptions? _cachedOptions;
+    private bool _httpClientConfigured;
 
     public WhatsAppCloudApiService(
         HttpClient httpClient,
-        IOptions<WhatsAppOptions> options,
+        IDatabaseOptionsProvider optionsProvider,
         IConversationRepository conversationRepository,
         ICustomerRepository customerRepository,
         ILogger<WhatsAppCloudApiService> logger)
     {
         _httpClient = httpClient;
-        _options = options.Value;
+        _optionsProvider = optionsProvider;
         _conversationRepository = conversationRepository;
         _customerRepository = customerRepository;
         _logger = logger;
+    }
 
-        _httpClient.BaseAddress = new Uri($"https://graph.facebook.com/{_options.ApiVersion}/");
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _options.AccessToken);
+    /// <summary>
+    /// Get WhatsApp options and configure HttpClient if needed
+    /// </summary>
+    private async Task<WhatsAppOptions> GetOptionsAsync()
+    {
+        if (_cachedOptions == null)
+        {
+            _cachedOptions = await _optionsProvider.GetWhatsAppOptionsAsync();
+        }
+
+        if (!_httpClientConfigured && _cachedOptions != null)
+        {
+            _httpClient.BaseAddress = new Uri($"https://graph.facebook.com/{_cachedOptions.ApiVersion}/");
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _cachedOptions.AccessToken);
+            _httpClientConfigured = true;
+        }
+
+        return _cachedOptions!;
     }
 
     public async Task<bool> SendTextMessageAsync(string phoneNumber, string message)
     {
         try
         {
+            var options = await GetOptionsAsync();
             var request = new WhatsAppSendMessageRequest
             {
                 To = NormalizePhoneNumber(phoneNumber),
@@ -51,7 +70,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_options.PhoneNumberId}/messages",
+                $"{options.PhoneNumberId}/messages",
                 request,
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
@@ -76,6 +95,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
     {
         try
         {
+            var options = await GetOptionsAsync();
             var request = new WhatsAppSendMessageRequest
             {
                 To = NormalizePhoneNumber(phoneNumber),
@@ -84,7 +104,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_options.PhoneNumberId}/messages",
+                $"{options.PhoneNumberId}/messages",
                 request,
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
@@ -101,6 +121,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
     {
         try
         {
+            var options = await GetOptionsAsync();
             var request = new WhatsAppSendMessageRequest
             {
                 To = NormalizePhoneNumber(phoneNumber),
@@ -109,7 +130,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_options.PhoneNumberId}/messages",
+                $"{options.PhoneNumberId}/messages",
                 request,
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
@@ -293,14 +314,32 @@ public class WhatsAppCloudApiService : IWhatsAppService
         }
     }
 
-    public bool VerifyWebhookSignature(string signature, string payload)
+    public async Task<bool> VerifyWebhookSignatureAsync(string signature, string payload)
     {
-        if (string.IsNullOrEmpty(_options.AccessToken))
+        var options = await GetOptionsAsync();
+        if (string.IsNullOrEmpty(options.AccessToken))
             return true; // Skip verification if no token configured
 
         try
         {
-            var expectedSignature = "sha256=" + ComputeHmacSha256(payload, _options.AccessToken);
+            var expectedSignature = "sha256=" + ComputeHmacSha256(payload, options.AccessToken);
+            return signature == expectedSignature;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // Keep synchronous version for backwards compatibility using cached options
+    public bool VerifyWebhookSignature(string signature, string payload)
+    {
+        if (_cachedOptions == null || string.IsNullOrEmpty(_cachedOptions.AccessToken))
+            return true; // Skip verification if no token configured
+
+        try
+        {
+            var expectedSignature = "sha256=" + ComputeHmacSha256(payload, _cachedOptions.AccessToken);
             return signature == expectedSignature;
         }
         catch

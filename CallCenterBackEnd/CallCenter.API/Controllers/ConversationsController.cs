@@ -11,10 +11,14 @@ namespace CallCenter.API.Controllers;
 public class ConversationsController : ControllerBase
 {
     private readonly IConversationService _conversationService;
+    private readonly ISmartBotEscalationService _smartBotEscalationService;
 
-    public ConversationsController(IConversationService conversationService)
+    public ConversationsController(
+        IConversationService conversationService,
+        ISmartBotEscalationService smartBotEscalationService)
     {
         _conversationService = conversationService;
+        _smartBotEscalationService = smartBotEscalationService;
     }
 
     [HttpGet]
@@ -119,4 +123,49 @@ public class ConversationsController : ControllerBase
         if (note == null) return NotFound();
         return Ok(note);
     }
+
+    /// <summary>
+    /// Accepts a SmartBot handoff chat. Agent takes ownership of the conversation.
+    /// </summary>
+    [HttpPost("{id}/accept")]
+    public async Task<ActionResult<AcceptChatResult>> AcceptChat(Guid id, [FromBody] AcceptChatRequest request)
+    {
+        var result = await _smartBotEscalationService.AcceptChatAsync(id, request.AgentId, request.AgentName);
+        if (!result.Success)
+        {
+            return BadRequest(new { error = result.ErrorMessage });
+        }
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Handles agent disconnect from a SmartBot handoff chat.
+    /// Can optionally re-queue the escalation for another agent.
+    /// </summary>
+    [HttpPost("{id}/agent-disconnect")]
+    public async Task<IActionResult> AgentDisconnect(Guid id, [FromBody] AgentDisconnectRequest request)
+    {
+        var success = await _smartBotEscalationService.HandleAgentDisconnectAsync(
+            id, request.AgentId, request.Reason, request.Requeue);
+
+        if (!success)
+        {
+            return NotFound(new { error = "Conversation not found or agent not assigned" });
+        }
+
+        return Ok(new { success = true, requeued = request.Requeue });
+    }
+}
+
+public class AcceptChatRequest
+{
+    public Guid AgentId { get; set; }
+    public string AgentName { get; set; } = string.Empty;
+}
+
+public class AgentDisconnectRequest
+{
+    public Guid AgentId { get; set; }
+    public string Reason { get; set; } = "Agent disconnected";
+    public bool Requeue { get; set; } = true;
 }

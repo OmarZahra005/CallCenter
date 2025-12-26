@@ -17,11 +17,9 @@ import {
   X,
   Loader2,
   AlertCircle,
-  CheckCircle2,
   Eye,
-  ExternalLink,
 } from 'lucide-react';
-import { Button, Badge } from '../../../components/ui';
+import { Button } from '../../../components/ui';
 import apiClient from '../../../api/client';
 
 interface TicketAttachment {
@@ -127,7 +125,7 @@ export const TicketAttachments = ({
   const queryClient = useQueryClient();
 
   // Fetch attachments
-  const { data: attachments = [], isLoading, error } = useQuery<TicketAttachment[]>({
+  const { data: attachments = [], isLoading, error: _error } = useQuery<TicketAttachment[]>({
     queryKey: ['ticket-attachments', ticketId],
     queryFn: async () => {
       try {

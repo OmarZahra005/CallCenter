@@ -8,6 +8,7 @@ namespace CallCenter.Application.Services;
 public interface IAgentStateService
 {
     Task<AgentStateDto?> GetCurrentStateAsync(Guid agentId);
+    Task<List<AgentStateDto>> GetAllCurrentStatesAsync();
     Task<List<AgentStateDto>> GetStateHistoryAsync(Guid agentId);
     Task<AgentStateDto> UpdateStateAsync(Guid agentId, UpdateAgentStateRequest request);
 }
@@ -32,6 +33,20 @@ public class AgentStateService : IAgentStateService
             .FirstOrDefault();
 
         return state != null ? MapToDto(state) : null;
+    }
+
+    public async Task<List<AgentStateDto>> GetAllCurrentStatesAsync()
+    {
+        var all = await _repository.GetAllAsync();
+
+        // Group by agent and get the most recent state for each
+        var currentStates = all
+            .GroupBy(s => s.AgentId)
+            .Select(g => g.OrderByDescending(s => s.ChangedAt).First())
+            .Select(MapToDto)
+            .ToList();
+
+        return currentStates;
     }
 
     public async Task<List<AgentStateDto>> GetStateHistoryAsync(Guid agentId)

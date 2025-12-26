@@ -23,10 +23,19 @@ public class Conversation
     public bool FollowUpRequired { get; set; }
     public DateTime? FollowUpDate { get; set; }
 
+    // SmartBot Handoff fields
+    public HandoffStatus HandoffStatus { get; set; } = HandoffStatus.None;
+    public string? SmartBotSessionId { get; set; }
+    public DateTime? HandoffRequestedAt { get; set; }
+    public DateTime? HandoffAcceptedAt { get; set; }
+    public DateTime? HandoffEndedAt { get; set; }
+    public string? HandoffEndedBy { get; set; }
+
     // Navigation properties
     public virtual Customer Customer { get; set; } = null!;
     public virtual Agent? Agent { get; set; }
     public virtual Queue? Queue { get; set; }
+    public virtual SmartBotEscalation? SmartBotEscalation { get; set; }
     public virtual ICollection<ConversationMessage> Messages { get; set; } = new List<ConversationMessage>();
     public virtual ICollection<ConversationNote> Notes { get; set; } = new List<ConversationNote>();
     public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();

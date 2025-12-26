@@ -7,7 +7,6 @@ import {
   Mail,
   Smartphone,
   Volume2,
-  VolumeX,
   Monitor,
   Check,
   X,
@@ -64,7 +63,7 @@ const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   { id: 'system', name: 'System', description: 'Maintenance, updates, announcements', icon: Zap, color: 'text-gray-500' },
 ];
 
-const mockPreferences: NotificationPreference[] = NOTIFICATION_CATEGORIES.map((cat) => ({
+const defaultPreferences: NotificationPreference[] = NOTIFICATION_CATEGORIES.map((cat) => ({
   categoryId: cat.id,
   inApp: true,
   email: cat.id !== 'calls',
@@ -72,60 +71,10 @@ const mockPreferences: NotificationPreference[] = NOTIFICATION_CATEGORIES.map((c
   sound: ['calls', 'messages'].includes(cat.id),
 }));
 
-const mockHistory: NotificationHistory[] = [
-  {
-    id: 'notif-1',
-    title: 'Incoming Call',
-    message: 'Call from +1 (555) 123-4567',
-    category: 'calls',
-    type: 'info',
-    read: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'notif-2',
-    title: 'New Ticket Assigned',
-    message: 'Ticket #1234 has been assigned to you',
-    category: 'tickets',
-    type: 'info',
-    read: false,
-    createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    actionUrl: '/tickets/1234',
-  },
-  {
-    id: 'notif-3',
-    title: 'Queue Alert',
-    message: 'Support queue wait time exceeded 5 minutes',
-    category: 'alerts',
-    type: 'warning',
-    read: true,
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'notif-4',
-    title: 'QA Evaluation Complete',
-    message: 'Your call has been evaluated. Score: 92%',
-    category: 'qa',
-    type: 'success',
-    read: true,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    actionUrl: '/qa',
-  },
-  {
-    id: 'notif-5',
-    title: 'Shift Reminder',
-    message: 'Your shift starts in 30 minutes',
-    category: 'schedule',
-    type: 'info',
-    read: true,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
 export const NotificationSettings = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'preferences' | 'history'>('preferences');
-  const [preferences, setPreferences] = useState<NotificationPreference[]>(mockPreferences);
+  const [preferences, setPreferences] = useState<NotificationPreference[]>(defaultPreferences);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<NotificationHistory | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -134,14 +83,12 @@ export const NotificationSettings = () => {
   const { isLoading: prefsLoading } = useQuery<NotificationPreference[]>({
     queryKey: ['notification-preferences'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/users/me/notification-preferences');
-        const data = response.data.items || response.data || [];
+      const response = await apiClient.get('/users/me/notification-preferences');
+      const data = response.data.items || response.data || [];
+      if (data.length > 0) {
         setPreferences(data);
-        return data;
-      } catch {
-        return mockPreferences;
       }
+      return data;
     },
   });
 
@@ -149,12 +96,8 @@ export const NotificationSettings = () => {
   const { data: history = [], isLoading: historyLoading } = useQuery<NotificationHistory[]>({
     queryKey: ['notification-history'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/users/me/notifications');
-        return response.data.items || response.data || [];
-      } catch {
-        return mockHistory;
-      }
+      const response = await apiClient.get('/users/me/notifications');
+      return response.data.items || response.data || [];
     },
   });
 
@@ -216,7 +159,7 @@ export const NotificationSettings = () => {
   };
 
   const handleReset = () => {
-    setPreferences(mockPreferences);
+    setPreferences(defaultPreferences);
     setHasChanges(false);
   };
 

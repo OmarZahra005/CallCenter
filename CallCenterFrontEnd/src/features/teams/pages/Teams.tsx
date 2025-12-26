@@ -24,9 +24,6 @@ import {
   ChevronDown,
   Calendar,
   MoreVertical,
-  Shield,
-  Target,
-  TrendingUp,
 } from 'lucide-react';
 
 // Animation variants
@@ -72,7 +69,7 @@ const initialFormData: TeamFormData = {
 };
 
 const Teams = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');

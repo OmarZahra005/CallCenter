@@ -18,6 +18,15 @@ public class ConversationDto
     public DateTime? EndTime { get; set; }
     public int? DurationSeconds { get; set; }
     public int MessageCount { get; set; }
+
+    // SmartBot Handoff fields
+    public HandoffStatus HandoffStatus { get; set; }
+    public string? SmartBotSessionId { get; set; }
+    public DateTime? HandoffRequestedAt { get; set; }
+    public DateTime? HandoffAcceptedAt { get; set; }
+    public DateTime? HandoffEndedAt { get; set; }
+    public string? HandoffEndedBy { get; set; }
+    public bool IsSmartBotHandoff => HandoffStatus != HandoffStatus.None;
 }
 
 public class ConversationDetailDto : ConversationDto

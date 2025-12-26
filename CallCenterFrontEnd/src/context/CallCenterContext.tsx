@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useCallback } 
 import { Call } from '@twilio/voice-sdk';
 import * as signalR from '@microsoft/signalr';
 import type { CallSummary } from '../types/callTypes';
-import { getActiveCalls, getCallHistory, getVoiceToken } from '../api/callApi';
+import { getActiveCalls, getCallHistory, getVoiceToken, prepareOutboundCall } from '../api/callApi';
 import { createNotificationHubConnection } from '../realtime/notificationHubClient';
 import { twilioDeviceManager } from '../twilio/twilioDeviceService';
 
@@ -21,6 +21,10 @@ interface CallCenterState {
   isLoading: boolean;
   error: string | null;
   incomingTwilioCall: Call | null;
+  // Outbound call tracking
+  pendingOutboundCall: { callId: string; customerNumber: string; customerName?: string } | null;
+  isInitiatingOutbound: boolean;
+  isConnectingOutbound: boolean;  // True when browser is connecting via device.connect()
 }
 
 interface CallCenterActions {
@@ -33,6 +37,8 @@ interface CallCenterActions {
   toggleMute: () => void;
   toggleHold: () => void;
   setAgentIdentity: (id: string) => Promise<void>;
+  // Direct outbound call - browser connects directly, no accept step
+  initiateDirectOutbound: (customerNumber: string, customerId?: string, customerName?: string) => Promise<void>;
 }
 
 type CallCenterContextType = CallCenterState & CallCenterActions;
@@ -55,7 +61,10 @@ type Action =
   | { type: 'SET_IS_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'UPDATE_CALL'; payload: CallSummary }
-  | { type: 'ADD_CALL'; payload: CallSummary };
+  | { type: 'ADD_CALL'; payload: CallSummary }
+  | { type: 'SET_PENDING_OUTBOUND'; payload: { callId: string; customerNumber: string; customerName?: string } | null }
+  | { type: 'SET_IS_INITIATING_OUTBOUND'; payload: boolean }
+  | { type: 'SET_IS_CONNECTING_OUTBOUND'; payload: boolean };
 
 const initialState: CallCenterState = {
   activeCalls: [],
@@ -72,6 +81,9 @@ const initialState: CallCenterState = {
   isLoading: false,
   error: null,
   incomingTwilioCall: null,
+  pendingOutboundCall: null,
+  isInitiatingOutbound: false,
+  isConnectingOutbound: false,
 };
 
 const reducer = (state: CallCenterState, action: Action): CallCenterState => {
@@ -142,6 +154,12 @@ const reducer = (state: CallCenterState, action: Action): CallCenterState => {
           : state.incomingRingingCall,
       };
     }
+    case 'SET_PENDING_OUTBOUND':
+      return { ...state, pendingOutboundCall: action.payload };
+    case 'SET_IS_INITIATING_OUTBOUND':
+      return { ...state, isInitiatingOutbound: action.payload };
+    case 'SET_IS_CONNECTING_OUTBOUND':
+      return { ...state, isConnectingOutbound: action.payload };
     default:
       return state;
   }
@@ -150,6 +168,13 @@ const reducer = (state: CallCenterState, action: Action): CallCenterState => {
 export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const hubConnectionRef = React.useRef<signalR.HubConnection | null>(null);
+  // Ref to track pending outbound call for use in Twilio callbacks
+  const pendingOutboundRef = React.useRef<{ callId: string; customerNumber: string } | null>(null);
+
+  // Keep ref in sync with state
+  React.useEffect(() => {
+    pendingOutboundRef.current = state.pendingOutboundCall;
+  }, [state.pendingOutboundCall]);
 
   const refreshActive = useCallback(async () => {
     try {
@@ -203,6 +228,9 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     dispatch({ type: 'SET_CALL_START_TIME', payload: null });
     dispatch({ type: 'SET_IS_MUTED', payload: false });
     dispatch({ type: 'SET_IS_ON_HOLD', payload: false });
+    // Clear outbound state
+    dispatch({ type: 'SET_PENDING_OUTBOUND', payload: null });
+    dispatch({ type: 'SET_IS_INITIATING_OUTBOUND', payload: false });
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -243,21 +271,35 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       twilioDeviceManager.onAccepted((call: Call) => {
         console.log('Call accepted - audio connected, showing call panel');
+
+        // Check if this is an outbound call (we have a pending outbound)
+        const pendingOutbound = pendingOutboundRef.current;
+        const isOutbound = pendingOutbound !== null;
+
         // Build call summary from Twilio call parameters
         const callSummary: CallSummary = {
-          id: call.parameters.CallSid || `twilio-${Date.now()}`,
+          id: pendingOutbound?.callId || call.parameters.CallSid || `twilio-${Date.now()}`,
           providerCallId: call.parameters.CallSid || '',
-          fromNumber: call.parameters.From || 'Unknown',
-          toNumber: call.parameters.To || identity || '',
-          direction: 'inbound',
+          fromNumber: isOutbound ? identity : (call.parameters.From || 'Unknown'),
+          toNumber: isOutbound ? pendingOutbound.customerNumber : (call.parameters.To || identity || ''),
+          direction: isOutbound ? 'outbound' : 'inbound',
           status: 'InProgress',
           startedAtUtc: new Date().toISOString(),
           endedAtUtc: null,
           recordingUrl: null,
         };
+
+        console.log(`${isOutbound ? 'Outbound' : 'Inbound'} call connected:`, callSummary);
+
         dispatch({ type: 'SET_ACTIVE_CALL', payload: callSummary });
         dispatch({ type: 'SET_CALL_START_TIME', payload: new Date() });
         dispatch({ type: 'SET_IS_ANSWERING', payload: false });
+
+        // Clear pending outbound after call is connected
+        if (isOutbound) {
+          dispatch({ type: 'SET_IS_INITIATING_OUTBOUND', payload: false });
+          dispatch({ type: 'SET_IS_CONNECTING_OUTBOUND', payload: false });
+        }
       });
 
       twilioDeviceManager.onDisconnected(() => {
@@ -268,6 +310,10 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         dispatch({ type: 'SET_CALL_START_TIME', payload: null });
         dispatch({ type: 'SET_IS_MUTED', payload: false });
         dispatch({ type: 'SET_IS_ON_HOLD', payload: false });
+        // Clear outbound state
+        dispatch({ type: 'SET_PENDING_OUTBOUND', payload: null });
+        dispatch({ type: 'SET_IS_INITIATING_OUTBOUND', payload: false });
+        dispatch({ type: 'SET_IS_CONNECTING_OUTBOUND', payload: false });
       });
 
       dispatch({ type: 'SET_IS_LOADING', payload: false });
@@ -277,6 +323,91 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       dispatch({ type: 'SET_IS_LOADING', payload: false });
     }
   }, []);
+
+  /**
+   * Initiate a direct outbound call - browser connects directly, no accept step
+   * Flow: prepareOutboundCall API → device.connect() → conference + customer dial
+   */
+  const initiateDirectOutbound = useCallback(async (
+    customerNumber: string,
+    customerId?: string,
+    customerName?: string
+  ) => {
+    if (!state.twilioReady) {
+      dispatch({ type: 'SET_ERROR', payload: 'Voice system not ready' });
+      return;
+    }
+
+    if (state.activeCall || state.isConnectingOutbound) {
+      dispatch({ type: 'SET_ERROR', payload: 'Already on a call or connecting' });
+      return;
+    }
+
+    try {
+      dispatch({ type: 'SET_IS_CONNECTING_OUTBOUND', payload: true });
+      dispatch({ type: 'SET_ERROR', payload: null });
+
+      // Generate idempotency key
+      const idempotencyKey = crypto.randomUUID();
+
+      console.log('Preparing outbound call:', { customerNumber, customerId, customerName, idempotencyKey });
+
+      // Step 1: Call API to create CallLog and get callLogId
+      const prepareResult = await prepareOutboundCall({
+        customerNumber,
+        customerId,
+        customerName,
+        idempotencyKey,
+      });
+
+      console.log('Outbound call prepared:', prepareResult);
+
+      // Handle both camelCase and PascalCase responses (backend JSON serialization)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = prepareResult as any;
+      const parsedCallLogId = result.callLogId || result.CallLogId;
+      const parsedCustomerNumber = result.customerNumber || result.CustomerNumber;
+      const parsedCustomerName = result.customerName || result.CustomerName;
+
+      console.log('Parsed response - callLogId:', parsedCallLogId, 'customerNumber:', parsedCustomerNumber);
+
+      if (!parsedCallLogId || !parsedCustomerNumber) {
+        throw new Error(`Invalid response from prepare-outbound: callLogId=${parsedCallLogId}, customerNumber=${parsedCustomerNumber}`);
+      }
+
+      // Set pending outbound for tracking
+      dispatch({
+        type: 'SET_PENDING_OUTBOUND',
+        payload: {
+          callId: parsedCallLogId,
+          customerNumber: parsedCustomerNumber,
+          customerName: parsedCustomerName,
+        },
+      });
+
+      // Step 2: Connect browser directly using device.connect()
+      console.log('Connecting browser via device.connect() with params:', { To: parsedCustomerNumber, callLogId: parsedCallLogId });
+      const call = await twilioDeviceManager.connectOutbound({
+        To: parsedCustomerNumber,
+        callLogId: parsedCallLogId,
+      });
+
+      if (!call) {
+        throw new Error('Failed to connect outbound call');
+      }
+
+      console.log('Browser connected, call initiated:', call.parameters);
+
+      // The onAccepted handler will set activeCall when audio connects
+      // isConnectingOutbound will be cleared when call connects or fails
+
+    } catch (error) {
+      console.error('Failed to initiate direct outbound call:', error);
+      dispatch({ type: 'SET_ERROR', payload: `Failed to call: ${(error as Error).message}` });
+      dispatch({ type: 'SET_IS_CONNECTING_OUTBOUND', payload: false });
+      dispatch({ type: 'SET_PENDING_OUTBOUND', payload: null });
+    }
+  }, [state.twilioReady, state.activeCall, state.isConnectingOutbound]);
 
   useEffect(() => {
     const initializeHub = async () => {
@@ -292,6 +423,34 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         connection.on('CallStatusChanged', (callSummary: CallSummary) => {
           console.log('CallStatusChanged event received:', callSummary);
           dispatch({ type: 'UPDATE_CALL', payload: callSummary });
+        });
+
+        // Outbound call events
+        connection.on('OutboundCallInitiated', (data: { callId: string; providerCallId: string; customerNumber: string; agentIdentity: string; status: string }) => {
+          console.log('OutboundCallInitiated event received:', data);
+          dispatch({ type: 'SET_PENDING_OUTBOUND', payload: { callId: data.callId, customerNumber: data.customerNumber } });
+          dispatch({ type: 'SET_IS_INITIATING_OUTBOUND', payload: true });
+        });
+
+        connection.on('OutboundCallStatusChanged', (data: { callId: string; providerCallId: string; status: string; customerNumber: string }) => {
+          console.log('OutboundCallStatusChanged event received:', data);
+          // If call completed or failed, clear pending outbound
+          if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(data.status.toLowerCase())) {
+            dispatch({ type: 'SET_PENDING_OUTBOUND', payload: null });
+            dispatch({ type: 'SET_IS_INITIATING_OUTBOUND', payload: false });
+          }
+        });
+
+        connection.on('OutboundCallRingingCustomer', (data: { callId: string; customerNumber: string; conferenceSid: string }) => {
+          console.log('OutboundCallRingingCustomer event received:', data);
+          // Customer is now being dialed - agent is connected
+        });
+
+        connection.on('OutboundCallFailed', (data: { callId: string; status: string }) => {
+          console.log('OutboundCallFailed event received:', data);
+          dispatch({ type: 'SET_PENDING_OUTBOUND', payload: null });
+          dispatch({ type: 'SET_IS_INITIATING_OUTBOUND', payload: false });
+          dispatch({ type: 'SET_ERROR', payload: `Outbound call failed: ${data.status}` });
         });
 
         await connection.start();
@@ -326,6 +485,7 @@ export const CallCenterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     toggleMute,
     toggleHold,
     setAgentIdentity,
+    initiateDirectOutbound,
   };
 
   return (
@@ -341,4 +501,13 @@ export const useCallCenter = (): CallCenterContextType => {
     throw new Error('useCallCenter must be used within a CallCenterProvider');
   }
   return context;
+};
+
+/**
+ * Safe version of useCallCenter that returns null when outside CallCenterProvider.
+ * Use this in components that may be rendered outside the provider context.
+ */
+export const useCallCenterSafe = (): CallCenterContextType | null => {
+  const context = useContext(CallCenterContext);
+  return context ?? null;
 };

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Check, Loader2, Save, RefreshCw, ShieldCheck } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
+import { Button, Badge } from '../../../components/ui';
 import {
   rolesApi,
   permissionsApi,
@@ -218,7 +217,7 @@ export default function PermissionMatrix() {
     return (
       <div className="text-center py-12">
         <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={loadData} variant="default">
+        <Button onClick={loadData} variant="secondary">
           Retry
         </Button>
       </div>
@@ -236,7 +235,7 @@ export default function PermissionMatrix() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="default"
+            variant="secondary"
             onClick={handleReset}
             disabled={!hasAnyChanges() || saving}
             className="flex items-center gap-2"
@@ -277,7 +276,7 @@ export default function PermissionMatrix() {
                       {role.name}
                     </span>
                     {role.isSuperAdmin && (
-                      <ShieldCheck className="w-4 h-4 text-amber-500" title="Super Admin - All permissions" />
+                      <ShieldCheck className="w-4 h-4 text-amber-500" aria-label="Super Admin - All permissions" />
                     )}
                     {rolePermissionsMap.get(role.id)?.hasChanges && (
                       <Badge variant="warning" className="text-xs py-0">

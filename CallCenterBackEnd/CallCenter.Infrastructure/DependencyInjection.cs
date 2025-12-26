@@ -1,14 +1,17 @@
-using CallCenter.Application.DTOs.WhatsApp;
 using CallCenter.Application.Interfaces;
+using CallCenter.Application.Options;
 using CallCenter.Application.Services;
 using CallCenter.Domain.Interfaces;
 using CallCenter.Domain.Interfaces.Repositories;
 using CallCenter.Infrastructure.Data;
+using CallCenter.Infrastructure.External;
 using CallCenter.Infrastructure.Repositories;
 using CallCenter.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
+using Polly.Extensions.Http;
 
 namespace CallCenter.Infrastructure;
 
@@ -19,6 +22,10 @@ public static class DependencyInjection
         // DbContext
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+
+        // CRM Integration Options
+        services.Configure<CrmIntegrationOptions>(
+            configuration.GetSection(CrmIntegrationOptions.SectionName));
 
         // Generic Repository
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -41,6 +48,12 @@ public static class DependencyInjection
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();
         services.AddScoped<ICallLogRepository, CallLogRepository>();
         services.AddScoped<IConversationNoteRepository, ConversationNoteRepository>();
+        services.AddScoped<IConversationMessageRepository, ConversationMessageRepository>();
+        services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+        services.AddScoped<ICallSurveyRepository, CallSurveyRepository>();
+
+        // Encryption Service (singleton for performance)
+        services.AddSingleton<IEncryptionService, EncryptionService>();
 
         // Services
         services.AddSingleton<ILocalizationService, LocalizationService>();
@@ -102,22 +115,21 @@ public static class DependencyInjection
         // IVR Services
         services.AddScoped<IIvrService, Services.IvrService>();
 
+        // System Settings Services
+        services.AddScoped<ISystemSettingService, SystemSettingService>();
+        services.AddScoped<IDatabaseOptionsProvider, DatabaseOptionsProvider>();
+
+        // Post-Call Survey Services
+        services.AddScoped<ICallSurveyService, CallSurveyService>();
+        services.AddScoped<ISurveyMessageService, SurveyMessageService>();
+
         // Mock CTI Services
         services.AddScoped<IMockCtiService, MockCtiService>();
 
         // WhatsApp Services
-        var whatsAppSection = configuration.GetSection("WhatsApp");
-        var useMockData = bool.Parse(whatsAppSection["UseMockData"] ?? "true");
-
-        services.Configure<WhatsAppOptions>(options =>
-        {
-            options.UseMockData = useMockData;
-            options.PhoneNumberId = whatsAppSection["PhoneNumberId"] ?? "";
-            options.AccessToken = whatsAppSection["AccessToken"] ?? "";
-            options.WebhookVerifyToken = whatsAppSection["WebhookVerifyToken"] ?? "";
-            options.BusinessAccountId = whatsAppSection["BusinessAccountId"] ?? "";
-            options.ApiVersion = whatsAppSection["ApiVersion"] ?? "v17.0";
-        });
+        // Note: WhatsApp options are now loaded from database via IDatabaseOptionsProvider
+        // The UseMockData flag in config only controls which service implementation is used at startup
+        var useMockData = bool.Parse(configuration["WhatsApp:UseMockData"] ?? "true");
 
         if (useMockData)
         {
@@ -126,9 +138,47 @@ public static class DependencyInjection
         else
         {
             services.AddScoped<IWhatsAppService, WhatsAppCloudApiService>();
-            services.AddScoped<HttpClient>();
+            services.AddHttpClient<WhatsAppCloudApiService>();
         }
 
+        // CRM Integration Service with Polly resilience policies
+        var crmOptions = configuration.GetSection(CrmIntegrationOptions.SectionName).Get<CrmIntegrationOptions>()
+            ?? new CrmIntegrationOptions();
+
+        services.AddHttpClient<ICrmIntegrationService, CrmIntegrationService>()
+            .AddPolicyHandler(GetRetryPolicy(crmOptions))
+            .AddPolicyHandler(GetCircuitBreakerPolicy(crmOptions));
+
         return services;
+    }
+
+    /// <summary>
+    /// Creates a retry policy with exponential backoff for transient HTTP errors.
+    /// </summary>
+    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(CrmIntegrationOptions options)
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            .WaitAndRetryAsync(
+                options.RetryCount,
+                retryAttempt => TimeSpan.FromMilliseconds(options.RetryDelayMs * Math.Pow(2, retryAttempt - 1)),
+                onRetry: (outcome, timespan, retryAttempt, context) =>
+                {
+                    // Logging is handled by the service itself
+                });
+    }
+
+    /// <summary>
+    /// Creates a circuit breaker policy to prevent cascading failures.
+    /// Opens after threshold failures, stays open for duration.
+    /// </summary>
+    private static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(CrmIntegrationOptions options)
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(
+                options.CircuitBreakerThreshold,
+                TimeSpan.FromSeconds(options.CircuitBreakerDurationSeconds));
     }
 }

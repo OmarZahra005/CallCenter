@@ -12,6 +12,15 @@ public class CallRecordingDto
     public bool IsEncrypted { get; set; }
     public DateTime? RetentionUntil { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Agent information
+    public Guid? AgentId { get; set; }
+    public string? AgentName { get; set; }
+
+    // Customer information
+    public Guid? CustomerId { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
 }
 
 public class CreateRecordingRequest

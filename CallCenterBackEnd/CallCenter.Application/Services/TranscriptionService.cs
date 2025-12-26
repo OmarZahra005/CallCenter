@@ -1,8 +1,9 @@
 using System.Text.Json;
+using CallCenter.Application.DTOs.CrmIntegration;
+using CallCenter.Application.Interfaces;
 using CallCenter.Domain.Entities;
 using CallCenter.Domain.Enums;
 using CallCenter.Domain.Interfaces;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CallCenter.Application.Services;
@@ -25,22 +26,32 @@ public class TranscriptionService : ITranscriptionService
     private readonly IRepository<Transcription> _repository;
     private readonly IRepository<CallRecording> _recordingRepository;
     private readonly IExternalTranscriptionService _externalTranscriptionService;
+    private readonly IDatabaseOptionsProvider _optionsProvider;
+    private readonly ICrmIntegrationService _crmIntegrationService;
     private readonly ILogger<TranscriptionService> _logger;
-    private readonly string _storageBasePath;
 
     public TranscriptionService(
         IRepository<Transcription> repository,
         IRepository<CallRecording> recordingRepository,
         IExternalTranscriptionService externalTranscriptionService,
-        ILogger<TranscriptionService> logger,
-        IConfiguration configuration)
+        IDatabaseOptionsProvider optionsProvider,
+        ICrmIntegrationService crmIntegrationService,
+        ILogger<TranscriptionService> logger)
     {
         _repository = repository;
         _recordingRepository = recordingRepository;
         _externalTranscriptionService = externalTranscriptionService;
+        _optionsProvider = optionsProvider;
+        _crmIntegrationService = crmIntegrationService;
         _logger = logger;
-        _storageBasePath = configuration["RecordingStorage:Path"]
-            ?? Path.Combine(Directory.GetCurrentDirectory(), "Recordings");
+    }
+
+    private async Task<string> GetStorageBasePathAsync()
+    {
+        var options = await _optionsProvider.GetRecordingStorageOptionsAsync();
+        return !string.IsNullOrEmpty(options.Path)
+            ? options.Path
+            : Path.Combine(Directory.GetCurrentDirectory(), "Recordings");
     }
 
     public async Task<TranscriptionDto?> GetByIdAsync(Guid id)
@@ -98,7 +109,8 @@ public class TranscriptionService : ITranscriptionService
         _logger.LogInformation("No transcription found for CallSid: {CallSid}, initiating processing", callSid);
 
         // Build the full path from recording's relative URL
-        var filePath = Path.Combine(_storageBasePath, recording.Url);
+        var storageBasePath = await GetStorageBasePathAsync();
+        var filePath = Path.Combine(storageBasePath, recording.Url);
         if (!File.Exists(filePath))
         {
             _logger.LogWarning("No recording file found at path: {FilePath} for RecordingId: {RecordingId}", filePath, recording.Id);
@@ -259,6 +271,52 @@ public class TranscriptionService : ITranscriptionService
 
             _logger.LogInformation("Transcription completed for recording: {RecordingId}, Sentiment: {Sentiment}",
                 recordingId, result.Sentiment);
+
+            // Send transcription and AI analysis results to CRM
+            if (_crmIntegrationService.IsEnabled)
+            {
+                try
+                {
+                    // Get the recording to find the CallId (callSid)
+                    var recordings = await _recordingRepository.GetAllAsync();
+                    var recording = recordings.FirstOrDefault(r => r.Id == recordingId);
+                    if (recording != null && !string.IsNullOrEmpty(recording.CallId))
+                    {
+                        var callId = recording.CallId;
+
+                        // Send transcript to CRM
+                        if (!string.IsNullOrEmpty(result.Transcript))
+                        {
+                            await _crmIntegrationService.SendTranscriptReadyAsync(new TranscriptReadyEvent
+                            {
+                                CallId = callId,
+                                TranscriptText = result.Transcript
+                            });
+                            _logger.LogInformation("Sent TranscriptReady event to CRM for CallId: {CallId}", callId);
+                        }
+
+                        // Send AI QA analysis to CRM
+                        var scoreDecimal = (decimal)(transcription.Confidence ?? 0.95f);
+                        await _crmIntegrationService.SendAiQaReadyAsync(new AiQaReadyEvent
+                        {
+                            CallId = callId,
+                            Score = scoreDecimal,
+                            Sentiment = result.Sentiment ?? "neutral",
+                            Summary = result.Summary ?? "No summary available"
+                        });
+                        _logger.LogInformation("Sent AiQaReady event to CRM for CallId: {CallId}", callId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Cannot send CRM events - recording not found or missing CallId for RecordingId: {RecordingId}", recordingId);
+                    }
+                }
+                catch (Exception crmEx)
+                {
+                    // Log but don't fail - CRM integration is not critical
+                    _logger.LogWarning(crmEx, "Failed to send transcription/AI events to CRM for RecordingId: {RecordingId}", recordingId);
+                }
+            }
 
             return MapToDto(transcription);
         }

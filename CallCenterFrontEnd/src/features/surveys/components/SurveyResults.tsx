@@ -7,13 +7,10 @@ import {
   TrendingDown,
   Users,
   Star,
-  Calendar,
   Download,
-  Filter,
   RefreshCw,
   MessageSquare,
   ThumbsUp,
-  ThumbsDown,
   Minus,
   Clock,
   Target,
@@ -47,46 +44,6 @@ interface SurveyResultsProps {
   onClose: () => void;
 }
 
-// Generate mock data
-const generateMockResponses = (surveyId: string, count: number = 50): SurveyResponse[] => {
-  const agents = ['John Smith', 'Emily Davis', 'Michael Brown', 'Sarah Wilson'];
-  const responses: SurveyResponse[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const daysAgo = Math.floor(Math.random() * 30);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-
-    const score = 1 + Math.floor(Math.random() * 5);
-    responses.push({
-      id: `response-${i}`,
-      surveyId,
-      customerId: `customer-${Math.floor(Math.random() * 100)}`,
-      customerName: `Customer ${Math.floor(Math.random() * 100)}`,
-      agentId: `agent-${Math.floor(Math.random() * 4)}`,
-      agentName: agents[Math.floor(Math.random() * agents.length)],
-      responses: [
-        {
-          questionId: 'q1',
-          questionText: 'How satisfied are you with our service?',
-          questionType: 'rating',
-          answer: score,
-        },
-        {
-          questionId: 'q2',
-          questionText: 'Any additional feedback?',
-          questionType: 'text',
-          answer: score >= 4 ? 'Great service!' : score >= 3 ? 'It was okay' : 'Could be better',
-        },
-      ],
-      overallScore: score,
-      submittedAt: date.toISOString(),
-      channel: ['Call', 'Chat', 'Email'][Math.floor(Math.random() * 3)],
-    });
-  }
-
-  return responses;
-};
 
 export const SurveyResults = ({
   surveyId,
@@ -101,12 +58,8 @@ export const SurveyResults = ({
   const { data: responses = [], isLoading } = useQuery<SurveyResponse[]>({
     queryKey: ['survey-responses', surveyId],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get(`/surveys/${surveyId}/responses`);
-        return response.data.items || response.data || [];
-      } catch {
-        return generateMockResponses(surveyId);
-      }
+      const response = await apiClient.get(`/surveys/${surveyId}/responses`);
+      return response.data.items || response.data || [];
     },
   });
 
@@ -528,7 +481,7 @@ export const SurveyResults = ({
                       ))}
                     </div>
                     {feedback.agentName && (
-                      <Badge variant="outline" size="sm">
+                      <Badge variant="default" size="sm">
                         {feedback.agentName}
                       </Badge>
                     )}

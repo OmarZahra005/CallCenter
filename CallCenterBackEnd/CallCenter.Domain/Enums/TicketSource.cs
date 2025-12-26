@@ -7,5 +7,6 @@ public enum TicketSource
     Whatsapp,
     Sms,
     Webchat,
-    WalkIn
+    WalkIn,
+    SmartBot
 }

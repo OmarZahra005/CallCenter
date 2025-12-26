@@ -34,4 +34,8 @@ public interface IHubNotificationService
 
     // Notes notifications
     Task NotifyNoteAddedAsync(Guid conversationId, object note);
+
+    // SmartBot escalation notifications
+    Task NotifySmartBotEscalationAsync(Guid escalationId, string eventType);
+    Task NotifySmartBotMessageAsync(Guid escalationId, Guid conversationId, string message, string senderType);
 }

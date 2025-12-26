@@ -2,6 +2,7 @@ using CallCenter.Application.DTOs.Common;
 using CallCenter.Application.DTOs.Recordings;
 using CallCenter.Domain.Entities;
 using CallCenter.Domain.Interfaces;
+using CallCenter.Domain.Interfaces.Repositories;
 
 namespace CallCenter.Application.Services;
 
@@ -17,36 +18,34 @@ public interface ICallRecordingService
 
 public class CallRecordingService : ICallRecordingService
 {
-    private readonly IRepository<CallRecording> _repository;
+    private readonly ICallRecordingRepository _repository;
 
-    public CallRecordingService(IRepository<CallRecording> repository)
+    public CallRecordingService(ICallRecordingRepository repository)
     {
         _repository = repository;
     }
 
     public async Task<PagedResponse<CallRecordingDto>> GetRecordingsAsync(PagedRequest request)
     {
-        var recordings = await _repository.GetPagedAsync(
+        var (items, totalCount) = await _repository.GetPagedWithDetailsAsync(
             request.PageNumber,
-            request.PageSize,
-            null,
-            request.SortBy,
-            request.SortDescending);
+            request.PageSize);
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
 
         return new PagedResponse<CallRecordingDto>
         {
-            Items = recordings.Items.Select(MapToDto).ToList(),
-            PageNumber = recordings.CurrentPage,
-            PageSize = recordings.PageSize,
-            TotalCount = recordings.TotalCount,
-            TotalPages = recordings.PageCount
+            Items = items.Select(MapToDto).ToList(),
+            PageNumber = request.PageNumber,
+            PageSize = request.PageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages
         };
     }
 
     public async Task<CallRecordingDto?> GetRecordingByIdAsync(Guid id)
     {
-        var all = await _repository.GetAllAsync();
-        var recording = all.FirstOrDefault(r => r.Id == id);
+        var recording = await _repository.GetByIdWithDetailsAsync(id);
         return recording != null ? MapToDto(recording) : null;
     }
 
@@ -105,6 +104,13 @@ public class CallRecordingService : ICallRecordingService
         Format = recording.Format,
         IsEncrypted = recording.IsEncrypted,
         RetentionUntil = recording.RetentionUntil,
-        CreatedAt = recording.CreatedAt
+        CreatedAt = recording.CreatedAt,
+        // Agent information from Conversation
+        AgentId = recording.Conversation?.AgentId,
+        AgentName = recording.Conversation?.Agent?.Name,
+        // Customer information from Conversation
+        CustomerId = recording.Conversation?.CustomerId,
+        CustomerName = recording.Conversation?.Customer?.Name,
+        CustomerPhone = recording.Conversation?.Customer?.Phone
     };
 }

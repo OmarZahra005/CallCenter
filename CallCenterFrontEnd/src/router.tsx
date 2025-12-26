@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { CallCenterProvider } from './context/CallCenterContext';
 
 // Lazy load pages
 import { lazy, Suspense } from 'react';
@@ -46,6 +47,8 @@ const WhatsAppConfig = lazy(() => import('./features/admin/pages/WhatsAppConfig'
 const CtiEvents = lazy(() => import('./features/admin/pages/CtiEvents').then(m => ({ default: m.CtiEvents })));
 const NotificationSettings = lazy(() => import('./features/settings/pages/NotificationSettings').then(m => ({ default: m.NotificationSettings })));
 const RolesPermissions = lazy(() => import('./features/admin/pages/RolesPermissions'));
+const PublicSurvey = lazy(() => import('./features/surveys/pages/PublicSurvey'));
+const OutCall = lazy(() => import('./features/outcall/pages/OutCall'));
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -98,6 +101,15 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    // Public survey page - no auth required, secured by token
+    path: '/survey/:token',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <PublicSurvey />
+      </Suspense>
+    ),
+  },
+  {
     path: '/',
     element: (
       <Suspense fallback={<PageLoader />}>
@@ -146,9 +158,11 @@ export const router = createBrowserRouter([
       {
         path: 'customers',
         element: (
-          <Suspense fallback={<PageLoader />}>
-            <Customers />
-          </Suspense>
+          <CallCenterProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Customers />
+            </Suspense>
+          </CallCenterProvider>
         ),
       },
       {
@@ -445,6 +459,16 @@ export const router = createBrowserRouter([
           <Suspense fallback={<PageLoader />}>
             <RolesPermissions />
           </Suspense>
+        ),
+      },
+      {
+        path: 'outcall',
+        element: (
+          <CallCenterProvider>
+            <Suspense fallback={<PageLoader />}>
+              <OutCall />
+            </Suspense>
+          </CallCenterProvider>
         ),
       },
     ],

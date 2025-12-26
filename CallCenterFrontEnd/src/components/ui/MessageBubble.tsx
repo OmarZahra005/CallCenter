@@ -1,13 +1,184 @@
 import { cn } from '../../utils/cn';
+import { useMemo } from 'react';
 
+// ============================================================================
+// DATE SEPARATOR - Groups messages by day
+// ============================================================================
+interface DateSeparatorProps {
+  date: Date;
+  className?: string;
+}
+
+export const DateSeparator = ({ date, className }: DateSeparatorProps) => {
+  const formatDateLabel = (date: Date): string => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    if (isToday) {
+      return 'Today';
+    } else if (isYesterday) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+      });
+    }
+  };
+
+  return (
+    <div className={cn('flex items-center justify-center my-8', className)}>
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent" />
+      <div className="mx-4 px-5 py-2 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700">
+        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+          {formatDateLabel(date)}
+        </span>
+      </div>
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent" />
+    </div>
+  );
+};
+
+// ============================================================================
+// SYSTEM MESSAGE - For events like transfers, closures, tickets
+// ============================================================================
+interface SystemMessageProps {
+  content: string;
+  timestamp?: Date;
+  type?: 'info' | 'success' | 'warning' | 'transfer' | 'ticket' | 'closed' | 'joined' | 'left';
+  className?: string;
+}
+
+export const SystemMessage = ({ content, timestamp, type = 'info', className }: SystemMessageProps) => {
+  const typeConfig = {
+    info: {
+      bg: 'bg-slate-100 dark:bg-slate-800/60',
+      border: 'border-slate-200 dark:border-slate-700',
+      text: 'text-slate-600 dark:text-slate-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    success: {
+      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+      border: 'border-emerald-200 dark:border-emerald-800',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    warning: {
+      bg: 'bg-amber-50 dark:bg-amber-900/20',
+      border: 'border-amber-200 dark:border-amber-800',
+      text: 'text-amber-700 dark:text-amber-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      ),
+    },
+    transfer: {
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      border: 'border-blue-200 dark:border-blue-800',
+      text: 'text-blue-700 dark:text-blue-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      ),
+    },
+    ticket: {
+      bg: 'bg-violet-50 dark:bg-violet-900/20',
+      border: 'border-violet-200 dark:border-violet-800',
+      text: 'text-violet-700 dark:text-violet-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+        </svg>
+      ),
+    },
+    closed: {
+      bg: 'bg-rose-50 dark:bg-rose-900/20',
+      border: 'border-rose-200 dark:border-rose-800',
+      text: 'text-rose-700 dark:text-rose-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    joined: {
+      bg: 'bg-teal-50 dark:bg-teal-900/20',
+      border: 'border-teal-200 dark:border-teal-800',
+      text: 'text-teal-700 dark:text-teal-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+      ),
+    },
+    left: {
+      bg: 'bg-gray-100 dark:bg-gray-800/60',
+      border: 'border-gray-200 dark:border-gray-700',
+      text: 'text-gray-600 dark:text-gray-400',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      ),
+    },
+  };
+
+  const config = typeConfig[type];
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  return (
+    <div className={cn('flex justify-center my-5', className)}>
+      <div className={cn(
+        'inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full text-sm font-medium border shadow-sm',
+        config.bg,
+        config.border,
+        config.text
+      )}>
+        <span className="flex-shrink-0">{config.icon}</span>
+        <span>{content}</span>
+        {timestamp && (
+          <span className="opacity-60 text-xs ml-1">• {formatTime(timestamp)}</span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// MESSAGE BUBBLE - Main chat message component
+// ============================================================================
 interface MessageBubbleProps {
   content: string;
   sender: 'customer' | 'agent' | 'system';
   timestamp: Date;
   senderName?: string;
+  senderAvatar?: string;
   status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   attachments?: Array<{ name: string; url: string; type: string }>;
   className?: string;
+  showAvatar?: boolean;
+  isRTL?: boolean;
+  showFullTimestamp?: boolean;
+  systemMessageType?: 'info' | 'success' | 'warning' | 'transfer' | 'ticket' | 'closed' | 'joined' | 'left';
 }
 
 export const MessageBubble = ({
@@ -15,111 +186,283 @@ export const MessageBubble = ({
   sender,
   timestamp,
   senderName,
+  senderAvatar,
   status,
   attachments,
   className,
+  showAvatar = true,
+  isRTL,
+  showFullTimestamp = true,
+  systemMessageType,
 }: MessageBubbleProps) => {
   const isAgent = sender === 'agent';
   const isSystem = sender === 'system';
+  const isCustomer = sender === 'customer';
 
+  // Detect RTL content
+  const containsRTL = useMemo(() => {
+    const rtlRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0590-\u05FF]/;
+    return rtlRegex.test(content);
+  }, [content]);
+
+  const textDirection = isRTL !== undefined ? (isRTL ? 'rtl' : 'ltr') : (containsRTL ? 'rtl' : 'ltr');
+
+  // System messages
   if (isSystem) {
     return (
-      <div className={cn('flex justify-center my-2', className)}>
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-          {content}
-        </span>
-      </div>
+      <SystemMessage
+        content={content}
+        timestamp={timestamp}
+        type={systemMessageType || 'info'}
+        className={className}
+      />
     );
   }
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  // Format timestamp
+  const formatTimestamp = (date: Date, showFull: boolean): string => {
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    if (!showFull) return timeStr;
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return timeStr;
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday ${timeStr}`;
+    } else {
+      const dateStr = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      return `${dateStr}, ${timeStr}`;
+    }
   };
 
-  const StatusIcon = () => {
-    if (!status || sender !== 'agent') return null;
+  // Get initials
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
-    const icons = {
-      sending: (
-        <svg className="w-3 h-3 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      ),
-      sent: (
-        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      ),
-      delivered: (
-        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      read: (
-        <svg className="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      failed: (
-        <svg className="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
+  const displayName = senderName || (isAgent ? 'Agent' : 'Customer');
+
+  // Avatar component
+  const Avatar = () => {
+    if (!showAvatar) return <div className="w-10 flex-shrink-0" />;
+
+    if (senderAvatar) {
+      return (
+        <img
+          src={senderAvatar}
+          alt={displayName}
+          className="w-10 h-10 rounded-full object-cover shadow-md flex-shrink-0"
+        />
+      );
+    }
+
+    return (
+      <div className={cn(
+        'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-md flex-shrink-0',
+        isAgent
+          ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white'
+          : 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white'
+      )}>
+        {getInitials(displayName)}
+      </div>
+    );
+  };
+
+  // Status indicator
+  const StatusIndicator = () => {
+    if (!status || !isAgent) return null;
+
+    const statusConfig = {
+      sending: {
+        icon: (
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        ),
+        text: 'Sending',
+        color: 'text-gray-400',
+      },
+      sent: {
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        ),
+        text: 'Sent',
+        color: 'text-gray-400',
+      },
+      delivered: {
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7M5 13l4 4L19 7" transform="translate(-3, 0)" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" transform="translate(3, 0)" />
+          </svg>
+        ),
+        text: 'Delivered',
+        color: 'text-gray-400',
+      },
+      read: {
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7M5 13l4 4L19 7" transform="translate(-3, 0)" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" transform="translate(3, 0)" />
+          </svg>
+        ),
+        text: 'Seen',
+        color: 'text-blue-500',
+      },
+      failed: {
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        ),
+        text: 'Failed',
+        color: 'text-red-500',
+      },
     };
 
-    return icons[status];
+    const config = statusConfig[status];
+
+    return (
+      <span className={cn('inline-flex items-center gap-1', config.color)} title={config.text}>
+        {config.icon}
+        <span className="text-xs">{config.text}</span>
+      </span>
+    );
   };
 
   return (
-    <div className={cn('flex flex-col mb-3', isAgent ? 'items-end' : 'items-start', className)}>
-      {senderName && (
-        <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-3">
-          {senderName}
-        </span>
+    <div
+      className={cn(
+        'flex gap-3 mb-6 px-2',
+        isCustomer ? 'flex-row-reverse' : 'flex-row',
+        className
       )}
-      <div
-        className={cn(
-          'max-w-[80%] rounded-2xl px-4 py-2',
-          isAgent
-            ? 'bg-primary-600 text-white rounded-br-sm'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm'
-        )}
-      >
-        <p className="text-sm whitespace-pre-wrap break-words">{content}</p>
-        {attachments && attachments.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {attachments.map((attachment, index) => (
-              <a
-                key={index}
-                href={attachment.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'flex items-center gap-2 text-xs underline',
-                  isAgent ? 'text-white/80 hover:text-white' : 'text-primary-600 hover:text-primary-700'
-                )}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-                {attachment.name}
-              </a>
-            ))}
-          </div>
-        )}
+    >
+      {/* Avatar */}
+      <div className="flex-shrink-0 self-end mb-5">
+        <Avatar />
       </div>
-      <div className="flex items-center gap-1 mt-1 px-3">
-        <span className={cn('text-xs', isAgent ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500')}>
-          {formatTime(timestamp)}
-        </span>
-        <StatusIcon />
+
+      {/* Message content wrapper */}
+      <div className={cn(
+        'flex flex-col max-w-[70%]',
+        isCustomer ? 'items-end' : 'items-start'
+      )}>
+        {/* Sender name label */}
+        <div className={cn(
+          'flex items-center gap-2 mb-1.5 px-2',
+          isCustomer ? 'flex-row-reverse' : 'flex-row'
+        )}>
+          <span className={cn(
+            'text-xs font-semibold tracking-wide',
+            isAgent ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400'
+          )}>
+            {displayName}
+          </span>
+          {isAgent && (
+            <span className="px-1.5 py-0.5 text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded">
+              AGENT
+            </span>
+          )}
+        </div>
+
+        {/* Message bubble */}
+        <div
+          className={cn(
+            'relative px-5 py-3.5 shadow-sm',
+            // Agent messages - left aligned, neutral colors
+            isAgent && [
+              'bg-white dark:bg-gray-800',
+              'border border-gray-200 dark:border-gray-700',
+              'rounded-2xl rounded-bl-md',
+              'text-gray-800 dark:text-gray-100',
+            ],
+            // Customer messages - right aligned, brand colors
+            isCustomer && [
+              'bg-gradient-to-br from-emerald-500 to-emerald-600',
+              'rounded-2xl rounded-br-md',
+              'text-white',
+              'shadow-emerald-500/20 shadow-lg',
+            ],
+          )}
+        >
+          {/* Message text */}
+          <p
+            className={cn(
+              'text-[15px] leading-relaxed whitespace-pre-wrap break-words',
+              textDirection === 'rtl' && 'text-right'
+            )}
+            dir={textDirection}
+          >
+            {content}
+          </p>
+
+          {/* Attachments */}
+          {attachments && attachments.length > 0 && (
+            <div className={cn(
+              'mt-3 pt-3 space-y-2 border-t',
+              isCustomer ? 'border-white/20' : 'border-gray-200 dark:border-gray-700'
+            )}>
+              {attachments.map((attachment, index) => (
+                <a
+                  key={index}
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    'flex items-center gap-2 text-sm font-medium hover:underline transition-colors',
+                    isCustomer
+                      ? 'text-white/90 hover:text-white'
+                      : 'text-indigo-600 hover:text-indigo-700 dark:text-indigo-400'
+                  )}
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  <span className="truncate max-w-[200px]">{attachment.name}</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Timestamp and status */}
+        <div className={cn(
+          'flex items-center gap-2.5 mt-2 px-2',
+          isCustomer ? 'flex-row-reverse' : 'flex-row'
+        )}>
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+            {formatTimestamp(timestamp, showFullTimestamp)}
+          </span>
+          <StatusIndicator />
+        </div>
       </div>
     </div>
   );
 };
 
-// Conversation list item for inbox
+// ============================================================================
+// CONVERSATION ITEM - For inbox list
+// ============================================================================
 interface ConversationItemProps {
   id?: string;
   customerName: string;
@@ -130,7 +473,6 @@ interface ConversationItemProps {
   isActive?: boolean;
   onClick?: () => void;
   className?: string;
-  // Additional props from ConversationInfo
   customerId?: string;
   state?: string;
   startedAt?: string;
@@ -224,6 +566,25 @@ export const ConversationItem = ({
       </div>
     </button>
   );
+};
+
+// ============================================================================
+// HELPER: Group messages by date
+// ============================================================================
+export const groupMessagesByDate = <T extends { createdAt: string }>(messages: T[]): Map<string, T[]> => {
+  const groups = new Map<string, T[]>();
+
+  messages.forEach((message) => {
+    const date = new Date(message.createdAt);
+    const dateKey = date.toDateString();
+
+    if (!groups.has(dateKey)) {
+      groups.set(dateKey, []);
+    }
+    groups.get(dateKey)!.push(message);
+  });
+
+  return groups;
 };
 
 export default MessageBubble;

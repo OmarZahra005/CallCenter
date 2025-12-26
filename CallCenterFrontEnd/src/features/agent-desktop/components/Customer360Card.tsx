@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Phone,
+  PhoneOutgoing,
   Mail,
   MapPin,
   Calendar,
@@ -21,14 +22,16 @@ import {
   History,
   Filter,
   MessageCircle,
-  Voicemail,
   ArrowUpRight,
   ArrowDownLeft,
   MoreHorizontal,
+  Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Card, Badge, Avatar, Button } from '../../../components/ui';
+import { Card, Badge, Avatar } from '../../../components/ui';
 import apiClient from '../../../api/client';
+import { initiateOutboundCall } from '../../../api/callApi';
+import { useCallCenter } from '../../../context/CallCenterContext';
 
 interface CustomerData {
   id: string;
@@ -96,22 +99,6 @@ interface DetailedTicket {
   createdAt: string;
   updatedAt?: string;
   resolvedAt?: string;
-}
-
-interface DetailedCallLog {
-  id: string;
-  providerCallId?: string;
-  direction: string;
-  fromNumber: string;
-  toNumber?: string;
-  status: string;
-  startedAtUtc: string;
-  endedAtUtc?: string;
-  durationSeconds?: number;
-  agentId?: string;
-  agentName?: string;
-  recordingUrl?: string;
-  disposition?: string;
 }
 
 interface Customer360CardProps {
@@ -229,6 +216,35 @@ export const Customer360Card = ({
     enabled: !!customerId && (activeTab === 'history' || interactionFilter === 'tickets'),
     staleTime: 30000,
   });
+
+  // Get call center state for click-to-call
+  const { activeCall, twilioReady } = useCallCenter();
+
+  // Mutation for initiating outbound calls
+  const initiateOutboundMutation = useMutation({
+    mutationFn: initiateOutboundCall,
+    onSuccess: (data) => {
+      console.log('Outbound call initiated:', data);
+      // The Twilio Device will receive the incoming call
+    },
+    onError: (error: Error) => {
+      console.error('Failed to initiate outbound call:', error.message);
+      // Could add toast notification here
+    },
+  });
+
+  // Handler for click-to-call
+  const handleClickToCall = () => {
+    if (customerPhone && twilioReady && !activeCall) {
+      // Generate unique idempotency key to prevent duplicate calls from rapid clicks
+      const idempotencyKey = crypto.randomUUID();
+      initiateOutboundMutation.mutate({
+        customerNumber: customerPhone,
+        customerId: customerId || undefined,
+        idempotencyKey,
+      });
+    }
+  };
 
   // Combine and sort interactions for timeline
   const allInteractions = [
@@ -439,16 +455,40 @@ export const Customer360Card = ({
                           <Phone className="w-4 h-4 text-gray-400" />
                           <span className="text-gray-700 dark:text-gray-300">{customerPhone}</span>
                         </div>
-                        <button
-                          onClick={() => handleCopy(customerPhone, 'phone')}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-opacity"
-                        >
-                          {copiedField === 'phone' ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-1">
+                          {/* Click-to-Call Button */}
+                          {twilioReady && !activeCall && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleClickToCall();
+                              }}
+                              disabled={initiateOutboundMutation.isPending}
+                              className="p-1.5 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Call customer"
+                            >
+                              {initiateOutboundMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <PhoneOutgoing className="w-4 h-4" />
+                              )}
+                            </button>
                           )}
-                        </button>
+                          {/* Copy Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopy(customerPhone, 'phone');
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-opacity"
+                          >
+                            {copiedField === 'phone' ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-gray-400" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
                     {customerEmail && (

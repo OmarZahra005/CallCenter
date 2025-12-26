@@ -110,6 +110,25 @@ const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
 
 CardHeader.displayName = 'CardHeader';
 
+interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
+
+const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className, children, ...props }, ref) => (
+    <h3
+      ref={ref}
+      className={cn(
+        'text-lg font-semibold text-gray-900 dark:text-white',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </h3>
+  )
+);
+
+CardTitle.displayName = 'CardTitle';
+
 interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
 
 const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
@@ -141,5 +160,5 @@ const CardFooter = forwardRef<HTMLDivElement, CardFooterProps>(
 
 CardFooter.displayName = 'CardFooter';
 
-export { Card, CardHeader, CardContent, CardFooter };
+export { Card, CardHeader, CardTitle, CardContent, CardFooter };
 export default Card;

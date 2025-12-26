@@ -79,6 +79,10 @@ export const Permissions = {
   IVR_VIEW: 'ivr.view',
   IVR_MANAGE: 'ivr.manage',
 
+  // Knowledge
+  KNOWLEDGE_VIEW: 'knowledge.view',
+  KNOWLEDGE_MANAGE: 'knowledge.manage',
+
   // Admin
   ADMIN_SETTINGS: 'admin.settings',
   ADMIN_AUDIT_LOGS: 'admin.audit_logs',
@@ -111,6 +115,7 @@ export const PermissionModules = {
   REPORTS: 'Reports',
   ANALYTICS: 'Analytics',
   IVR: 'IVR',
+  KNOWLEDGE: 'Knowledge',
   ADMIN: 'Admin',
   SYSTEM: 'System',
 } as const;

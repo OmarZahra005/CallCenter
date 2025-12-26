@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { SkeletonTable, EmptyStateNoData } from '../../../components/ui';
 import { useToast } from '../../../store/toastStore';
 import { CustomerNotes } from '../components/CustomerNotes';
+import { useCallCenter } from '../../../context/CallCenterContext';
+import { useAuthStore } from '../../../store/authStore';
+import { initiateOutboundCall } from '../../../api/callApi';
+import { IncomingCallBanner } from '../../../components/call-center';
 import {
   Search,
   Plus,
@@ -25,12 +29,12 @@ import {
   ChevronDown,
   Mail,
   Phone,
+  PhoneOutgoing,
+  Loader2,
   Building2,
   Calendar,
   MessageSquare,
   MoreVertical,
-  Star,
-  TrendingUp,
 } from 'lucide-react';
 
 // Animation variants
@@ -88,7 +92,16 @@ const Customers = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { twilioReady, activeCall, setAgentIdentity } = useCallCenter();
+  const user = useAuthStore((state) => state.user);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Auto-initialize Twilio Device with current user's email for Click-to-Call
+  useEffect(() => {
+    if (user?.email && !twilioReady) {
+      setAgentIdentity(user.email);
+    }
+  }, [user?.email, twilioReady, setAgentIdentity]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -99,6 +112,7 @@ const Customers = () => {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [callingCustomerId, setCallingCustomerId] = useState<string | null>(null);
 
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers'],
@@ -147,6 +161,31 @@ const Customers = () => {
       showToast('Failed to delete customer', 'error');
     },
   });
+
+  const callMutation = useMutation({
+    mutationFn: (data: { customerId: string; customerNumber: string }) =>
+      initiateOutboundCall({
+        customerNumber: data.customerNumber,
+        customerId: data.customerId,
+      }),
+    onSuccess: () => {
+      showToast('Call initiated successfully', 'success');
+      setCallingCustomerId(null);
+    },
+    onError: (error: Error) => {
+      showToast(error.message || 'Failed to initiate call', 'error');
+      setCallingCustomerId(null);
+    },
+  });
+
+  const handleClickToCall = (customer: Customer) => {
+    if (!customer.phone || !twilioReady || activeCall) return;
+    setCallingCustomerId(customer.id);
+    callMutation.mutate({
+      customerId: customer.id,
+      customerNumber: customer.phone,
+    });
+  };
 
   const customers: Customer[] = Array.isArray(customersData) ? customersData : (customersData?.data || customersData?.items || []);
 
@@ -314,13 +353,17 @@ const Customers = () => {
   };
 
   return (
-    <motion.div
-      className="space-y-6 p-1"
-      initial="initial"
-      animate="animate"
-      variants={pageVariants}
-    >
-      {/* Page header */}
+    <>
+      {/* Incoming call banner for outbound calls */}
+      <IncomingCallBanner />
+
+      <motion.div
+        className="space-y-6 p-1"
+        initial="initial"
+        animate="animate"
+        variants={pageVariants}
+      >
+        {/* Page header */}
       <motion.div
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         initial={{ opacity: 0, y: -10 }}
@@ -578,6 +621,23 @@ const Customers = () => {
                             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                               <Phone className="w-4 h-4 flex-shrink-0" />
                               <span>{customer.phone}</span>
+                              {customer.phone && twilioReady && !activeCall && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClickToCall(customer);
+                                  }}
+                                  disabled={callingCustomerId === customer.id}
+                                  className="p-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50 ml-1"
+                                  title="Call customer"
+                                >
+                                  {callingCustomerId === customer.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <PhoneOutgoing className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
@@ -729,9 +789,28 @@ const Customers = () => {
                             <Mail className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">{customer.email}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <Phone className="w-4 h-4 flex-shrink-0" />
-                            <span>{customer.phone}</span>
+                          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 flex-shrink-0" />
+                              <span>{customer.phone}</span>
+                            </div>
+                            {customer.phone && twilioReady && !activeCall && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClickToCall(customer);
+                                }}
+                                disabled={callingCustomerId === customer.id}
+                                className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50"
+                                title="Call customer"
+                              >
+                                {callingCustomerId === customer.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <PhoneOutgoing className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                           {customer.company && (
                             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -898,9 +977,25 @@ const Customers = () => {
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</span>
-                <div className="mt-2 flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-900 dark:text-white">{selectedCustomer.phone}</span>
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900 dark:text-white">{selectedCustomer.phone}</span>
+                  </div>
+                  {selectedCustomer.phone && twilioReady && !activeCall && (
+                    <button
+                      onClick={() => handleClickToCall(selectedCustomer)}
+                      disabled={callingCustomerId === selectedCustomer.id}
+                      className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50"
+                      title="Call customer"
+                    >
+                      {callingCustomerId === selectedCustomer.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <PhoneOutgoing className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -1022,6 +1117,7 @@ const Customers = () => {
         />
       )}
     </motion.div>
+    </>
   );
 };
 

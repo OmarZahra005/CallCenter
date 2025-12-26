@@ -11,9 +11,7 @@ import {
   Phone,
   ArrowUpCircle,
   RotateCcw,
-  PhoneForwarded,
   XCircle,
-  Voicemail,
   ChevronDown,
   Smile,
   Meh,
@@ -126,7 +124,7 @@ export interface ACWFormData {
 export const ACWPanel = ({
   isVisible,
   callId,
-  conversationId,
+  conversationId: _conversationId,
   customerName,
   callDuration,
   acwTimeoutSeconds = 120,

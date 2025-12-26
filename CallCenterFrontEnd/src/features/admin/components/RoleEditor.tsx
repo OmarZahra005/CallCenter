@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Loader2, Check } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '../../../components/ui';
 import { rolesApi, permissionsApi, type RoleDetailDto, type PermissionGroupDto } from '../api/rolesApi';
 
 interface RoleEditorProps {
@@ -344,7 +344,7 @@ export default function RoleEditor({ isOpen, roleId, onClose, onSave }: RoleEdit
 
               {/* Footer */}
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <Button type="button" variant="default" onClick={onClose}>
+                <Button type="button" variant="secondary" onClick={onClose}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saving} className="flex items-center gap-2">

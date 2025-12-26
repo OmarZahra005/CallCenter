@@ -11,7 +11,6 @@ import {
   Save,
   X,
   Loader2,
-  AlertCircle,
   StickyNote,
   MoreVertical,
 } from 'lucide-react';
@@ -44,39 +43,6 @@ const NOTE_CATEGORIES = [
   { value: 'important', label: 'Important', color: 'bg-yellow-500' },
 ];
 
-// Mock data for development
-const generateMockNotes = (customerId: string): CustomerNote[] => [
-  {
-    id: 'note-1',
-    customerId,
-    content: 'Customer prefers to be contacted via email. They mentioned they work from 9 AM to 5 PM EST.',
-    category: 'general',
-    authorId: 'agent-1',
-    authorName: 'John Smith',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'note-2',
-    customerId,
-    content: 'Had an issue with their last order. Provided a 10% discount code LOYAL10 as compensation.',
-    category: 'support',
-    authorId: 'agent-2',
-    authorName: 'Emily Davis',
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'note-3',
-    customerId,
-    content: 'VIP customer - handle with priority. Has been a customer since 2019.',
-    category: 'important',
-    authorId: 'agent-1',
-    authorName: 'John Smith',
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
 
 export const CustomerNotes = ({
   customerId,
@@ -92,16 +58,12 @@ export const CustomerNotes = ({
   const [editCategory, setEditCategory] = useState('');
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  // Fetch notes
+  // Fetch notes from real backend API
   const { data: notes = [], isLoading } = useQuery<CustomerNote[]>({
     queryKey: ['customer-notes', customerId],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get(`/customers/${customerId}/notes`);
-        return response.data.items || response.data || [];
-      } catch {
-        return generateMockNotes(customerId);
-      }
+      const response = await apiClient.get(`/customers/${customerId}/notes`);
+      return Array.isArray(response.data) ? response.data : response.data.items || [];
     },
   });
 
@@ -362,7 +324,7 @@ export const CustomerNotes = ({
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Badge
-                            variant="outline"
+                            variant="default"
                             size="sm"
                             className={`${categoryInfo.color} text-white border-0`}
                           >

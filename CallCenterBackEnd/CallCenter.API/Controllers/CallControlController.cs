@@ -1,4 +1,5 @@
 using CallCenter.Application.Services;
+using CallCenter.Application.DTOs.CallSurvey;
 using CallCenter.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -14,15 +15,24 @@ public class CallControlController : ControllerBase
     private readonly ICtiService _ctiService;
     private readonly IHubContext<CallCenterHub> _hubContext;
     private readonly ICallLogService _callLogService;
+    private readonly ICallSurveyService _callSurveyService;
+    private readonly ISurveyMessageService _surveyMessageService;
+    private readonly ILogger<CallControlController> _logger;
 
     public CallControlController(
         ICtiService ctiService,
         IHubContext<CallCenterHub> hubContext,
-        ICallLogService callLogService)
+        ICallLogService callLogService,
+        ICallSurveyService callSurveyService,
+        ISurveyMessageService surveyMessageService,
+        ILogger<CallControlController> logger)
     {
         _ctiService = ctiService;
         _hubContext = hubContext;
         _callLogService = callLogService;
+        _callSurveyService = callSurveyService;
+        _surveyMessageService = surveyMessageService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -159,6 +169,67 @@ public class CallControlController : ControllerBase
             duration = request.DurationSeconds
         });
 
+        // Trigger post-call survey creation and message sending
+        try
+        {
+            // Look up call log to get customer phone number
+            var callLog = await _callLogService.GetByProviderIdAsync(callId);
+
+            if (callLog != null && !string.IsNullOrEmpty(callLog.FromNumber))
+            {
+                // Check if survey already exists (idempotency)
+                var surveyExists = await _callSurveyService.SurveyExistsForCallAsync(callId);
+
+                if (!surveyExists)
+                {
+                    // Create survey request
+                    var surveyRequest = new CreateCallSurveyRequest
+                    {
+                        AgentId = callLog.AssignedAgentId,
+                        QueueId = null,
+                        Direction = callLog.Direction,
+                        CustomerContact = callLog.FromNumber,
+                        Channel = "SMS",
+                        ExpiryHours = 24
+                    };
+
+                    var surveyResult = await _callSurveyService.CreateSurveyAsync(callId, surveyRequest);
+
+                    var isEligible = surveyResult.Status != "NotEligible";
+                    _logger.LogInformation(
+                        "Created post-call survey {SurveyId} for call {CallId}, status: {Status}, eligible: {IsEligible}",
+                        surveyResult.SurveyId, callId, surveyResult.Status, isEligible);
+
+                    // Send survey message if eligible (status is Pending, not NotEligible)
+                    if (isEligible && surveyResult.SurveyId != Guid.Empty)
+                    {
+                        var messageSent = await _surveyMessageService.SendSurveyMessageAsync(surveyResult.SurveyId);
+
+                        _logger.LogInformation(
+                            "Survey message {MessageStatus} for call {CallId}, survey {SurveyId}",
+                            messageSent ? "sent" : "failed to send", callId, surveyResult.SurveyId);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug("Survey already exists for call {CallId}, skipping creation", callId);
+                }
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "Skipping survey for call {CallId}: CallLog {CallLogStatus}, FromNumber: {HasFromNumber}",
+                    callId,
+                    callLog == null ? "not found" : "found",
+                    callLog?.FromNumber != null);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the hangup operation
+            _logger.LogError(ex, "Error creating/sending post-call survey for call {CallId}", callId);
+        }
+
         return Ok(new CallActionResult
         {
             Success = true,
@@ -182,7 +253,7 @@ public class CallControlController : ControllerBase
             AgentId = request.AgentId,
             EventType = CtiEventType.Ringing,
             Direction = CallDirection.Outbound,
-            Metadata = $"{{\"action\":\"dial\",\"destination\":\"{request.Destination}\",\"customerId\":\"{request.CustomerId}\",\"timestamp\":\"{DateTime.UtcNow:O}\"}}"
+            Metadata = $"{{\"action\":\"dial\",\"destination\":\"{request.Destination}\",\"customerId\":\"{request.CustomerId}\",\"crmRecordId\":\"{request.CrmRecordId}\",\"crmRecordType\":\"{request.CrmRecordType}\",\"timestamp\":\"{DateTime.UtcNow:O}\"}}"
         });
 
         await _hubContext.Clients.All.SendAsync("OutboundCallStarted", new
@@ -190,7 +261,9 @@ public class CallControlController : ControllerBase
             callId,
             agentId = request.AgentId,
             destination = request.Destination,
-            customerId = request.CustomerId
+            customerId = request.CustomerId,
+            crmRecordId = request.CrmRecordId,
+            crmRecordType = request.CrmRecordType
         });
 
         return Ok(new CallActionResult
@@ -394,6 +467,14 @@ public record DialCallRequest
     public Guid AgentId { get; init; }
     public string Destination { get; init; } = string.Empty;
     public Guid? CustomerId { get; init; }
+    /// <summary>
+    /// CRM record ID (Contact, Lead, or Account ID) associated with this call
+    /// </summary>
+    public Guid? CrmRecordId { get; init; }
+    /// <summary>
+    /// Type of CRM record: "Contact", "Lead", or "Account"
+    /// </summary>
+    public string? CrmRecordType { get; init; }
 }
 
 public record MuteCallRequest

@@ -22,7 +22,7 @@ public class VoiceClientController : ControllerBase
     /// Generate a Twilio access token for WebRTC voice client
     /// </summary>
     [HttpGet("token")]
-    public IActionResult GetToken([FromQuery] string identity)
+    public async Task<IActionResult> GetToken([FromQuery] string identity)
     {
         if (string.IsNullOrWhiteSpace(identity))
         {
@@ -31,7 +31,7 @@ public class VoiceClientController : ControllerBase
 
         try
         {
-            var token = _twilioVoiceService.GenerateAccessToken(identity);
+            var token = await _twilioVoiceService.GenerateAccessTokenAsync(identity);
 
             _logger.LogInformation("Generated voice client token for identity: {Identity}", identity);
 

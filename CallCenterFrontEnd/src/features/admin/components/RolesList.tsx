@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Edit2, Trash2, Shield, ShieldCheck, Users, Key } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
+import { Edit2, Trash2, Shield, ShieldCheck, Users } from 'lucide-react';
+import { Button, Badge } from '../../../components/ui';
 import { rolesApi, type RoleDto } from '../api/rolesApi';
 
 interface RolesListProps {
@@ -68,7 +67,7 @@ export default function RolesList({ onEditRole, onRefresh }: RolesListProps) {
     return (
       <div className="text-center py-12">
         <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={loadRoles} variant="default">
+        <Button onClick={loadRoles} variant="secondary">
           Retry
         </Button>
       </div>
@@ -153,7 +152,7 @@ export default function RolesList({ onEditRole, onRefresh }: RolesListProps) {
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end gap-2">
                   <Button
-                    variant="default"
+                    variant="secondary"
                     size="sm"
                     onClick={() => onEditRole(role.id)}
                     className="flex items-center gap-1"

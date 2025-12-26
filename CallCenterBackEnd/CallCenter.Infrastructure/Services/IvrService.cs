@@ -1,4 +1,6 @@
+using System.Net.Http;
 using System.Text.Json;
+using System.Web;
 using CallCenter.Application.DTOs.Ivr;
 using CallCenter.Domain.Models;
 using CallCenter.Application.Services;
@@ -16,15 +18,18 @@ public class IvrService : IIvrService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<IvrService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _baseWebhookUrl;
 
     public IvrService(
         ApplicationDbContext dbContext,
         ILogger<IvrService> logger,
+        IHttpClientFactory httpClientFactory,
         Microsoft.Extensions.Options.IOptions<Application.DTOs.Twilio.TwilioOptions> twilioOptions)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
         _baseWebhookUrl = twilioOptions.Value.BaseWebhookUrl ?? "";
     }
 
@@ -279,6 +284,9 @@ public class IvrService : IIvrService
                 ConditionValue = sourceNode.ConditionValue,
                 HttpUrl = sourceNode.HttpUrl,
                 HttpMethod = sourceNode.HttpMethod,
+                VariableName = sourceNode.VariableName,
+                VariableValue = sourceNode.VariableValue,
+                SubFlowId = sourceNode.SubFlowId,
                 MaxRecordingLength = sourceNode.MaxRecordingLength,
                 TranscribeVoicemail = sourceNode.TranscribeVoicemail,
                 VoicemailEmail = sourceNode.VoicemailEmail,
@@ -387,6 +395,9 @@ public class IvrService : IIvrService
             HttpUrl = request.HttpUrl,
             HttpMethod = request.HttpMethod,
             NextNodeId = request.NextNodeId,
+            VariableName = request.VariableName,
+            VariableValue = request.VariableValue,
+            SubFlowId = request.SubFlowId,
             MaxRecordingLength = request.MaxRecordingLength,
             TranscribeVoicemail = request.TranscribeVoicemail,
             VoicemailEmail = request.VoicemailEmail,
@@ -434,6 +445,9 @@ public class IvrService : IIvrService
         node.HttpUrl = request.HttpUrl;
         node.HttpMethod = request.HttpMethod;
         node.NextNodeId = request.NextNodeId;
+        node.VariableName = request.VariableName;
+        node.VariableValue = request.VariableValue;
+        node.SubFlowId = request.SubFlowId;
         node.MaxRecordingLength = request.MaxRecordingLength;
         node.TranscribeVoicemail = request.TranscribeVoicemail;
         node.VoicemailEmail = request.VoicemailEmail;
@@ -786,6 +800,9 @@ public class IvrService : IIvrService
                 HttpMethod = n.HttpMethod,
                 NextNodeName = n.NextNodeId.HasValue && nodeNameMap.ContainsKey(n.NextNodeId.Value)
                     ? nodeNameMap[n.NextNodeId.Value] : null,
+                VariableName = n.VariableName,
+                VariableValue = n.VariableValue,
+                SubFlowName = null, // SubFlows are external, not included in export
                 MaxRecordingLength = n.MaxRecordingLength,
                 TranscribeVoicemail = n.TranscribeVoicemail,
                 VoicemailEmail = n.VoicemailEmail,
@@ -851,6 +868,9 @@ public class IvrService : IIvrService
                 ConditionValue = nodeData.ConditionValue,
                 HttpUrl = nodeData.HttpUrl,
                 HttpMethod = nodeData.HttpMethod,
+                VariableName = nodeData.VariableName,
+                VariableValue = nodeData.VariableValue,
+                // SubFlowId not imported - SubFlows are external references
                 MaxRecordingLength = nodeData.MaxRecordingLength,
                 TranscribeVoicemail = nodeData.TranscribeVoicemail,
                 VoicemailEmail = nodeData.VoicemailEmail,
@@ -1134,6 +1154,13 @@ public class IvrService : IIvrService
                 break;
 
             case IvrNodeType.Hangup:
+                // Check if we should return to a parent subflow instead
+                var hangupReturnResult = await TryReturnFromSubFlowAsync(session, language, voice);
+                if (hangupReturnResult != null)
+                {
+                    return hangupReturnResult;
+                }
+
                 if (!string.IsNullOrEmpty(node.MessageText))
                 {
                     response.Say(node.MessageText, language: language, voice: voice);
@@ -1160,6 +1187,283 @@ public class IvrService : IIvrService
                 response.Append(gather);
                 break;
 
+            case IvrNodeType.Condition:
+                // Evaluate the condition using session variables
+                var conditionResult = EvaluateCondition(
+                    session,
+                    node.ConditionVariable,
+                    node.ConditionOperator,
+                    node.ConditionValue);
+
+                _logger.LogInformation(
+                    "Condition node {NodeName}: Variable={Variable}, Operator={Operator}, Value={Value}, Result={Result}",
+                    node.Name, node.ConditionVariable, node.ConditionOperator, node.ConditionValue, conditionResult);
+
+                // Determine the next node based on condition result
+                var conditionNextNodeId = conditionResult
+                    ? node.ConditionTrueNodeId
+                    : node.ConditionFalseNodeId;
+
+                if (conditionNextNodeId.HasValue)
+                {
+                    // Find the next node in the flow
+                    var conditionNextNode = flow.Nodes.FirstOrDefault(n => n.Id == conditionNextNodeId.Value);
+                    if (conditionNextNode != null)
+                    {
+                        // Update session to track the new current node
+                        session.CurrentNodeId = conditionNextNode.Id;
+                        await _dbContext.SaveChangesAsync();
+
+                        // Recursively generate TwiML for the next node
+                        return await GenerateTwimlForNodeAsync(conditionNextNode, flow, session);
+                    }
+                }
+
+                // No next node configured - end with error
+                _logger.LogWarning("Condition node {NodeId} has no valid next node for result {Result}", node.Id, conditionResult);
+                response.Say("We're sorry, an error occurred. Goodbye.", language: language, voice: voice);
+                response.Hangup();
+                break;
+
+            case IvrNodeType.HttpRequest:
+                if (string.IsNullOrEmpty(node.HttpUrl))
+                {
+                    _logger.LogWarning("HttpRequest node {NodeId} has no URL configured", node.Id);
+                    response.Say("We're sorry, an error occurred. Goodbye.", language: language, voice: voice);
+                    response.Hangup();
+                    break;
+                }
+
+                try
+                {
+                    var httpClient = _httpClientFactory.CreateClient();
+                    httpClient.Timeout = TimeSpan.FromSeconds(10); // 10 second timeout for IVR
+
+                    // Build query parameters from session variables
+                    var queryParams = new Dictionary<string, string>
+                    {
+                        ["CallSid"] = session.CallSid,
+                        ["CallerNumber"] = session.CallerNumber,
+                        ["CalledNumber"] = session.CalledNumber,
+                        ["LastDigits"] = session.LastDigits ?? ""
+                    };
+
+                    // Add custom session variables
+                    if (!string.IsNullOrEmpty(session.Variables))
+                    {
+                        var sessionVars = JsonSerializer.Deserialize<Dictionary<string, string>>(session.Variables);
+                        if (sessionVars != null)
+                        {
+                            foreach (var kvp in sessionVars)
+                            {
+                                queryParams[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
+
+                    HttpResponseMessage httpResponse;
+                    var httpMethod = node.HttpMethod?.ToUpperInvariant() ?? "GET";
+
+                    if (httpMethod == "POST")
+                    {
+                        var content = new FormUrlEncodedContent(queryParams);
+                        httpResponse = await httpClient.PostAsync(node.HttpUrl, content);
+                    }
+                    else
+                    {
+                        // GET request with query parameters
+                        var uriBuilder = new UriBuilder(node.HttpUrl);
+                        var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+                        foreach (var kvp in queryParams)
+                        {
+                            query[kvp.Key] = kvp.Value;
+                        }
+                        uriBuilder.Query = query.ToString();
+                        httpResponse = await httpClient.GetAsync(uriBuilder.Uri);
+                    }
+
+                    // Store response in session variables
+                    var responseBody = await httpResponse.Content.ReadAsStringAsync();
+                    SetSessionVariable(session, "http_status", ((int)httpResponse.StatusCode).ToString());
+                    SetSessionVariable(session, "http_response", responseBody.Length > 1000 ? responseBody[..1000] : responseBody);
+
+                    // Try to parse JSON response and extract fields
+                    if (httpResponse.Content.Headers.ContentType?.MediaType == "application/json")
+                    {
+                        try
+                        {
+                            using var jsonDoc = JsonDocument.Parse(responseBody);
+                            foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+                            {
+                                if (prop.Value.ValueKind == JsonValueKind.String)
+                                {
+                                    SetSessionVariable(session, $"http_{prop.Name}", prop.Value.GetString() ?? "");
+                                }
+                                else if (prop.Value.ValueKind == JsonValueKind.Number)
+                                {
+                                    SetSessionVariable(session, $"http_{prop.Name}", prop.Value.GetRawText());
+                                }
+                                else if (prop.Value.ValueKind == JsonValueKind.True || prop.Value.ValueKind == JsonValueKind.False)
+                                {
+                                    SetSessionVariable(session, $"http_{prop.Name}", prop.Value.GetBoolean().ToString().ToLower());
+                                }
+                            }
+                        }
+                        catch (JsonException)
+                        {
+                            // Not valid JSON, ignore
+                        }
+                    }
+
+                    await _dbContext.SaveChangesAsync();
+
+                    _logger.LogInformation(
+                        "HttpRequest node {NodeName}: {Method} {Url} returned {StatusCode}",
+                        node.Name, httpMethod, node.HttpUrl, (int)httpResponse.StatusCode);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "HttpRequest node {NodeId} failed: {Message}", node.Id, ex.Message);
+                    SetSessionVariable(session, "http_status", "0");
+                    SetSessionVariable(session, "http_error", ex.Message);
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                // Navigate to next node
+                if (node.NextNodeId.HasValue)
+                {
+                    var httpNextNode = flow.Nodes.FirstOrDefault(n => n.Id == node.NextNodeId.Value);
+                    if (httpNextNode != null)
+                    {
+                        session.CurrentNodeId = httpNextNode.Id;
+                        await _dbContext.SaveChangesAsync();
+                        return await GenerateTwimlForNodeAsync(httpNextNode, flow, session);
+                    }
+                }
+
+                // No next node - end call
+                response.Say("Thank you. Goodbye.", language: language, voice: voice);
+                response.Hangup();
+                break;
+
+            case IvrNodeType.SetVariable:
+                if (!string.IsNullOrEmpty(node.VariableName))
+                {
+                    // Substitute any variable references in the value
+                    var resolvedValue = SubstituteVariables(session, node.VariableValue ?? "");
+                    SetSessionVariable(session, node.VariableName, resolvedValue);
+                    await _dbContext.SaveChangesAsync();
+
+                    _logger.LogInformation(
+                        "SetVariable node {NodeName}: {Variable} = {Value}",
+                        node.Name, node.VariableName, resolvedValue);
+                }
+
+                // Navigate to next node
+                if (node.NextNodeId.HasValue)
+                {
+                    var setVarNextNode = flow.Nodes.FirstOrDefault(n => n.Id == node.NextNodeId.Value);
+                    if (setVarNextNode != null)
+                    {
+                        session.CurrentNodeId = setVarNextNode.Id;
+                        await _dbContext.SaveChangesAsync();
+                        return await GenerateTwimlForNodeAsync(setVarNextNode, flow, session);
+                    }
+                }
+
+                // No next node - end call
+                response.Say("Thank you. Goodbye.", language: language, voice: voice);
+                response.Hangup();
+                break;
+
+            case IvrNodeType.RequestCallback:
+                // Create a callback request
+                var callbackRequest = new CallbackRequest
+                {
+                    Id = Guid.NewGuid(),
+                    PhoneNumber = session.CallerNumber,
+                    CalledNumber = session.CalledNumber,
+                    QueueId = node.TransferQueueId, // Reuse transfer queue for callback routing
+                    Status = "Pending",
+                    Priority = 0,
+                    Notes = $"Callback requested via IVR flow: {flow.Name}",
+                    SessionVariables = session.Variables,
+                    OriginalCallSid = session.CallSid,
+                    RequestedAtUtc = DateTimeOffset.UtcNow
+                };
+
+                _dbContext.CallbackRequests.Add(callbackRequest);
+
+                // End IVR session
+                session.IsActive = false;
+                session.EndedAtUtc = DateTimeOffset.UtcNow;
+                session.Outcome = "callback_requested";
+                await _dbContext.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "RequestCallback node {NodeName}: Created callback request {CallbackId} for {PhoneNumber}",
+                    node.Name, callbackRequest.Id, session.CallerNumber);
+
+                // Play confirmation message
+                if (!string.IsNullOrEmpty(node.MessageText))
+                {
+                    var confirmationMessage = SubstituteVariables(session, node.MessageText);
+                    response.Say(confirmationMessage, language: language, voice: voice);
+                }
+                else
+                {
+                    response.Say("Thank you. We will call you back shortly. Goodbye.", language: language, voice: voice);
+                }
+                response.Hangup();
+                break;
+
+            case IvrNodeType.SubFlow:
+                if (!node.SubFlowId.HasValue)
+                {
+                    _logger.LogWarning("SubFlow node {NodeId} has no SubFlowId configured", node.Id);
+                    response.Say("We're sorry, an error occurred. Goodbye.", language: language, voice: voice);
+                    response.Hangup();
+                    break;
+                }
+
+                // Load the subflow
+                var subFlow = await GetFlowByIdAsync(node.SubFlowId.Value);
+                if (subFlow == null || !subFlow.EntryNodeId.HasValue)
+                {
+                    _logger.LogWarning("SubFlow {SubFlowId} not found or has no entry node", node.SubFlowId.Value);
+                    response.Say("We're sorry, an error occurred. Goodbye.", language: language, voice: voice);
+                    response.Hangup();
+                    break;
+                }
+
+                var subFlowEntryNode = subFlow.Nodes.FirstOrDefault(n => n.Id == subFlow.EntryNodeId.Value);
+                if (subFlowEntryNode == null)
+                {
+                    _logger.LogWarning("SubFlow {SubFlowId} entry node not found", node.SubFlowId.Value);
+                    response.Say("We're sorry, an error occurred. Goodbye.", language: language, voice: voice);
+                    response.Hangup();
+                    break;
+                }
+
+                // Store parent flow context for return (supports nested subflows)
+                var subflowDepth = GetSessionVariable(session, "_subflow_depth") ?? "0";
+                var depth = int.Parse(subflowDepth);
+                SetSessionVariable(session, $"_subflow_{depth}_parent_flow_id", flow.Id.ToString());
+                SetSessionVariable(session, $"_subflow_{depth}_return_node_id", node.NextNodeId?.ToString() ?? "");
+                SetSessionVariable(session, "_subflow_depth", (depth + 1).ToString());
+
+                // Update session to track new flow and node
+                session.FlowId = subFlow.Id;
+                session.CurrentNodeId = subFlowEntryNode.Id;
+                await _dbContext.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "SubFlow node {NodeName}: Entering subflow {SubFlowName} (depth {Depth})",
+                    node.Name, subFlow.Name, depth + 1);
+
+                // Execute the subflow's entry node
+                return await GenerateTwimlForNodeAsync(subFlowEntryNode, subFlow, session);
+
             default:
                 response.Say("We're sorry, an error occurred. Goodbye.", language: language, voice: voice);
                 response.Hangup();
@@ -1173,6 +1477,60 @@ public class IvrService : IIvrService
             CurrentNodeId = node.Id,
             Outcome = session.Outcome
         };
+    }
+
+    /// <summary>
+    /// Checks if there's a parent subflow to return to and handles the return
+    /// </summary>
+    private async Task<IvrTwimlResponse?> TryReturnFromSubFlowAsync(IvrCallSession session, string language, string voice)
+    {
+        var depthStr = GetSessionVariable(session, "_subflow_depth");
+        if (string.IsNullOrEmpty(depthStr) || depthStr == "0")
+            return null; // Not in a subflow
+
+        var depth = int.Parse(depthStr) - 1;
+        var parentFlowIdStr = GetSessionVariable(session, $"_subflow_{depth}_parent_flow_id");
+        var returnNodeIdStr = GetSessionVariable(session, $"_subflow_{depth}_return_node_id");
+
+        if (string.IsNullOrEmpty(parentFlowIdStr))
+            return null;
+
+        // Clear the subflow context for this level
+        SetSessionVariable(session, $"_subflow_{depth}_parent_flow_id", "");
+        SetSessionVariable(session, $"_subflow_{depth}_return_node_id", "");
+        SetSessionVariable(session, "_subflow_depth", depth.ToString());
+
+        // Load parent flow
+        var parentFlowId = Guid.Parse(parentFlowIdStr);
+        var parentFlow = await GetFlowByIdAsync(parentFlowId);
+        if (parentFlow == null)
+        {
+            _logger.LogWarning("Parent flow {ParentFlowId} not found when returning from subflow", parentFlowId);
+            return null;
+        }
+
+        // Update session to parent flow
+        session.FlowId = parentFlowId;
+
+        // If there's a return node, navigate to it
+        if (!string.IsNullOrEmpty(returnNodeIdStr) && Guid.TryParse(returnNodeIdStr, out var returnNodeId))
+        {
+            var returnNode = parentFlow.Nodes.FirstOrDefault(n => n.Id == returnNodeId);
+            if (returnNode != null)
+            {
+                session.CurrentNodeId = returnNodeId;
+                await _dbContext.SaveChangesAsync();
+
+                _logger.LogInformation("Returning from subflow to parent flow {FlowName}, node {NodeName}",
+                    parentFlow.Name, returnNode.Name);
+
+                return await GenerateTwimlForNodeAsync(returnNode, parentFlow, session);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
+        _logger.LogInformation("Returned from subflow to parent flow {FlowName} (no return node)", parentFlow.Name);
+        return null;
     }
 
     private IvrTwimlResponse GenerateMenuTwiml(IvrNodeDto node, IvrFlowDetailDto flow, Guid sessionId, bool showInvalidMessage)
@@ -1371,6 +1729,9 @@ public class IvrService : IIvrService
             HttpUrl = node.HttpUrl,
             HttpMethod = node.HttpMethod,
             NextNodeId = node.NextNodeId,
+            VariableName = node.VariableName,
+            VariableValue = node.VariableValue,
+            SubFlowId = node.SubFlowId,
             MaxRecordingLength = node.MaxRecordingLength,
             TranscribeVoicemail = node.TranscribeVoicemail,
             VoicemailEmail = node.VoicemailEmail,
@@ -1417,5 +1778,125 @@ public class IvrService : IIvrService
             StartedAtUtc = session.StartedAtUtc,
             EndedAtUtc = session.EndedAtUtc
         };
+    }
+
+    // ==================== Variable System Helpers ====================
+
+    /// <summary>
+    /// Gets a variable value from the session
+    /// </summary>
+    private string? GetSessionVariable(IvrCallSession session, string variableName)
+    {
+        if (string.IsNullOrEmpty(session.Variables) || string.IsNullOrEmpty(variableName))
+            return null;
+
+        try
+        {
+            var variables = JsonSerializer.Deserialize<Dictionary<string, string>>(session.Variables);
+            if (variables != null && variables.TryGetValue(variableName, out var value))
+                return value;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize session variables for session {SessionId}", session.Id);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Sets a variable value in the session
+    /// </summary>
+    private void SetSessionVariable(IvrCallSession session, string variableName, string value)
+    {
+        if (string.IsNullOrEmpty(variableName))
+            return;
+
+        var variables = string.IsNullOrEmpty(session.Variables)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(session.Variables) ?? new Dictionary<string, string>();
+
+        variables[variableName] = value;
+        session.Variables = JsonSerializer.Serialize(variables);
+    }
+
+    /// <summary>
+    /// Evaluates a condition against session variables
+    /// </summary>
+    private bool EvaluateCondition(IvrCallSession session, string? variableName, string? conditionOperator, string? conditionValue)
+    {
+        if (string.IsNullOrEmpty(variableName) || string.IsNullOrEmpty(conditionOperator))
+        {
+            _logger.LogWarning("Condition evaluation failed: missing variable name or operator");
+            return false;
+        }
+
+        var actualValue = GetSessionVariable(session, variableName) ?? "";
+        var expectedValue = conditionValue ?? "";
+
+        return conditionOperator.ToLowerInvariant() switch
+        {
+            "equals" => string.Equals(actualValue, expectedValue, StringComparison.OrdinalIgnoreCase),
+            "notequals" => !string.Equals(actualValue, expectedValue, StringComparison.OrdinalIgnoreCase),
+            "contains" => actualValue.Contains(expectedValue, StringComparison.OrdinalIgnoreCase),
+            "startswith" => actualValue.StartsWith(expectedValue, StringComparison.OrdinalIgnoreCase),
+            "endswith" => actualValue.EndsWith(expectedValue, StringComparison.OrdinalIgnoreCase),
+            "greaterthan" => CompareNumeric(actualValue, expectedValue) > 0,
+            "lessthan" => CompareNumeric(actualValue, expectedValue) < 0,
+            "greaterthanorequal" => CompareNumeric(actualValue, expectedValue) >= 0,
+            "lessthanorequal" => CompareNumeric(actualValue, expectedValue) <= 0,
+            "isempty" => string.IsNullOrEmpty(actualValue),
+            "isnotempty" => !string.IsNullOrEmpty(actualValue),
+            _ => false
+        };
+    }
+
+    /// <summary>
+    /// Compares two string values as numbers
+    /// </summary>
+    private int CompareNumeric(string value1, string value2)
+    {
+        if (decimal.TryParse(value1, out var num1) && decimal.TryParse(value2, out var num2))
+            return num1.CompareTo(num2);
+
+        // Fall back to string comparison if not numeric
+        return string.Compare(value1, value2, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Substitutes {variableName} placeholders in text with session variable values
+    /// </summary>
+    private string SubstituteVariables(IvrCallSession session, string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text ?? "";
+
+        // Also include built-in variables
+        var result = text
+            .Replace("{CallerNumber}", session.CallerNumber ?? "")
+            .Replace("{CalledNumber}", session.CalledNumber ?? "")
+            .Replace("{LastDigits}", session.LastDigits ?? "");
+
+        // Replace custom variables: {variableName}
+        if (!string.IsNullOrEmpty(session.Variables))
+        {
+            try
+            {
+                var variables = JsonSerializer.Deserialize<Dictionary<string, string>>(session.Variables);
+                if (variables != null)
+                {
+                    foreach (var kvp in variables)
+                    {
+                        result = result.Replace($"{{{kvp.Key}}}", kvp.Value ?? "");
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore deserialization errors
+            }
+        }
+
+        return result;
     }
 }

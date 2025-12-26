@@ -117,13 +117,23 @@ const Dashboard = () => {
     agentsAvailable: q.agentsAvailable,
   }));
 
-  // Map agents to status grid format
-  const agentStatusData = agents.map((agent: { id: string; name: string; currentState?: string }) => ({
-    id: agent.id,
-    name: agent.name,
-    state: (agent.currentState?.toLowerCase() || 'offline') as 'available' | 'busy' | 'break' | 'acw' | 'offline',
-    duration: Math.floor(Math.random() * 600), // TODO: Track actual duration from backend
-  }));
+  // Map agents to status grid format with real duration calculation
+  const agentStatusData = agents.map((agent: { id: string; name: string; currentState?: string; stateChangedAt?: string }) => {
+    // Calculate duration in seconds from stateChangedAt
+    let duration = 0;
+    if (agent.stateChangedAt) {
+      const changedAt = new Date(agent.stateChangedAt);
+      const now = new Date();
+      duration = Math.floor((now.getTime() - changedAt.getTime()) / 1000);
+    }
+
+    return {
+      id: agent.id,
+      name: agent.name,
+      state: (agent.currentState?.toLowerCase() || 'offline') as 'available' | 'busy' | 'break' | 'acw' | 'offline',
+      duration,
+    };
+  });
 
   // Agent state breakdown from API
   const stateColors: Record<string, string> = {

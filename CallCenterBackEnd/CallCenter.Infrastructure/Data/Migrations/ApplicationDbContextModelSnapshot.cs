@@ -487,6 +487,10 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("id");
 
+                    b.Property<bool>("Acknowledged")
+                        .HasColumnType("bit")
+                        .HasColumnName("acknowledged");
+
                     b.Property<DateTime?>("AcknowledgedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("acknowledged_at");
@@ -520,9 +524,25 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("metadata");
 
+                    b.Property<decimal>("MetricValue")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("metric_value");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("resolved_at");
+
                     b.Property<int>("Severity")
                         .HasColumnType("int")
                         .HasColumnName("severity");
+
+                    b.Property<decimal>("ThresholdValue")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("threshold_value");
+
+                    b.Property<DateTime>("TriggeredAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("triggered_at");
 
                     b.HasKey("Id")
                         .HasName("p_k_alert_logs");
@@ -547,10 +567,24 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("alert_type");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Channels")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("channels");
+
                     b.Property<string>("Condition")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("condition");
+
+                    b.Property<int>("CooldownMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("cooldown_minutes");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -564,23 +598,53 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("is_active");
 
+                    b.Property<DateTime?>("LastTriggeredAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_triggered_at");
+
+                    b.Property<string>("Metric")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("metric");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("name");
+
+                    b.Property<string>("Operator")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("operator");
 
                     b.Property<string>("Recipients")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("recipients");
 
-                    b.Property<string>("Threshold")
-                        .HasColumnType("nvarchar(max)")
+                    b.Property<int>("Severity")
+                        .HasColumnType("int")
+                        .HasColumnName("severity");
+
+                    b.Property<decimal>("Threshold")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("threshold");
+
+                    b.Property<int>("TriggerCount")
+                        .HasColumnType("int")
+                        .HasColumnName("trigger_count");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("unit");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("updated_at");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("webhook_url");
 
                     b.HasKey("Id")
                         .HasName("p_k_alert_rules");
@@ -693,6 +757,10 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("created_by");
 
+                    b.Property<bool>("CustomerDialed")
+                        .HasColumnType("bit")
+                        .HasColumnName("customer_dialed");
+
                     b.Property<string>("Direction")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -709,9 +777,17 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("from_number");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("notes");
+
+                    b.Property<string>("OutboundConferenceSid")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("outbound_conference_sid");
 
                     b.Property<string>("ProviderCallId")
                         .IsRequired()
@@ -822,6 +898,131 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.ToTable("call_recordings");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.CallSurvey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AgentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("agent_id");
+
+                    b.Property<string>("CallId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("call_id");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerContactEncrypted")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("customer_contact_encrypted");
+
+                    b.Property<string>("CustomerContactMasked")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("customer_contact_masked");
+
+                    b.Property<string>("Direction")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("direction");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("provider_message_id");
+
+                    b.Property<string>("QuestionCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("question_code");
+
+                    b.Property<Guid?>("QueueId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("queue_id");
+
+                    b.Property<byte?>("Rating")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("rating");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("responded_at");
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("retry_count");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("token");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_call_surveys");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("ix_call_surveys_agent_id");
+
+                    b.HasIndex("CallId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_call_surveys_call_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_call_surveys_status");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasDatabaseName("ix_call_surveys_token");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_call_surveys_status_created");
+
+                    b.ToTable("call_surveys", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_call_surveys_rating", "rating IS NULL OR (rating >= 1 AND rating <= 5)");
+                        });
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.CallTranscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -882,6 +1083,100 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasDatabaseName("i_x_call_transcriptions_conversation_id");
 
                     b.ToTable("call_transcriptions");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.CallbackRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssignedAgentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_agent_id");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<DateTimeOffset?>("AttemptedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("attempted_at_utc");
+
+                    b.Property<string>("CalledNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("called_number");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("OriginalCallSid")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("original_call_sid");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("phone_number");
+
+                    b.Property<DateTimeOffset?>("PreferredCallbackTime")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("preferred_callback_time");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid?>("QueueId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("queue_id");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("requested_at_utc");
+
+                    b.Property<string>("SessionVariables")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("session_variables");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_callback_requests");
+
+                    b.HasIndex("AssignedAgentId")
+                        .HasDatabaseName("i_x_callback_requests_assigned_agent_id");
+
+                    b.HasIndex("QueueId")
+                        .HasDatabaseName("i_x_callback_requests_queue_id");
+
+                    b.ToTable("callback_requests");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.CoachingSession", b =>
@@ -1001,6 +1296,29 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("follow_up_required");
 
+                    b.Property<DateTime?>("HandoffAcceptedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("handoff_accepted_at");
+
+                    b.Property<DateTime?>("HandoffEndedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("handoff_ended_at");
+
+                    b.Property<string>("HandoffEndedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("handoff_ended_by");
+
+                    b.Property<DateTime?>("HandoffRequestedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("handoff_requested_at");
+
+                    b.Property<int>("HandoffStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("handoff_status");
+
                     b.Property<string>("LastMessage")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("last_message");
@@ -1008,6 +1326,11 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Property<Guid?>("QueueId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("queue_id");
+
+                    b.Property<string>("SmartBotSessionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("smart_bot_session_id");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("datetime2")
@@ -1030,8 +1353,14 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.HasIndex("CustomerId")
                         .HasDatabaseName("i_x_conversations_customer_id");
 
+                    b.HasIndex("HandoffStatus")
+                        .HasDatabaseName("i_x_conversations_handoff_status");
+
                     b.HasIndex("QueueId")
                         .HasDatabaseName("i_x_conversations_queue_id");
+
+                    b.HasIndex("SmartBotSessionId")
+                        .HasDatabaseName("i_x_conversations_smart_bot_session_id");
 
                     b.ToTable("conversations");
                 });
@@ -1439,6 +1768,86 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasDatabaseName("i_x_customer_satisfaction_surveys_ticket_id");
 
                     b.ToTable("customer_satisfaction_surveys");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.DataExport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("created_by_name");
+
+                    b.Property<string>("DataSource")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("data_source");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("error_message");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("expires_at");
+
+                    b.Property<long?>("FileSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size");
+
+                    b.Property<string>("FileUrl")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("file_url");
+
+                    b.Property<string>("Filters")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("filters");
+
+                    b.Property<int>("Format")
+                        .HasColumnType("int")
+                        .HasColumnName("format");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("name");
+
+                    b.Property<int?>("Progress")
+                        .HasColumnType("int")
+                        .HasColumnName("progress");
+
+                    b.Property<int?>("RecordCount")
+                        .HasColumnType("int")
+                        .HasColumnName("record_count");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_data_exports");
+
+                    b.ToTable("data_exports");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.DataExportLog", b =>
@@ -2574,6 +2983,10 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("repeat_count");
 
+                    b.Property<Guid?>("SubFlowId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("sub_flow_id");
+
                     b.Property<string>("TimeoutMessage")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
@@ -2611,6 +3024,14 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("updated_by");
+
+                    b.Property<string>("VariableName")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("variable_name");
+
+                    b.Property<string>("VariableValue")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("variable_value");
 
                     b.Property<string>("Voice")
                         .HasMaxLength(50)
@@ -2770,6 +3191,55 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasName("p_k_notifications");
 
                     b.ToTable("notifications");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.NotificationPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CategoryId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("Email")
+                        .HasColumnType("bit")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("InApp")
+                        .HasColumnType("bit")
+                        .HasColumnName("in_app");
+
+                    b.Property<bool>("Push")
+                        .HasColumnType("bit")
+                        .HasColumnName("push");
+
+                    b.Property<bool>("Sound")
+                        .HasColumnType("bit")
+                        .HasColumnName("sound");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_notification_preferences");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("i_x_notification_preferences_user_id");
+
+                    b.ToTable("notification_preferences");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.Permission", b =>
@@ -3335,10 +3805,30 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         },
                         new
                         {
+                            Id = new Guid("fd59c6f7-f4c9-0b8e-851a-40fb2e9d685d"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View knowledge base articles",
+                            DisplayOrder = 52,
+                            Module = "Knowledge",
+                            Name = "View Knowledge Base",
+                            SystemName = "knowledge.view"
+                        },
+                        new
+                        {
+                            Id = new Guid("4e327cfe-d41d-c23d-54e4-9d5980c37848"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Create, edit, delete knowledge base articles",
+                            DisplayOrder = 53,
+                            Module = "Knowledge",
+                            Name = "Manage Knowledge Base",
+                            SystemName = "knowledge.manage"
+                        },
+                        new
+                        {
                             Id = new Guid("aa646765-6738-521c-20dc-df9df6f1daac"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Access and modify system settings",
-                            DisplayOrder = 52,
+                            DisplayOrder = 54,
                             Module = "Admin",
                             Name = "System Settings",
                             SystemName = "admin.settings"
@@ -3348,7 +3838,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("e8330f06-3147-5980-b919-04aa547962c6"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "View system audit logs",
-                            DisplayOrder = 53,
+                            DisplayOrder = 55,
                             Module = "Admin",
                             Name = "View Audit Logs",
                             SystemName = "admin.audit_logs"
@@ -3358,7 +3848,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("a0e76814-f452-de78-a582-27acd0793035"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Create and edit SLA rules",
-                            DisplayOrder = 54,
+                            DisplayOrder = 56,
                             Module = "Admin",
                             Name = "Manage SLA Rules",
                             SystemName = "admin.sla_rules"
@@ -3368,7 +3858,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("e2db533a-9ef9-e7d0-387a-ba8e394e49fa"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Create and edit call queues",
-                            DisplayOrder = 55,
+                            DisplayOrder = 57,
                             Module = "Admin",
                             Name = "Manage Queues",
                             SystemName = "admin.queues"
@@ -3378,7 +3868,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("993cb8aa-8d1e-0484-eba4-5b3dc713eae7"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Create and edit system alerts",
-                            DisplayOrder = 56,
+                            DisplayOrder = 58,
                             Module = "Admin",
                             Name = "Manage Alerts",
                             SystemName = "admin.alerts"
@@ -3388,7 +3878,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("e8c12788-2cea-dac1-a0b9-eb9ed0f65ea8"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Configure external integrations",
-                            DisplayOrder = 57,
+                            DisplayOrder = 59,
                             Module = "Admin",
                             Name = "Manage Integrations",
                             SystemName = "admin.integrations"
@@ -3398,7 +3888,7 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("884d0d86-67dc-5322-4601-9c532412a23c"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Create, edit, delete roles and assign permissions",
-                            DisplayOrder = 58,
+                            DisplayOrder = 60,
                             Module = "System",
                             Name = "Manage Roles",
                             SystemName = "system.roles_manage"
@@ -3408,10 +3898,20 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             Id = new Guid("a7b80797-6662-2714-c7db-fdd89a770200"),
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "View available permissions",
-                            DisplayOrder = 59,
+                            DisplayOrder = 61,
                             Module = "System",
                             Name = "View Permissions",
                             SystemName = "system.permissions_view"
+                        },
+                        new
+                        {
+                            Id = new Guid("57cfa772-d9d7-d285-77e0-231ae50cad1c"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "View and modify system settings",
+                            DisplayOrder = 62,
+                            Module = "System",
+                            Name = "Manage Settings",
+                            SystemName = "system.settings_manage"
                         });
                 });
 
@@ -4268,6 +4768,18 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         new
                         {
                             RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("fd59c6f7-f4c9-0b8e-851a-40fb2e9d685d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("4e327cfe-d41d-c23d-54e4-9d5980c37848"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
                             PermissionId = new Guid("aa646765-6738-521c-20dc-df9df6f1daac"),
                             AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
@@ -4311,6 +4823,12 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         {
                             RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
                             PermissionId = new Guid("a7b80797-6662-2714-c7db-fdd89a770200"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000002"),
+                            PermissionId = new Guid("57cfa772-d9d7-d285-77e0-231ae50cad1c"),
                             AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
@@ -4609,6 +5127,18 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         },
                         new
                         {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("fd59c6f7-f4c9-0b8e-851a-40fb2e9d685d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000003"),
+                            PermissionId = new Guid("4e327cfe-d41d-c23d-54e4-9d5980c37848"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
                             RoleId = new Guid("10000000-0000-0000-0000-000000000004"),
                             PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
                             AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -4825,6 +5355,12 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         },
                         new
                         {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000005"),
+                            PermissionId = new Guid("fd59c6f7-f4c9-0b8e-851a-40fb2e9d685d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
                             RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
                             PermissionId = new Guid("3bf50508-edbc-3d48-5daf-6a7e581fd610"),
                             AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -4882,7 +5418,86 @@ namespace CallCenter.Infrastructure.Data.Migrations
                             RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
                             PermissionId = new Guid("e8b9eabe-ba23-ea46-4352-a6068cfeb627"),
                             AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            RoleId = new Guid("10000000-0000-0000-0000-000000000006"),
+                            PermissionId = new Guid("fd59c6f7-f4c9-0b8e-851a-40fb2e9d685d"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.ScheduledExport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("DataSource")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("data_source");
+
+                    b.Property<string>("Filters")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("filters");
+
+                    b.Property<int>("Format")
+                        .HasColumnType("int")
+                        .HasColumnName("format");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_run_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("NextRunAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("next_run_at");
+
+                    b.Property<string>("Recipients")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("recipients");
+
+                    b.Property<int>("Schedule")
+                        .HasColumnType("int")
+                        .HasColumnName("schedule");
+
+                    b.Property<int?>("ScheduleDayOfMonth")
+                        .HasColumnType("int")
+                        .HasColumnName("schedule_day_of_month");
+
+                    b.Property<int?>("ScheduleDayOfWeek")
+                        .HasColumnType("int")
+                        .HasColumnName("schedule_day_of_week");
+
+                    b.Property<string>("ScheduleTime")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("schedule_time");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_scheduled_exports");
+
+                    b.ToTable("scheduled_exports");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.SlaRule", b =>
@@ -4930,6 +5545,392 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasName("p_k_sla_rules");
 
                     b.ToTable("sla_rules");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SmartBotEscalation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("AgentAssignedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("agent_assigned_at");
+
+                    b.Property<Guid?>("AssignedAgentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_agent_id");
+
+                    b.Property<string>("AssignedAgentName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("assigned_agent_name");
+
+                    b.Property<Guid?>("AssignedQueueId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_queue_id");
+
+                    b.Property<string>("ContextVariablesJson")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("context_variables_json");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("customer_email");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<string>("CustomerPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("customer_phone");
+
+                    b.Property<DateTime>("EscalatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("escalated_at");
+
+                    b.Property<int?>("EstimatedWaitTimeSeconds")
+                        .HasColumnType("int")
+                        .HasColumnName("estimated_wait_time_seconds");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("int")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("PreferredLanguage")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("preferred_language");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int")
+                        .HasColumnName("priority");
+
+                    b.Property<int?>("QueuePosition")
+                        .HasColumnType("int")
+                        .HasColumnName("queue_position");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("resolution");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("resolution_notes");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Sentiment")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("sentiment");
+
+                    b.Property<string>("SmartBotChatbotId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("smart_bot_chatbot_id");
+
+                    b.Property<string>("SmartBotConversationId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("smart_bot_conversation_id");
+
+                    b.Property<string>("SmartBotSessionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("smart_bot_session_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<string>("Topic")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("topic");
+
+                    b.Property<string>("TranscriptJson")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("transcript_json");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_smart_bot_escalations");
+
+                    b.HasIndex("AssignedAgentId")
+                        .HasDatabaseName("i_x_smart_bot_escalations_assigned_agent_id");
+
+                    b.HasIndex("AssignedQueueId")
+                        .HasDatabaseName("i_x_smart_bot_escalations_assigned_queue_id");
+
+                    b.HasIndex("ConversationId")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_smart_bot_escalations_conversation_id");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("i_x_smart_bot_escalations_customer_id");
+
+                    b.HasIndex("EscalatedAt")
+                        .HasDatabaseName("i_x_smart_bot_escalations_escalated_at");
+
+                    b.HasIndex("SmartBotConversationId")
+                        .HasDatabaseName("i_x_smart_bot_escalations_smart_bot_conversation_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("i_x_smart_bot_escalations_status");
+
+                    b.HasIndex("TicketId")
+                        .HasDatabaseName("i_x_smart_bot_escalations_ticket_id");
+
+                    b.ToTable("smart_bot_escalations");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SmartBotEscalationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("action");
+
+                    b.Property<string>("ActorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("actor_id");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("actor_name");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("details");
+
+                    b.Property<Guid>("EscalationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("escalation_id");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("timestamp");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_smart_bot_escalation_logs");
+
+                    b.HasIndex("EscalationId")
+                        .HasDatabaseName("i_x_smart_bot_escalation_logs_escalation_id");
+
+                    b.HasIndex("Timestamp")
+                        .HasDatabaseName("i_x_smart_bot_escalation_logs_timestamp");
+
+                    b.ToTable("smart_bot_escalation_logs");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.Survey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("description");
+
+                    b.Property<int?>("ExpirationDays")
+                        .HasColumnType("int")
+                        .HasColumnName("expiration_days");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ThankYouMessage")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("thank_you_message");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("trigger");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_surveys");
+
+                    b.ToTable("surveys");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SurveyQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("MaxValue")
+                        .HasColumnType("int")
+                        .HasColumnName("max_value");
+
+                    b.Property<int?>("MinValue")
+                        .HasColumnType("int")
+                        .HasColumnName("min_value");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("options");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int")
+                        .HasColumnName("order");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("question");
+
+                    b.Property<bool>("Required")
+                        .HasColumnType("bit")
+                        .HasColumnName("required");
+
+                    b.Property<Guid>("SurveyId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("survey_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_survey_questions");
+
+                    b.HasIndex("SurveyId")
+                        .HasDatabaseName("i_x_survey_questions_survey_id");
+
+                    b.ToTable("survey_questions");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SurveyResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AgentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("agent_id");
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("answers");
+
+                    b.Property<string>("Channel")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("channel");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("customer_id");
+
+                    b.Property<decimal?>("OverallScore")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("overall_score");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("SurveyId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("survey_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_survey_responses");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("i_x_survey_responses_agent_id");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("i_x_survey_responses_customer_id");
+
+                    b.HasIndex("SurveyId")
+                        .HasDatabaseName("i_x_survey_responses_survey_id");
+
+                    b.ToTable("survey_responses");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.SystemSetting", b =>
@@ -4988,6 +5989,572 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasDatabaseName("i_x_system_settings_updated_by_agent_id");
 
                     b.ToTable("system_settings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("d59a9380-854a-6266-5570-00194277c8b6"),
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Use mock data for WhatsApp (development)",
+                            IsSensitive = false,
+                            Key = "WhatsApp:UseMockData",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        },
+                        new
+                        {
+                            Id = new Guid("fa7ccd8f-b9b9-aaa6-0768-15726b4f979a"),
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "WhatsApp Phone Number ID",
+                            IsSensitive = true,
+                            Key = "WhatsApp:PhoneNumberId",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("419af46c-4416-4b4f-a0c1-458f1a7211c7"),
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "WhatsApp Access Token",
+                            IsSensitive = true,
+                            Key = "WhatsApp:AccessToken",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("58b17efc-2e16-65be-0d02-e9e417dde75c"),
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Webhook Verify Token",
+                            IsSensitive = true,
+                            Key = "WhatsApp:WebhookVerifyToken",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("78b8d820-5387-5d89-0516-67a5982d1d07"),
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "WhatsApp Business Account ID",
+                            IsSensitive = true,
+                            Key = "WhatsApp:BusinessAccountId",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("f8c29e28-3221-6554-eddc-8128bcf999fe"),
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "WhatsApp API Version",
+                            IsSensitive = false,
+                            Key = "WhatsApp:ApiVersion",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "v17.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("e3cee8f1-7667-49ff-33a9-5c86f3ab14aa"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Twilio Account SID",
+                            IsSensitive = true,
+                            Key = "Twilio:AccountSid",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("0a16237e-bd53-306a-3023-e8b10c384e39"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Twilio API Key SID",
+                            IsSensitive = true,
+                            Key = "Twilio:ApiKeySid",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("cf1f9f44-a322-3242-f392-43ab08e91975"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Twilio API Key Secret",
+                            IsSensitive = true,
+                            Key = "Twilio:ApiKeySecret",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("8764433b-07dd-2424-c48b-17da320e7898"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Voice TwiML App SID",
+                            IsSensitive = true,
+                            Key = "Twilio:VoiceTwimlAppSid",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("804effd6-0a2a-482f-8918-2e2d05896c58"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Default Caller ID",
+                            IsSensitive = false,
+                            Key = "Twilio:CallerId",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("cf10a076-477a-409e-e109-4168c600670e"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Twilio Auth Token",
+                            IsSensitive = true,
+                            Key = "Twilio:AuthToken",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("f58446a5-a377-57f2-c888-9e20b17d477d"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Webhook Auth Token",
+                            IsSensitive = true,
+                            Key = "Twilio:WebhookAuthToken",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("2b67338b-d5c3-9beb-6747-34fe3edfb88a"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Base Webhook URL",
+                            IsSensitive = false,
+                            Key = "Twilio:BaseWebhookUrl",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("7b19673c-c4dd-6d7a-9c2e-f912519a0aaa"),
+                            Category = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Bypass Signature Validation (dev only)",
+                            IsSensitive = false,
+                            Key = "Twilio:BypassSignatureValidation",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "false"
+                        },
+                        new
+                        {
+                            Id = new Guid("bcc9a598-6bd5-d620-8862-24aec034d6e2"),
+                            Category = 3,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "SMS Provider (twilio, vonage, etc.)",
+                            IsSensitive = false,
+                            Key = "Sms:Provider",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "twilio"
+                        },
+                        new
+                        {
+                            Id = new Guid("1a225051-9846-6a15-20fb-e65723b39ee7"),
+                            Category = 3,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Default SMS From Number",
+                            IsSensitive = false,
+                            Key = "Sms:FromNumber",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("d140fab4-e1ef-798c-2341-5d2179f4155a"),
+                            Category = 3,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Enable SMS messaging",
+                            IsSensitive = false,
+                            Key = "Sms:Enabled",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "false"
+                        },
+                        new
+                        {
+                            Id = new Guid("54b34fdd-7486-4b39-6f96-e854cff05afd"),
+                            Category = 5,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Transcription API Base URL",
+                            IsSensitive = false,
+                            Key = "Transcription:BaseUrl",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("98ffdf8b-56b2-1c6c-64da-3ff8d2b513c9"),
+                            Category = 5,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Transcription Endpoint",
+                            IsSensitive = false,
+                            Key = "Transcription:Endpoint",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "/api/Transcription"
+                        },
+                        new
+                        {
+                            Id = new Guid("8ef0f236-0631-52c5-af47-b7b98ccd6f9e"),
+                            Category = 5,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "API Timeout (seconds)",
+                            IsSensitive = false,
+                            Key = "Transcription:TimeoutSeconds",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "300"
+                        },
+                        new
+                        {
+                            Id = new Guid("75e56a7b-0e42-ae59-176d-06e7a83351ed"),
+                            Category = 6,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Recording Storage Path",
+                            IsSensitive = false,
+                            Key = "RecordingStorage:Path",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "C:\\CallCenterRecordings"
+                        },
+                        new
+                        {
+                            Id = new Guid("dcd6d551-ea0a-ba98-fb53-91ad9af4dba5"),
+                            Category = 6,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "Retention Period (days)",
+                            IsSensitive = false,
+                            Key = "RecordingStorage:RetentionDays",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "90"
+                        },
+                        new
+                        {
+                            Id = new Guid("aed3d52a-f986-df11-d80b-073acced45cb"),
+                            Category = 6,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "Max File Size (MB)",
+                            IsSensitive = false,
+                            Key = "RecordingStorage:MaxFileSizeMB",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "100"
+                        },
+                        new
+                        {
+                            Id = new Guid("ce4ecc43-b9c6-3a70-6b6b-5f0afdf69d3b"),
+                            Category = 7,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "JWT Secret Key (min 32 chars)",
+                            IsSensitive = true,
+                            Key = "Jwt:Key",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("786f1e23-f788-95cd-1c04-04bc97318939"),
+                            Category = 7,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "JWT Issuer",
+                            IsSensitive = false,
+                            Key = "Jwt:Issuer",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "CallCenterAPI"
+                        },
+                        new
+                        {
+                            Id = new Guid("ba459564-1ce8-8a6b-0745-3bc128afb897"),
+                            Category = 7,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "JWT Audience",
+                            IsSensitive = false,
+                            Key = "Jwt:Audience",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "CallCenterClient"
+                        },
+                        new
+                        {
+                            Id = new Guid("91b64fd9-3a63-6ec1-570a-9584f121680b"),
+                            Category = 7,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "Token Expiration (minutes)",
+                            IsSensitive = false,
+                            Key = "Jwt:ExpirationMinutes",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "60"
+                        },
+                        new
+                        {
+                            Id = new Guid("a3200bb2-eb1f-e929-b685-df03251b4856"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "SMTP Server Hostname",
+                            IsSensitive = false,
+                            Key = "Email:SmtpHost",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("827eeae5-7b6e-869f-1bc0-63f4475a293b"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "SMTP Port",
+                            IsSensitive = false,
+                            Key = "Email:SmtpPort",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "587"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e07d8aa-a436-db91-67ab-3a7caddde828"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "SMTP Username",
+                            IsSensitive = false,
+                            Key = "Email:SmtpUsername",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("60fb3617-3254-eb88-a2ec-12d2c6120678"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "SMTP Password",
+                            IsSensitive = true,
+                            Key = "Email:SmtpPassword",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("7eea0044-ace3-4d56-35b8-28e9dad2ed77"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Default From Email",
+                            IsSensitive = false,
+                            Key = "Email:FromEmail",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = ""
+                        },
+                        new
+                        {
+                            Id = new Guid("87306d03-33de-f412-799d-bff9bf146f4a"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Default From Name",
+                            IsSensitive = false,
+                            Key = "Email:FromName",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Call Center"
+                        },
+                        new
+                        {
+                            Id = new Guid("b228da17-6c1f-2938-3027-20da5e64505e"),
+                            Category = 4,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Use SSL/TLS",
+                            IsSensitive = false,
+                            Key = "Email:UseSsl",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1a4f29a-22c6-3434-2a80-e8c70000eb66"),
+                            Category = 0,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Company Name",
+                            IsSensitive = false,
+                            Key = "General:CompanyName",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "Call Center"
+                        },
+                        new
+                        {
+                            Id = new Guid("719d035c-38ce-b35a-c0e8-f06b0d4ba47f"),
+                            Category = 0,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Default Timezone",
+                            IsSensitive = false,
+                            Key = "General:Timezone",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "UTC"
+                        },
+                        new
+                        {
+                            Id = new Guid("0ba8ffa6-5869-0ab9-9568-34c188c62d05"),
+                            Category = 0,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Date Display Format",
+                            IsSensitive = false,
+                            Key = "General:DateFormat",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "MM/dd/yyyy"
+                        },
+                        new
+                        {
+                            Id = new Guid("912978fe-e8ce-cbca-209d-44b1a0bc2876"),
+                            Category = 0,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Time Display Format",
+                            IsSensitive = false,
+                            Key = "General:TimeFormat",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "HH:mm:ss"
+                        },
+                        new
+                        {
+                            Id = new Guid("c089c4c3-b848-c14b-8d7e-6731047879ca"),
+                            Category = 0,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 0,
+                            Description = "Default Language",
+                            IsSensitive = false,
+                            Key = "General:Language",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "en"
+                        },
+                        new
+                        {
+                            Id = new Guid("45fe4ccc-c7d4-2c53-348e-b7001bc9b26c"),
+                            Category = 8,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "Default Response Time (seconds)",
+                            IsSensitive = false,
+                            Key = "Sla:DefaultResponseTime",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "30"
+                        },
+                        new
+                        {
+                            Id = new Guid("543aed1f-e4b1-8b0f-2531-d203f5156523"),
+                            Category = 8,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "Default Service Level (%)",
+                            IsSensitive = false,
+                            Key = "Sla:DefaultServiceLevel",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "80"
+                        },
+                        new
+                        {
+                            Id = new Guid("26bdb9f4-bb6f-c417-00ad-590c8ff7e9e8"),
+                            Category = 8,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 1,
+                            Description = "Warning Threshold (seconds before breach)",
+                            IsSensitive = false,
+                            Key = "Sla:WarningThreshold",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "20"
+                        },
+                        new
+                        {
+                            Id = new Guid("75ec8d57-c85c-7fc9-4fc0-692b1acce9ee"),
+                            Category = 9,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Enable Email Notifications",
+                            IsSensitive = false,
+                            Key = "Notification:EnableEmail",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        },
+                        new
+                        {
+                            Id = new Guid("9b077893-81df-a269-2e3e-6b45c423d295"),
+                            Category = 9,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Enable Push Notifications",
+                            IsSensitive = false,
+                            Key = "Notification:EnablePush",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        },
+                        new
+                        {
+                            Id = new Guid("7bdfe3fa-ed06-e28f-34c8-b2f60c6a33a8"),
+                            Category = 9,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Enable In-App Notifications",
+                            IsSensitive = false,
+                            Key = "Notification:EnableInApp",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        },
+                        new
+                        {
+                            Id = new Guid("c70a9f0a-381a-b046-262d-2921ccd6bc24"),
+                            Category = 9,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DataType = 2,
+                            Description = "Enable Sound Alerts",
+                            IsSensitive = false,
+                            Key = "Notification:EnableSound",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "true"
+                        });
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.Team", b =>
@@ -5585,6 +7152,60 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.ToTable("transcription_segments");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.WhatsAppMessageTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Components")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("components");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("language");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("MetaTemplateId")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("meta_template_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("int")
+                        .HasColumnName("usage_count");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_whats_app_message_templates");
+
+                    b.ToTable("whats_app_message_templates");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.Agent", b =>
                 {
                     b.HasOne("CallCenter.Domain.Entities.Team", "Team")
@@ -5780,6 +7401,17 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Conversation");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.CallSurvey", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_call_surveys_agents_agent_id");
+
+                    b.Navigation("Agent");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.CallTranscription", b =>
                 {
                     b.HasOne("CallCenter.Domain.Entities.Conversation", "Conversation")
@@ -5788,6 +7420,23 @@ namespace CallCenter.Infrastructure.Data.Migrations
                         .HasConstraintName("f_k_call_transcriptions__conversations_conversation_id");
 
                     b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.CallbackRequest", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "AssignedAgent")
+                        .WithMany()
+                        .HasForeignKey("AssignedAgentId")
+                        .HasConstraintName("f_k_callback_requests_agents_assigned_agent_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Queue", "Queue")
+                        .WithMany()
+                        .HasForeignKey("QueueId")
+                        .HasConstraintName("f_k_callback_requests__queues_queue_id");
+
+                    b.Navigation("AssignedAgent");
+
+                    b.Navigation("Queue");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.CoachingSession", b =>
@@ -6211,6 +7860,18 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Author");
                 });
 
+            modelBuilder.Entity("CallCenter.Domain.Entities.NotificationPreference", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_notification_preferences_agents_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CallCenter.Domain.Entities.QaFormCriteria", b =>
                 {
                     b.HasOne("CallCenter.Domain.Entities.QaEvaluationForm", "Form")
@@ -6367,6 +8028,101 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SmartBotEscalation", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "AssignedAgent")
+                        .WithMany()
+                        .HasForeignKey("AssignedAgentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_smart_bot_escalations_agents_assigned_agent_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Queue", "AssignedQueue")
+                        .WithMany()
+                        .HasForeignKey("AssignedQueueId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_smart_bot_escalations_queues_assigned_queue_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Conversation", "Conversation")
+                        .WithOne("SmartBotEscalation")
+                        .HasForeignKey("CallCenter.Domain.Entities.SmartBotEscalation", "ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_smart_bot_escalations_conversations_conversation_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_smart_bot_escalations_customers_customer_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_smart_bot_escalations__tickets_ticket_id");
+
+                    b.Navigation("AssignedAgent");
+
+                    b.Navigation("AssignedQueue");
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Ticket");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SmartBotEscalationLog", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.SmartBotEscalation", "Escalation")
+                        .WithMany("Logs")
+                        .HasForeignKey("EscalationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_smart_bot_escalation_logs_smart_bot_escalations_escalation_id");
+
+                    b.Navigation("Escalation");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SurveyQuestion", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Survey", "Survey")
+                        .WithMany("Questions")
+                        .HasForeignKey("SurveyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_survey_questions_surveys_survey_id");
+
+                    b.Navigation("Survey");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SurveyResponse", b =>
+                {
+                    b.HasOne("CallCenter.Domain.Entities.Agent", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .HasConstraintName("f_k_survey_responses_agents_agent_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasConstraintName("f_k_survey_responses_customers_customer_id");
+
+                    b.HasOne("CallCenter.Domain.Entities.Survey", "Survey")
+                        .WithMany("Responses")
+                        .HasForeignKey("SurveyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_survey_responses_surveys_survey_id");
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Survey");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.SystemSetting", b =>
@@ -6605,6 +8361,8 @@ namespace CallCenter.Infrastructure.Data.Migrations
 
                     b.Navigation("Notes");
 
+                    b.Navigation("SmartBotEscalation");
+
                     b.Navigation("Tickets");
                 });
 
@@ -6692,6 +8450,18 @@ namespace CallCenter.Infrastructure.Data.Migrations
             modelBuilder.Entity("CallCenter.Domain.Entities.SlaRule", b =>
                 {
                     b.Navigation("Trackings");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.SmartBotEscalation", b =>
+                {
+                    b.Navigation("Logs");
+                });
+
+            modelBuilder.Entity("CallCenter.Domain.Entities.Survey", b =>
+                {
+                    b.Navigation("Questions");
+
+                    b.Navigation("Responses");
                 });
 
             modelBuilder.Entity("CallCenter.Domain.Entities.Team", b =>

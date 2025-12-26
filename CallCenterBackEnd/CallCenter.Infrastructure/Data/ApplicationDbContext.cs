@@ -78,6 +78,8 @@ public class ApplicationDbContext : DbContext
     // System
     public DbSet<DataExportLog> DataExportLogs => Set<DataExportLog>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<DataExport> DataExports => Set<DataExport>();
+    public DbSet<ScheduledExport> ScheduledExports => Set<ScheduledExport>();
 
     // Notifications (from improved version)
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -101,12 +103,31 @@ public class ApplicationDbContext : DbContext
     public DbSet<IvrNode> IvrNodes => Set<IvrNode>();
     public DbSet<IvrMenuOption> IvrMenuOptions => Set<IvrMenuOption>();
     public DbSet<IvrCallSession> IvrCallSessions => Set<IvrCallSession>();
+    public DbSet<CallbackRequest> CallbackRequests => Set<CallbackRequest>();
 
     // RBAC (Role-Based Access Control)
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<AgentRoleAssignment> AgentRoleAssignments => Set<AgentRoleAssignment>();
+
+    // WhatsApp
+    public DbSet<WhatsAppMessageTemplate> WhatsAppMessageTemplates => Set<WhatsAppMessageTemplate>();
+
+    // Surveys
+    public DbSet<Survey> Surveys => Set<Survey>();
+    public DbSet<SurveyQuestion> SurveyQuestions => Set<SurveyQuestion>();
+    public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
+
+    // Post-Call Customer Surveys (CSAT 1-5)
+    public DbSet<CallSurvey> CallSurveys => Set<CallSurvey>();
+
+    // Notification Preferences
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+
+    // SmartBot Escalations
+    public DbSet<SmartBotEscalation> SmartBotEscalations => Set<SmartBotEscalation>();
+    public DbSet<SmartBotEscalationLog> SmartBotEscalationLogs => Set<SmartBotEscalationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -147,6 +168,9 @@ public class ApplicationDbContext : DbContext
 
         // Seed RBAC (Roles, Permissions, RolePermissions, AgentRoleAssignment)
         RbacSeedData.SeedRbac(modelBuilder);
+
+        // Seed System Settings
+        SystemSettingSeedData.SeedSystemSettings(modelBuilder);
 
         // Configure table names to use snake_case
         foreach (var entity in modelBuilder.Model.GetEntityTypes())

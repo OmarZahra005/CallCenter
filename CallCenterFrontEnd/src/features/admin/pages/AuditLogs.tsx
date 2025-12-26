@@ -3,20 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  Filter,
   Download,
   RefreshCw,
   Clock,
   User,
   FileText,
   Shield,
-  AlertTriangle,
   CheckCircle,
   XCircle,
   Eye,
   ChevronDown,
   ChevronRight,
-  Calendar,
   Activity,
   Database,
   Settings,
@@ -29,71 +26,86 @@ import { Card, CardContent, Button, Badge } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
 import apiClient from '../../../api/client';
 
-// Types
+// Types - matches backend AuditLogDto
 interface AuditLog {
   id: string;
-  entityType: string;
+  operation: string; // AuditOperation enum
+  entityType: string; // AuditEntityType enum
   entityId: string;
-  action: string;
+  entityName?: string;
   userId: string;
   userName?: string;
-  userRole?: string;
+  userEmail?: string;
   ipAddress?: string;
-  userAgent?: string;
-  oldValues?: Record<string, unknown>;
-  newValues?: Record<string, unknown>;
-  details?: string;
   timestamp: string;
+  additionalInfo?: string;
+  changes?: string;
+  success: boolean;
+  errorMessage?: string;
 }
 
-// Mock data generator
-const generateMockLogs = (): AuditLog[] => {
-  const actions = ['Create', 'Update', 'Delete', 'View', 'Login', 'Logout', 'Export', 'Import'];
-  const entityTypes = ['User', 'Customer', 'Ticket', 'Call', 'Agent', 'Queue', 'Setting', 'Report'];
-  const users = [
-    { id: 'user-1', name: 'John Admin', role: 'Admin' },
-    { id: 'user-2', name: 'Sarah Supervisor', role: 'Supervisor' },
-    { id: 'user-3', name: 'Mike Agent', role: 'Agent' },
-    { id: 'user-4', name: 'Emily QA', role: 'QA Analyst' },
-  ];
+interface AuditLogsResponse {
+  items: AuditLog[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
 
-  const logs: AuditLog[] = [];
-  for (let i = 0; i < 100; i++) {
-    const user = users[Math.floor(Math.random() * users.length)];
-    const action = actions[Math.floor(Math.random() * actions.length)];
-    const entityType = entityTypes[Math.floor(Math.random() * entityTypes.length)];
-    const hoursAgo = Math.floor(Math.random() * 168); // Last 7 days
-    const date = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+// Map operation enum to display name
+const OPERATION_NAMES: Record<string, string> = {
+  '0': 'Create',
+  '1': 'Read',
+  '2': 'Update',
+  '3': 'Delete',
+  '4': 'Login',
+  '5': 'Logout',
+  '6': 'Export',
+  '7': 'Import',
+  '8': 'Other',
+  Create: 'Create',
+  Read: 'Read',
+  Update: 'Update',
+  Delete: 'Delete',
+  Login: 'Login',
+  Logout: 'Logout',
+  Export: 'Export',
+  Import: 'Import',
+  Other: 'Other',
+};
 
-    logs.push({
-      id: `log-${i}`,
-      entityType,
-      entityId: `${entityType.toLowerCase()}-${Math.floor(Math.random() * 1000)}`,
-      action,
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      oldValues: action === 'Update' ? { status: 'Active' } : undefined,
-      newValues: action === 'Update' ? { status: 'Inactive' } : undefined,
-      details: `${action} performed on ${entityType}`,
-      timestamp: date.toISOString(),
-    });
-  }
-
-  return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+// Map entity type enum to display name
+const ENTITY_TYPE_NAMES: Record<string, string> = {
+  '0': 'User',
+  '1': 'Customer',
+  '2': 'Ticket',
+  '3': 'Call',
+  '4': 'Agent',
+  '5': 'Queue',
+  '6': 'Setting',
+  '7': 'Report',
+  '8': 'Other',
+  User: 'User',
+  Customer: 'Customer',
+  Ticket: 'Ticket',
+  Call: 'Call',
+  Agent: 'Agent',
+  Queue: 'Queue',
+  Setting: 'Setting',
+  Report: 'Report',
+  Other: 'Other',
 };
 
 const ACTION_COLORS: Record<string, string> = {
   Create: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  Read: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   Update: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   Delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  View: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   Login: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   Logout: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   Export: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   Import: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  Other: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
 
 const ENTITY_ICONS: Record<string, React.ElementType> = {
@@ -116,26 +128,27 @@ export const AuditLogs = () => {
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-  // Fetch audit logs
-  const { data: logs = [], isLoading, refetch } = useQuery<AuditLog[]>({
-    queryKey: ['audit-logs'],
+  // Fetch audit logs from real backend API
+  const { data: logsResponse, isLoading, refetch } = useQuery<AuditLogsResponse>({
+    queryKey: ['audit-logs', dateFilter],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/audit-logs');
-        return response.data.items || response.data || [];
-      } catch {
-        return generateMockLogs();
-      }
+      const params = new URLSearchParams();
+      params.append('pageSize', '100');
+      params.append('pageNumber', '1');
+      const response = await apiClient.get(`/auditlogs?${params.toString()}`);
+      return response.data;
     },
   });
 
+  const logs = logsResponse?.items || [];
+
   // Get unique values for filters
   const uniqueActions = useMemo(() => {
-    return [...new Set(logs.map((l) => l.action))];
+    return [...new Set(logs.map((l) => OPERATION_NAMES[l.operation] || l.operation))];
   }, [logs]);
 
   const uniqueEntities = useMemo(() => {
-    return [...new Set(logs.map((l) => l.entityType))];
+    return [...new Set(logs.map((l) => ENTITY_TYPE_NAMES[l.entityType] || l.entityType))];
   }, [logs]);
 
   // Filter logs
@@ -148,21 +161,21 @@ export const AuditLogs = () => {
       filtered = filtered.filter(
         (log) =>
           log.userName?.toLowerCase().includes(query) ||
-          log.entityType.toLowerCase().includes(query) ||
+          (ENTITY_TYPE_NAMES[log.entityType] || log.entityType).toLowerCase().includes(query) ||
           log.entityId.toLowerCase().includes(query) ||
-          log.action.toLowerCase().includes(query) ||
-          log.details?.toLowerCase().includes(query)
+          (OPERATION_NAMES[log.operation] || log.operation).toLowerCase().includes(query) ||
+          log.additionalInfo?.toLowerCase().includes(query)
       );
     }
 
     // Action filter
     if (actionFilter !== 'all') {
-      filtered = filtered.filter((log) => log.action === actionFilter);
+      filtered = filtered.filter((log) => (OPERATION_NAMES[log.operation] || log.operation) === actionFilter);
     }
 
     // Entity filter
     if (entityFilter !== 'all') {
-      filtered = filtered.filter((log) => log.entityType === entityFilter);
+      filtered = filtered.filter((log) => (ENTITY_TYPE_NAMES[log.entityType] || log.entityType) === entityFilter);
     }
 
     // Date filter
@@ -181,14 +194,20 @@ export const AuditLogs = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const getOperationName = (op: string) => OPERATION_NAMES[op] || op;
+
     return {
       total: logs.length,
       todayCount: logs.filter((l) => new Date(l.timestamp) >= today).length,
-      createCount: logs.filter((l) => l.action === 'Create').length,
-      updateCount: logs.filter((l) => l.action === 'Update').length,
-      deleteCount: logs.filter((l) => l.action === 'Delete').length,
+      createCount: logs.filter((l) => getOperationName(l.operation) === 'Create').length,
+      updateCount: logs.filter((l) => getOperationName(l.operation) === 'Update').length,
+      deleteCount: logs.filter((l) => getOperationName(l.operation) === 'Delete').length,
     };
   }, [logs]);
+
+  // Helper to get display names
+  const getOperationDisplayName = (operation: string) => OPERATION_NAMES[operation] || operation;
+  const getEntityTypeDisplayName = (entityType: string) => ENTITY_TYPE_NAMES[entityType] || entityType;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -365,7 +384,9 @@ export const AuditLogs = () => {
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {filteredLogs.slice(0, 50).map((log) => {
-                  const EntityIcon = ENTITY_ICONS[log.entityType] || FileText;
+                  const entityTypeName = getEntityTypeDisplayName(log.entityType);
+                  const operationName = getOperationDisplayName(log.operation);
+                  const EntityIcon = ENTITY_ICONS[entityTypeName] || FileText;
                   const isExpanded = expandedLog === log.id;
 
                   return (
@@ -385,20 +406,23 @@ export const AuditLogs = () => {
                             <div className="flex items-center gap-2 mb-1">
                               <span
                                 className={`px-2 py-0.5 text-xs font-medium rounded ${
-                                  ACTION_COLORS[log.action] || ACTION_COLORS.View
+                                  ACTION_COLORS[operationName] || ACTION_COLORS.Other
                                 }`}
                               >
-                                {log.action}
+                                {operationName}
                               </span>
                               <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                {log.entityType}
+                                {entityTypeName}
                               </span>
                               <span className="text-sm text-gray-500">#{log.entityId}</span>
+                              {!log.success && (
+                                <Badge variant="danger" size="sm">Failed</Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-3 text-xs text-gray-500">
                               <span className="flex items-center gap-1">
                                 <User className="w-3 h-3" />
-                                {log.userName}
+                                {log.userName || 'Unknown'}
                               </span>
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
@@ -443,25 +467,31 @@ export const AuditLogs = () => {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-4 pb-4 pl-18 grid grid-cols-2 gap-4 text-sm bg-gray-50 dark:bg-gray-800/30 ml-14">
-                              {log.oldValues && (
+                            <div className="px-4 pb-4 pl-18 text-sm bg-gray-50 dark:bg-gray-800/30 ml-14">
+                              {log.additionalInfo && (
+                                <div className="mb-2">
+                                  <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Additional Info
+                                  </p>
+                                  <p className="text-gray-600 dark:text-gray-400">{log.additionalInfo}</p>
+                                </div>
+                              )}
+                              {log.changes && (
                                 <div>
                                   <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Previous Values
+                                    Changes
                                   </p>
                                   <pre className="text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto">
-                                    {JSON.stringify(log.oldValues, null, 2)}
+                                    {log.changes}
                                   </pre>
                                 </div>
                               )}
-                              {log.newValues && (
-                                <div>
-                                  <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    New Values
+                              {log.errorMessage && (
+                                <div className="mt-2">
+                                  <p className="font-medium text-red-600 dark:text-red-400 mb-1">
+                                    Error
                                   </p>
-                                  <pre className="text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto">
-                                    {JSON.stringify(log.newValues, null, 2)}
-                                  </pre>
+                                  <p className="text-red-600 dark:text-red-400">{log.errorMessage}</p>
                                 </div>
                               )}
                             </div>
@@ -510,16 +540,19 @@ export const AuditLogs = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Action</p>
-                      <Badge className={ACTION_COLORS[selectedLog.action] || ''}>
-                        {selectedLog.action}
+                      <p className="text-xs text-gray-500 mb-1">Operation</p>
+                      <Badge className={ACTION_COLORS[getOperationDisplayName(selectedLog.operation)] || ''}>
+                        {getOperationDisplayName(selectedLog.operation)}
                       </Badge>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Entity</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedLog.entityType} #{selectedLog.entityId}
+                        {getEntityTypeDisplayName(selectedLog.entityType)} #{selectedLog.entityId}
                       </p>
+                      {selectedLog.entityName && (
+                        <p className="text-xs text-gray-500">{selectedLog.entityName}</p>
+                      )}
                     </div>
                   </div>
 
@@ -527,9 +560,11 @@ export const AuditLogs = () => {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">User</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedLog.userName}
+                        {selectedLog.userName || 'Unknown'}
                       </p>
-                      <p className="text-xs text-gray-500">{selectedLog.userRole}</p>
+                      {selectedLog.userEmail && (
+                        <p className="text-xs text-gray-500">{selectedLog.userEmail}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Timestamp</p>
@@ -547,45 +582,33 @@ export const AuditLogs = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">User Agent</p>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 truncate">
-                        {selectedLog.userAgent || 'N/A'}
-                      </p>
+                      <p className="text-xs text-gray-500 mb-1">Status</p>
+                      <Badge variant={selectedLog.success ? 'success' : 'danger'}>
+                        {selectedLog.success ? 'Success' : 'Failed'}
+                      </Badge>
                     </div>
                   </div>
 
-                  {selectedLog.details && (
+                  {selectedLog.additionalInfo && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Details</p>
-                      <p className="text-sm text-gray-900 dark:text-white">{selectedLog.details}</p>
+                      <p className="text-xs text-gray-500 mb-1">Additional Info</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedLog.additionalInfo}</p>
                     </div>
                   )}
 
-                  {(selectedLog.oldValues || selectedLog.newValues) && (
+                  {selectedLog.errorMessage && (
+                    <div>
+                      <p className="text-xs text-red-500 mb-1">Error Message</p>
+                      <p className="text-sm text-red-600 dark:text-red-400">{selectedLog.errorMessage}</p>
+                    </div>
+                  )}
+
+                  {selectedLog.changes && (
                     <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                       <p className="text-xs text-gray-500 mb-2">Changes</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        {selectedLog.oldValues && (
-                          <div>
-                            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Before
-                            </p>
-                            <pre className="text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800 overflow-x-auto">
-                              {JSON.stringify(selectedLog.oldValues, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                        {selectedLog.newValues && (
-                          <div>
-                            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              After
-                            </p>
-                            <pre className="text-xs bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-200 dark:border-green-800 overflow-x-auto">
-                              {JSON.stringify(selectedLog.newValues, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
+                      <pre className="text-xs bg-gray-50 dark:bg-gray-900/50 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                        {selectedLog.changes}
+                      </pre>
                     </div>
                   )}
                 </div>

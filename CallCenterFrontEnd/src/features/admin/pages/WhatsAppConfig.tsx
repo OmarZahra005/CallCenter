@@ -7,7 +7,6 @@ import {
   Search,
   Phone,
   FileText,
-  Settings,
   CheckCircle,
   XCircle,
   Loader2,
@@ -62,89 +61,6 @@ interface MessageTemplate {
   usageCount: number;
 }
 
-const mockAccount: WhatsAppAccount = {
-  id: 'wa-1',
-  businessName: 'Call Center Corp',
-  businessId: '123456789012345',
-  phoneNumberId: '987654321098765',
-  displayPhoneNumber: '+1 (555) 123-4567',
-  qualityRating: 'GREEN',
-  messagingLimit: '1000/day',
-  status: 'connected',
-  verifiedName: 'Call Center Corp',
-  webhookUrl: 'https://api.callcenter.com/webhooks/whatsapp',
-  webhookVerifyToken: 'verify_token_abc123',
-  accessToken: 'EAAGm0PX4ZCpsBA...xxxxx',
-  createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-  lastSyncAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-};
-
-const mockTemplates: MessageTemplate[] = [
-  {
-    id: 'tmpl-1',
-    name: 'order_confirmation',
-    category: 'UTILITY',
-    language: 'en',
-    status: 'APPROVED',
-    components: [
-      { type: 'HEADER', text: 'Order Confirmed!' },
-      { type: 'BODY', text: 'Hi {{1}}, your order #{{2}} has been confirmed. Expected delivery: {{3}}.' },
-      { type: 'FOOTER', text: 'Thank you for your purchase!' },
-    ],
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    lastUsedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    usageCount: 1542,
-  },
-  {
-    id: 'tmpl-2',
-    name: 'appointment_reminder',
-    category: 'UTILITY',
-    language: 'en',
-    status: 'APPROVED',
-    components: [
-      { type: 'BODY', text: 'Hi {{1}}, this is a reminder for your appointment on {{2}} at {{3}}. Reply YES to confirm or NO to reschedule.' },
-      {
-        type: 'BUTTONS',
-        buttons: [
-          { type: 'QUICK_REPLY', text: 'Confirm' },
-          { type: 'QUICK_REPLY', text: 'Reschedule' },
-        ],
-      },
-    ],
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    lastUsedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    usageCount: 892,
-  },
-  {
-    id: 'tmpl-3',
-    name: 'support_followup',
-    category: 'UTILITY',
-    language: 'en',
-    status: 'PENDING',
-    components: [
-      { type: 'BODY', text: 'Hi {{1}}, we wanted to follow up on your recent support ticket #{{2}}. Was your issue resolved? Please rate your experience.' },
-    ],
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    usageCount: 0,
-  },
-  {
-    id: 'tmpl-4',
-    name: 'promo_offer',
-    category: 'MARKETING',
-    language: 'en',
-    status: 'REJECTED',
-    components: [
-      { type: 'HEADER', format: 'IMAGE' },
-      { type: 'BODY', text: 'Special offer just for you, {{1}}! Get 20% off your next purchase with code: SAVE20' },
-      {
-        type: 'BUTTONS',
-        buttons: [{ type: 'URL', text: 'Shop Now', url: 'https://shop.example.com' }],
-      },
-    ],
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    usageCount: 0,
-  },
-];
 
 interface AccountFormData {
   businessName: string;
@@ -198,12 +114,8 @@ export const WhatsAppConfig = () => {
   const { data: account, isLoading: accountLoading } = useQuery<WhatsAppAccount | null>({
     queryKey: ['whatsapp-account'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/whatsapp/account');
-        return response.data;
-      } catch {
-        return mockAccount;
-      }
+      const response = await apiClient.get('/admin/whatsapp/account');
+      return response.data;
     },
   });
 
@@ -211,12 +123,8 @@ export const WhatsAppConfig = () => {
   const { data: templates = [], isLoading: templatesLoading } = useQuery<MessageTemplate[]>({
     queryKey: ['whatsapp-templates'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/whatsapp/templates');
-        return response.data.items || response.data || [];
-      } catch {
-        return mockTemplates;
-      }
+      const response = await apiClient.get('/admin/whatsapp/templates');
+      return response.data.items || response.data || [];
     },
   });
 

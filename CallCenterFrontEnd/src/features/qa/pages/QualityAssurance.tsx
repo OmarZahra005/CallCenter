@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, Button, Badge, Textarea } from '../../..
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
 import apiClient from '../../../api/client';
 import { QaDashboardStats } from '../components/QaDashboardStats';
+import { useAuthStore } from '../../../store/authStore';
 
 interface CallLog {
   id: string;
@@ -98,6 +99,9 @@ interface Transcription {
 }
 
 const QualityAssurance = () => {
+  // Get current user from auth store
+  const user = useAuthStore((state) => state.user);
+
   // View toggle state
   const [activeView, setActiveView] = useState<'dashboard' | 'evaluations'>('dashboard');
 
@@ -400,7 +404,7 @@ const QualityAssurance = () => {
         formId: evaluationForm.id,
         callRecordingId: selectedRecording.id,
         agentId: selectedRecording.agentId || '11111111-1111-1111-1111-111111111111',
-        evaluatorId: '11111111-1111-1111-1111-111111111111', // TODO: Get from auth context
+        evaluatorId: user?.id || '00000000-0000-0000-0000-000000000001',
         totalScore,
         maxScore,
         passingScore: evaluationForm.passingScore,
@@ -433,7 +437,7 @@ const QualityAssurance = () => {
         formId: evaluationForm.id,
         callRecordingId: selectedRecording.id,
         agentId: selectedRecording.agentId || '11111111-1111-1111-1111-111111111111',
-        evaluatorId: '11111111-1111-1111-1111-111111111111', // TODO: Get from auth context
+        evaluatorId: user?.id || '00000000-0000-0000-0000-000000000001',
         totalScore,
         maxScore,
         passingScore: evaluationForm.passingScore,

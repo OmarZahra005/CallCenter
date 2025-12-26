@@ -15,11 +15,12 @@ import {
   User,
   Headphones,
 } from 'lucide-react';
-import { Button, Badge } from '../../../components/ui';
+import { Button } from '../../../components/ui';
+import apiClient from '../../../api/client';
 
 interface RecordingPlayerProps {
   recordingId: string;
-  recordingUrl: string;
+  recordingUrl?: string; // Optional, kept for backward compatibility but not used
   duration: number;
   onTimeUpdate?: (currentTime: number) => void;
 }
@@ -36,7 +37,6 @@ const formatTime = (seconds: number): string => {
 
 export const RecordingPlayer = ({
   recordingId,
-  recordingUrl,
   duration,
   onTimeUpdate,
 }: RecordingPlayerProps) => {
@@ -44,8 +44,6 @@ export const RecordingPlayer = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
-
   // State
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,9 +55,51 @@ export const RecordingPlayer = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [audioChannel, setAudioChannel] = useState<'both' | 'agent' | 'customer'>('both');
+  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
 
   // Waveform data (simulated - in real implementation would come from backend)
   const [waveformData, setWaveformData] = useState<number[]>([]);
+
+  // Fetch audio with authentication and create blob URL
+  useEffect(() => {
+    let isMounted = true;
+    let blobUrl: string | null = null;
+
+    const fetchAudio = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch audio with auth headers via apiClient
+        const response = await apiClient.get(`/recordings/${recordingId}/stream`, {
+          responseType: 'blob',
+        });
+
+        if (isMounted) {
+          // Create blob URL for the audio element
+          const blob = new Blob([response.data], { type: 'audio/wav' });
+          blobUrl = URL.createObjectURL(blob);
+          setAudioBlobUrl(blobUrl);
+        }
+      } catch (err) {
+        console.error('Failed to fetch recording:', err);
+        if (isMounted) {
+          setError('Failed to load recording');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchAudio();
+
+    // Cleanup blob URL on unmount
+    return () => {
+      isMounted = false;
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [recordingId]);
 
   // Generate simulated waveform data
   useEffect(() => {
@@ -240,9 +280,16 @@ export const RecordingPlayer = ({
     }
   };
 
-  // Download
+  // Download - use blob URL if available for authenticated download
   const handleDownload = () => {
-    window.open(recordingUrl, '_blank');
+    if (audioBlobUrl) {
+      const link = document.createElement('a');
+      link.href = audioBlobUrl;
+      link.download = `recording_${recordingId}.wav`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   // Keyboard shortcuts
@@ -282,17 +329,19 @@ export const RecordingPlayer = ({
 
   return (
     <div className="space-y-4">
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        src={recordingUrl}
-        onLoadedMetadata={handleLoadedMetadata}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        onError={handleError}
-        onCanPlay={handleCanPlay}
-        preload="metadata"
-      />
+      {/* Hidden audio element - uses blob URL for authenticated playback */}
+      {audioBlobUrl && (
+        <audio
+          ref={audioRef}
+          src={audioBlobUrl}
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          onError={handleError}
+          onCanPlay={handleCanPlay}
+          preload="metadata"
+        />
+      )}
 
       {/* Error state */}
       {error && (

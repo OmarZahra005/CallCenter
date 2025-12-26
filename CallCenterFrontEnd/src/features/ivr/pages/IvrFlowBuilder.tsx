@@ -117,6 +117,9 @@ interface IvrNode {
   httpUrl?: string;
   httpMethod?: string;
   nextNodeId?: string;
+  variableName?: string;
+  variableValue?: string;
+  subFlowId?: string;
   maxRecordingLength?: number;
   transcribeVoicemail?: boolean;
   voicemailEmail?: string;
@@ -186,6 +189,24 @@ export function IvrFlowBuilder() {
     queryFn: async () => {
       const response = await apiClient.get('/queues');
       return response.data as Array<{ id: string; name: string }>;
+    }
+  });
+
+  // Fetch all flows for SubFlow selector
+  const { data: allFlows } = useQuery({
+    queryKey: ['ivr-flows-list'],
+    queryFn: async () => {
+      const response = await apiClient.get('/ivr/flows?pageSize=100');
+      return response.data.items as Array<{ id: string; name: string }>;
+    }
+  });
+
+  // Fetch agents for TransferToAgent
+  const { data: agents } = useQuery({
+    queryKey: ['agents'],
+    queryFn: async () => {
+      const response = await apiClient.get('/agents?pageSize=100');
+      return response.data.items as Array<{ id: string; firstName: string; lastName: string }>;
     }
   });
 
@@ -477,6 +498,37 @@ export function IvrFlowBuilder() {
               </div>
             ))}
           </div>
+
+          {/* Connection Legend */}
+          <div className="mt-6 space-y-2">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('ivr.connectionLegend', 'Connection Lines')}</h4>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 space-y-2">
+              <div className="flex items-center">
+                <div className="w-6 h-0.5 bg-gray-500 mr-2"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Next Node</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-6 h-0.5 bg-green-500 mr-2"></div>
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium mr-1">T</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Condition True</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-6 h-0.5 bg-red-500 mr-2"></div>
+                <span className="text-xs text-red-600 dark:text-red-400 font-medium mr-1">F</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Condition False</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-6 h-0.5 bg-blue-500 mr-2"></div>
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium mr-1">#</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Menu Option</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-6 h-0.5 bg-orange-500 mr-2"></div>
+                <span className="text-xs text-orange-600 dark:text-orange-400 font-medium mr-1">!</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Fallback</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Canvas */}
@@ -551,7 +603,130 @@ export function IvrFlowBuilder() {
             </div>
           ))}
 
-          {/* Connection lines would go here - simplified for now */}
+          {/* Connection lines */}
+          <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+            <defs>
+              {/* Arrow markers */}
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280" />
+              </marker>
+              <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" />
+              </marker>
+              <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#EF4444" />
+              </marker>
+              <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6" />
+              </marker>
+              <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#F97316" />
+              </marker>
+            </defs>
+
+            {/* Draw connections for each node */}
+            {flow.nodes.map((node) => {
+              const nodeWidth = 180;
+              const nodeHeight = 100;
+              const sourceX = node.positionX + nodeWidth;
+              const sourceY = node.positionY + nodeHeight / 2;
+
+              const connections: Array<{ targetId: string; color: string; label?: string; offsetY?: number }> = [];
+
+              // NextNodeId connection
+              if (node.nextNodeId) {
+                connections.push({ targetId: node.nextNodeId, color: '#6B7280' });
+              }
+
+              // Condition node connections
+              if (node.nodeType === NodeTypes.Condition) {
+                if (node.conditionTrueNodeId) {
+                  connections.push({ targetId: node.conditionTrueNodeId, color: '#10B981', label: 'T', offsetY: -15 });
+                }
+                if (node.conditionFalseNodeId) {
+                  connections.push({ targetId: node.conditionFalseNodeId, color: '#EF4444', label: 'F', offsetY: 15 });
+                }
+              }
+
+              // Menu option connections
+              if (node.nodeType === NodeTypes.Menu && node.menuOptions) {
+                node.menuOptions.forEach((option, idx) => {
+                  if (option.targetNodeId) {
+                    connections.push({
+                      targetId: option.targetNodeId,
+                      color: '#3B82F6',
+                      label: option.digit,
+                      offsetY: (idx - (node.menuOptions.length - 1) / 2) * 20
+                    });
+                  }
+                });
+              }
+
+              // Fallback node connection
+              if (node.fallbackNodeId) {
+                connections.push({ targetId: node.fallbackNodeId, color: '#F97316', label: '!' });
+              }
+
+              return connections.map((conn, idx) => {
+                const targetNode = flow.nodes.find(n => n.id === conn.targetId);
+                if (!targetNode) return null;
+
+                const targetX = targetNode.positionX;
+                const targetY = targetNode.positionY + nodeHeight / 2;
+
+                // Calculate control points for curved line
+                const midX = (sourceX + targetX) / 2;
+                const srcY = sourceY + (conn.offsetY || 0);
+
+                // Determine path based on relative positions
+                let path: string;
+                if (targetX > sourceX) {
+                  // Target is to the right - simple curve
+                  path = `M ${sourceX} ${srcY} C ${midX} ${srcY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
+                } else {
+                  // Target is to the left - loop around
+                  const loopOffset = 50;
+                  path = `M ${sourceX} ${srcY}
+                          C ${sourceX + loopOffset} ${srcY},
+                            ${sourceX + loopOffset} ${Math.min(srcY, targetY) - loopOffset},
+                            ${midX} ${Math.min(srcY, targetY) - loopOffset}
+                          C ${targetX - loopOffset} ${Math.min(srcY, targetY) - loopOffset},
+                            ${targetX - loopOffset} ${targetY},
+                            ${targetX} ${targetY}`;
+                }
+
+                const markerId = conn.color === '#10B981' ? 'arrowhead-green'
+                  : conn.color === '#EF4444' ? 'arrowhead-red'
+                  : conn.color === '#3B82F6' ? 'arrowhead-blue'
+                  : conn.color === '#F97316' ? 'arrowhead-orange'
+                  : 'arrowhead';
+
+                return (
+                  <g key={`${node.id}-${conn.targetId}-${idx}`}>
+                    <path
+                      d={path}
+                      fill="none"
+                      stroke={conn.color}
+                      strokeWidth="2"
+                      markerEnd={`url(#${markerId})`}
+                      opacity="0.7"
+                    />
+                    {conn.label && (
+                      <text
+                        x={sourceX + 15}
+                        y={srcY - 5}
+                        fontSize="10"
+                        fill={conn.color}
+                        fontWeight="bold"
+                      >
+                        {conn.label}
+                      </text>
+                    )}
+                  </g>
+                );
+              });
+            })}
+          </svg>
         </div>
 
         {/* Properties Panel */}
@@ -639,8 +814,154 @@ export function IvrFlowBuilder() {
                 </>
               )}
 
-              {/* Next Node - for non-terminal nodes */}
-              {![NodeTypes.Hangup, NodeTypes.Menu].includes(selectedNode.nodeType) && (
+              {/* Condition Node */}
+              {selectedNode.nodeType === NodeTypes.Condition && (
+                <>
+                  <Input
+                    label={t('ivr.conditionVariable', 'Variable Name')}
+                    value={editingNode.conditionVariable || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingNode({ ...editingNode, conditionVariable: e.target.value })}
+                    placeholder="e.g., accountNumber, language"
+                  />
+                  <Select
+                    label={t('ivr.conditionOperator', 'Operator')}
+                    value={editingNode.conditionOperator || 'equals'}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, conditionOperator: e.target.value })}
+                    options={[
+                      { value: 'equals', label: 'Equals' },
+                      { value: 'notequals', label: 'Not Equals' },
+                      { value: 'contains', label: 'Contains' },
+                      { value: 'startswith', label: 'Starts With' },
+                      { value: 'endswith', label: 'Ends With' },
+                      { value: 'greaterthan', label: 'Greater Than' },
+                      { value: 'lessthan', label: 'Less Than' },
+                      { value: 'isempty', label: 'Is Empty' },
+                      { value: 'isnotempty', label: 'Is Not Empty' },
+                    ]}
+                  />
+                  <Input
+                    label={t('ivr.conditionValue', 'Compare Value')}
+                    value={editingNode.conditionValue || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingNode({ ...editingNode, conditionValue: e.target.value })}
+                    placeholder="Value to compare against"
+                  />
+                  <Select
+                    label={t('ivr.conditionTrueNode', 'If True → Go To')}
+                    value={editingNode.conditionTrueNodeId || ''}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, conditionTrueNodeId: e.target.value })}
+                    options={[
+                      { value: '', label: 'None' },
+                      ...flow.nodes.filter(n => n.id !== selectedNode.id).map(n => ({ value: n.id, label: n.name }))
+                    ]}
+                  />
+                  <Select
+                    label={t('ivr.conditionFalseNode', 'If False → Go To')}
+                    value={editingNode.conditionFalseNodeId || ''}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, conditionFalseNodeId: e.target.value })}
+                    options={[
+                      { value: '', label: 'None' },
+                      ...flow.nodes.filter(n => n.id !== selectedNode.id).map(n => ({ value: n.id, label: n.name }))
+                    ]}
+                  />
+                </>
+              )}
+
+              {/* HTTP Request Node */}
+              {selectedNode.nodeType === NodeTypes.HttpRequest && (
+                <>
+                  <Input
+                    label={t('ivr.httpUrl', 'URL')}
+                    value={editingNode.httpUrl || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingNode({ ...editingNode, httpUrl: e.target.value })}
+                    placeholder="https://api.example.com/lookup"
+                  />
+                  <Select
+                    label={t('ivr.httpMethod', 'Method')}
+                    value={editingNode.httpMethod || 'GET'}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, httpMethod: e.target.value })}
+                    options={[
+                      { value: 'GET', label: 'GET' },
+                      { value: 'POST', label: 'POST' },
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Session variables are automatically sent as parameters. Response JSON fields are stored as http_fieldName.
+                  </p>
+                </>
+              )}
+
+              {/* Set Variable Node */}
+              {selectedNode.nodeType === NodeTypes.SetVariable && (
+                <>
+                  <Input
+                    label={t('ivr.variableName', 'Variable Name')}
+                    value={editingNode.variableName || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingNode({ ...editingNode, variableName: e.target.value })}
+                    placeholder="e.g., greeting, language"
+                  />
+                  <Input
+                    label={t('ivr.variableValue', 'Value')}
+                    value={editingNode.variableValue || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingNode({ ...editingNode, variableValue: e.target.value })}
+                    placeholder="Use {varName} for substitution"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Use {'{CallerNumber}'}, {'{LastDigits}'}, or any custom variable like {'{accountNumber}'}.
+                  </p>
+                </>
+              )}
+
+              {/* Request Callback Node */}
+              {selectedNode.nodeType === NodeTypes.RequestCallback && queues && (
+                <>
+                  <Select
+                    label={t('ivr.callbackQueue', 'Callback Queue (Optional)')}
+                    value={editingNode.transferQueueId || ''}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, transferQueueId: e.target.value })}
+                    options={[
+                      { value: '', label: 'No specific queue' },
+                      ...queues.map(q => ({ value: q.id, label: q.name }))
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Creates a callback request. Use Message Text for custom confirmation.
+                  </p>
+                </>
+              )}
+
+              {/* Sub Flow Node */}
+              {selectedNode.nodeType === NodeTypes.SubFlow && allFlows && (
+                <>
+                  <Select
+                    label={t('ivr.subFlow', 'Sub Flow')}
+                    value={editingNode.subFlowId || ''}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, subFlowId: e.target.value })}
+                    options={[
+                      { value: '', label: 'Select a flow' },
+                      ...allFlows.filter(f => f.id !== flowId).map(f => ({ value: f.id, label: f.name }))
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Execution jumps to the selected flow. Set Next Node for where to return after sub flow completes.
+                  </p>
+                </>
+              )}
+
+              {/* Transfer to Agent */}
+              {selectedNode.nodeType === NodeTypes.TransferToAgent && agents && (
+                <Select
+                  label={t('ivr.agent', 'Agent')}
+                  value={editingNode.transferAgentId || ''}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditingNode({ ...editingNode, transferAgentId: e.target.value })}
+                  options={[
+                    { value: '', label: 'Select an agent' },
+                    ...agents.map(a => ({ value: a.id, label: `${a.firstName} ${a.lastName}` }))
+                  ]}
+                />
+              )}
+
+              {/* Next Node - for non-terminal nodes (excluding Condition which has TrueNode/FalseNode) */}
+              {![NodeTypes.Hangup, NodeTypes.Menu, NodeTypes.Condition, NodeTypes.RequestCallback].includes(selectedNode.nodeType) && (
                 <Select
                   label={t('ivr.nextNode', 'Next Node')}
                   value={editingNode.nextNodeId || ''}

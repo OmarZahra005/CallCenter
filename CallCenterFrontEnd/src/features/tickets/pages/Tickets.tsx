@@ -27,7 +27,6 @@ import {
   MessageSquare,
   ArrowUpRight,
   MoreVertical,
-  Paperclip,
 } from 'lucide-react';
 import { TicketAttachments } from '../components/TicketAttachments';
 import { TicketStatusHistory } from '../components/TicketStatusHistory';

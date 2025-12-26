@@ -2,6 +2,7 @@ using CallCenter.Application.DTOs.Agents;
 using CallCenter.Application.DTOs.Common;
 using CallCenter.Domain.Entities;
 using CallCenter.Domain.Enums;
+using CallCenter.Domain.Interfaces;
 using CallCenter.Domain.Interfaces.Repositories;
 
 namespace CallCenter.Application.Services;
@@ -10,6 +11,7 @@ public interface IAgentService
 {
     Task<PagedResponse<AgentDto>> GetAgentsAsync(PagedRequest request, Guid? teamId = null, AgentStatus? status = null);
     Task<AgentDetailDto?> GetAgentByIdAsync(Guid id);
+    Task<AgentDto?> GetAgentByEmailAsync(string email);
     Task<AgentDto> CreateAgentAsync(CreateAgentRequest request);
     Task<AgentDto?> UpdateAgentAsync(Guid id, UpdateAgentRequest request);
     Task<bool> DeleteAgentAsync(Guid id);
@@ -20,10 +22,12 @@ public interface IAgentService
 public class AgentService : IAgentService
 {
     private readonly IAgentRepository _agentRepository;
+    private readonly IRepository<AgentState> _agentStateRepository;
 
-    public AgentService(IAgentRepository agentRepository)
+    public AgentService(IAgentRepository agentRepository, IRepository<AgentState> agentStateRepository)
     {
         _agentRepository = agentRepository;
+        _agentStateRepository = agentStateRepository;
     }
 
     public async Task<PagedResponse<AgentDto>> GetAgentsAsync(PagedRequest request, Guid? teamId = null, AgentStatus? status = null)
@@ -43,9 +47,20 @@ public class AgentService : IAgentService
         if (status.HasValue)
             items = items.Where(a => a.Status == status.Value);
 
+        var agentList = items.ToList();
+
+        // Get latest agent states for all agents
+        var allAgentStates = (await _agentStateRepository.GetAllAsync()).ToList();
+        var latestStatesByAgent = allAgentStates
+            .GroupBy(s => s.AgentId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(s => s.ChangedAt).First()
+            );
+
         return new PagedResponse<AgentDto>
         {
-            Items = items.Select(MapToDto).ToList(),
+            Items = agentList.Select(a => MapToDtoWithState(a, latestStatesByAgent)).ToList(),
             PageNumber = agents.CurrentPage,
             PageSize = agents.PageSize,
             TotalCount = agents.TotalCount,
@@ -79,6 +94,26 @@ public class AgentService : IAgentService
                 SkillName = s.SkillName,
                 ProficiencyLevel = s.ProficiencyLevel
             }).ToList() ?? new List<AgentSkillDto>()
+        };
+    }
+
+    public async Task<AgentDto?> GetAgentByEmailAsync(string email)
+    {
+        var agent = await _agentRepository.GetByEmailAsync(email);
+        if (agent == null) return null;
+
+        return new AgentDto
+        {
+            Id = agent.Id,
+            EmployeeId = agent.EmployeeId,
+            Name = agent.Name,
+            Email = agent.Email,
+            Phone = agent.Phone,
+            TeamId = agent.TeamId,
+            TeamName = agent.Team?.Name,
+            Role = agent.Role,
+            SkillLevel = agent.SkillLevel,
+            Status = agent.Status
         };
     }
 
@@ -167,5 +202,19 @@ public class AgentService : IAgentService
             HireDate = agent.HireDate,
             CreatedAt = agent.CreatedAt
         };
+    }
+
+    private static AgentDto MapToDtoWithState(Agent agent, Dictionary<Guid, AgentState> latestStatesByAgent)
+    {
+        var dto = MapToDto(agent);
+
+        // Add current state information if available
+        if (latestStatesByAgent.TryGetValue(agent.Id, out var state))
+        {
+            dto.CurrentState = state.State.ToString();
+            dto.StateChangedAt = state.ChangedAt;
+        }
+
+        return dto;
     }
 }

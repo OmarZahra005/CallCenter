@@ -10,11 +10,9 @@ import {
   PhoneOff,
   User,
   Clock,
-  Filter,
   Search,
   Pause,
   Play,
-  Trash2,
   Download,
   RefreshCw,
   AlertCircle,
@@ -69,49 +67,14 @@ const EVENT_TYPES = {
   ERROR: { label: 'Error', icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' },
 };
 
-const generateMockEvents = (): CtiEvent[] => {
-  const events: CtiEvent[] = [];
-  const now = Date.now();
-
-  const mockData = [
-    { type: 'CALL_INITIATED', agent: 'John Smith', caller: '+1 (555) 123-4567', queue: 'Sales', direction: 'inbound' },
-    { type: 'CALL_RINGING', agent: 'John Smith', caller: '+1 (555) 123-4567', queue: 'Sales', direction: 'inbound' },
-    { type: 'CALL_ANSWERED', agent: 'John Smith', caller: '+1 (555) 123-4567', queue: 'Sales', direction: 'inbound' },
-    { type: 'AGENT_READY', agent: 'Emily Davis', queue: 'Support' },
-    { type: 'CALL_ENDED', agent: 'Sarah Wilson', caller: '+1 (555) 987-6543', duration: 324, direction: 'outbound' },
-    { type: 'QUEUE_JOINED', caller: '+1 (555) 111-2222', queue: 'Support' },
-    { type: 'CALL_TRANSFERRED', agent: 'Mike Johnson', caller: '+1 (555) 333-4444', queue: 'Billing' },
-    { type: 'AGENT_NOT_READY', agent: 'Emily Davis', status: 'Break' },
-    { type: 'DTMF_RECEIVED', caller: '+1 (555) 555-6666', metadata: { digits: '2' } },
-    { type: 'RECORDING_STARTED', agent: 'John Smith', callId: 'call-123' },
-    { type: 'CALL_MISSED', caller: '+1 (555) 777-8888', queue: 'Sales' },
-    { type: 'AGENT_LOGIN', agent: 'New Agent' },
-    { type: 'ERROR', metadata: { error: 'Connection timeout', code: 'ERR_TIMEOUT' } },
-    { type: 'CALL_HELD', agent: 'Sarah Wilson', caller: '+1 (555) 999-0000' },
-    { type: 'CALL_RESUMED', agent: 'Sarah Wilson', caller: '+1 (555) 999-0000' },
-  ];
-
-  mockData.forEach((data, index) => {
-    events.push({
-      id: `event-${index}`,
-      timestamp: new Date(now - index * 15000).toISOString(),
-      eventType: data.type,
-      callId: `call-${1000 + index}`,
-      agentId: data.agent ? `agent-${index}` : undefined,
-      agentName: data.agent,
-      queueId: data.queue ? `queue-${index}` : undefined,
-      queueName: data.queue,
-      callerNumber: data.caller,
-      direction: data.direction as 'inbound' | 'outbound' | undefined,
-      duration: data.duration,
-      status: data.status,
-      metadata: data.metadata,
-      source: 'Twilio',
-    });
-  });
-
-  return events;
-};
+// Response interface for CTI events API
+interface CtiEventsResponse {
+  items: CtiEvent[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
 
 export const CtiEvents = () => {
   const [isPaused, setIsPaused] = useState(false);
@@ -123,19 +86,17 @@ export const CtiEvents = () => {
   const [isConnected, setIsConnected] = useState(true);
   const eventsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch CTI events
-  const { data: events = [], isLoading, refetch } = useQuery<CtiEvent[]>({
+  // Fetch CTI events from real backend API
+  const { data: eventsResponse, isLoading, refetch } = useQuery<CtiEventsResponse>({
     queryKey: ['cti-events'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/cti-events');
-        return response.data.items || response.data || [];
-      } catch {
-        return generateMockEvents();
-      }
+      const response = await apiClient.get('/ctievents?pageSize=100&pageNumber=1');
+      return response.data;
     },
     refetchInterval: isPaused ? false : 5000,
   });
+
+  const events: CtiEvent[] = eventsResponse?.items || [];
 
   // Simulate connection status
   useEffect(() => {

@@ -19,6 +19,7 @@ public class DashboardService : IDashboardService
     private readonly IRepository<QueueMetric> _queueMetricRepository;
     private readonly IRepository<TicketSlaTracking> _slaTrackingRepository;
     private readonly IRepository<AgentState> _agentStateRepository;
+    private readonly IRepository<TicketStatusHistory> _statusHistoryRepository;
 
     public DashboardService(
         IRepository<Agent> agentRepository,
@@ -27,7 +28,8 @@ public class DashboardService : IDashboardService
         IRepository<Queue> queueRepository,
         IRepository<QueueMetric> queueMetricRepository,
         IRepository<TicketSlaTracking> slaTrackingRepository,
-        IRepository<AgentState> agentStateRepository)
+        IRepository<AgentState> agentStateRepository,
+        IRepository<TicketStatusHistory> statusHistoryRepository)
     {
         _agentRepository = agentRepository;
         _ticketRepository = ticketRepository;
@@ -36,6 +38,7 @@ public class DashboardService : IDashboardService
         _queueMetricRepository = queueMetricRepository;
         _slaTrackingRepository = slaTrackingRepository;
         _agentStateRepository = agentStateRepository;
+        _statusHistoryRepository = statusHistoryRepository;
     }
 
     public async Task<DashboardSummaryDto> GetDashboardSummaryAsync()
@@ -115,9 +118,34 @@ public class DashboardService : IDashboardService
             ? (int)completedToday.Average(s => (s.FirstResponseAt!.Value - s.CreatedAt).TotalSeconds)
             : 0;
 
-        // FCR - tickets resolved without reopening (simplified)
-        var resolvedTickets = tickets.Where(t => t.Status == TicketStatus.Resolved).ToList();
-        var fcrRate = resolvedTickets.Any() ? 78f : 0f; // Placeholder - would need reopening tracking
+        // FCR - tickets resolved without reopening
+        // Get all status history to identify reopened tickets
+        var statusHistory = (await _statusHistoryRepository.GetAllAsync()).ToList();
+
+        // Find tickets that were reopened (status changed from Resolved/Closed back to New/Open/Reopened)
+        var reopenedTicketIds = statusHistory
+            .Where(sh =>
+                (sh.FromStatus == TicketStatus.Resolved || sh.FromStatus == TicketStatus.Closed) &&
+                (sh.ToStatus == TicketStatus.New || sh.ToStatus == TicketStatus.Open || sh.ToStatus == TicketStatus.Reopened))
+            .Select(sh => sh.TicketId)
+            .Distinct()
+            .ToHashSet();
+
+        // Calculate FCR rate: resolved tickets that were never reopened
+        var resolvedTickets = tickets.Where(t =>
+            t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed).ToList();
+        var resolvedWithoutReopening = resolvedTickets.Count(t => !reopenedTicketIds.Contains(t.Id));
+        var fcrRate = resolvedTickets.Any()
+            ? (float)resolvedWithoutReopening / resolvedTickets.Count * 100
+            : 0f;
+
+        // Calculate average resolution time from resolved tickets with ResolvedAt
+        var ticketsWithResolutionTime = tickets
+            .Where(t => t.ResolvedAt.HasValue && t.CreatedAt < t.ResolvedAt.Value)
+            .ToList();
+        var avgResolutionTime = ticketsWithResolutionTime.Any()
+            ? (int)ticketsWithResolutionTime.Average(t => (t.ResolvedAt!.Value - t.CreatedAt).TotalSeconds)
+            : 0;
 
         return new DashboardSummaryDto
         {
@@ -136,7 +164,7 @@ public class DashboardService : IDashboardService
                 AtRiskPercent = totalActive > 0 ? (float)atRiskCount / totalActive * 100 : 0,
                 BreachedPercent = totalActive > 0 ? (float)breachedCount / totalActive * 100 : 0,
                 AverageResponseTimeSeconds = avgResponseTime,
-                AverageResolutionTimeSeconds = 930, // ~15m30s placeholder
+                AverageResolutionTimeSeconds = avgResolutionTime,
                 FirstContactResolutionRate = fcrRate
             }
         };

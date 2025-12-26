@@ -7,18 +7,15 @@ import {
   Filter,
   Play,
   Download,
-  Trash2,
   Clock,
   User,
-  Phone,
-  Calendar,
   ChevronDown,
   FileAudio,
   Eye,
   X,
-  Loader2,
   Volume2,
   FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, Button, Badge, Modal, Pagination } from '../../../components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../components/ui';
@@ -127,7 +124,7 @@ const Recordings = () => {
   const [durationFilter, setDurationFilter] = useState<string>('all');
 
   // Fetch recordings
-  const { data, isLoading, error } = useQuery<RecordingsResponse>({
+  const { data, isLoading, error, refetch, isFetching } = useQuery<RecordingsResponse>({
     queryKey: ['recordings', currentPage],
     queryFn: async () => {
       const response = await apiClient.get('/recordings', {
@@ -148,6 +145,8 @@ const Recordings = () => {
       }
       return response.data;
     },
+    refetchOnMount: 'always', // Always fetch fresh data when navigating to page
+    staleTime: 30000, // Consider data stale after 30 seconds
   });
 
   const recordings = data?.items || [];
@@ -243,6 +242,15 @@ const Recordings = () => {
             Browse and manage call recordings
           </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </motion.div>
 
       {/* Stats Cards */}

@@ -324,4 +324,93 @@ public class CallCenterHub : Hub
     }
 
     #endregion
+
+    #region SmartBot Escalation
+
+    // New SmartBot escalation received
+    public async Task NotifySmartBotEscalation(object escalation)
+    {
+        await Clients.Group("Agents").SendAsync("SmartBotEscalationReceived", escalation);
+        await Clients.Group("Supervisors").SendAsync("SmartBotEscalationReceived", escalation);
+    }
+
+    // SmartBot escalation assigned to agent
+    public async Task NotifySmartBotEscalationAssigned(string agentId, object escalation)
+    {
+        if (_connectedAgents.TryGetValue(agentId, out var connectionId))
+        {
+            await Clients.Client(connectionId).SendAsync("SmartBotEscalationAssigned", escalation);
+        }
+        await Clients.Group("Supervisors").SendAsync("SmartBotEscalationAssigned", new { agentId, escalation, timestamp = DateTime.UtcNow });
+    }
+
+    // SmartBot escalation status changed
+    public async Task NotifySmartBotEscalationStatusChanged(string escalationId, string status, object? details = null)
+    {
+        await Clients.All.SendAsync("SmartBotEscalationStatusChanged", new { escalationId, status, details, timestamp = DateTime.UtcNow });
+    }
+
+    // SmartBot escalation queue position updated
+    public async Task NotifySmartBotQueuePositionUpdate(string escalationId, int position, int? estimatedWaitSeconds)
+    {
+        // Notify to SmartBot webhook listener group (if any connected)
+        await Clients.Group($"smartbot_escalation_{escalationId}").SendAsync("QueuePositionUpdated",
+            new { escalationId, position, estimatedWaitSeconds, timestamp = DateTime.UtcNow });
+
+        await Clients.Group("Supervisors").SendAsync("SmartBotQueueUpdated",
+            new { escalationId, position, estimatedWaitSeconds, timestamp = DateTime.UtcNow });
+    }
+
+    // Message from agent to SmartBot customer
+    public async Task SendSmartBotAgentMessage(string escalationId, string conversationId, string message, string agentId, string agentName)
+    {
+        await Clients.Group($"smartbot_escalation_{escalationId}").SendAsync("AgentMessage",
+            new { escalationId, conversationId, message, agentId, agentName, timestamp = DateTime.UtcNow });
+    }
+
+    // Message from SmartBot customer to agent
+    public async Task NotifySmartBotCustomerMessage(string escalationId, string conversationId, string message)
+    {
+        // Notify assigned agent
+        await Clients.Group($"conversation_{conversationId}").SendAsync("SmartBotCustomerMessage",
+            new { escalationId, conversationId, message, timestamp = DateTime.UtcNow });
+    }
+
+    // Agent typing indicator for SmartBot customer
+    public async Task SendSmartBotTypingIndicator(string escalationId, string agentId, bool isTyping)
+    {
+        await Clients.Group($"smartbot_escalation_{escalationId}").SendAsync("AgentTyping",
+            new { escalationId, agentId, isTyping, timestamp = DateTime.UtcNow });
+    }
+
+    // SmartBot escalation resolved
+    public async Task NotifySmartBotEscalationResolved(string escalationId, string resolution, object? details = null)
+    {
+        await Clients.Group($"smartbot_escalation_{escalationId}").SendAsync("EscalationResolved",
+            new { escalationId, resolution, details, timestamp = DateTime.UtcNow });
+
+        await Clients.All.SendAsync("SmartBotEscalationResolved",
+            new { escalationId, resolution, details, timestamp = DateTime.UtcNow });
+    }
+
+    // Join SmartBot escalation group (for webhook listener)
+    public async Task JoinSmartBotEscalation(string escalationId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"smartbot_escalation_{escalationId}");
+    }
+
+    // Leave SmartBot escalation group
+    public async Task LeaveSmartBotEscalation(string escalationId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"smartbot_escalation_{escalationId}");
+    }
+
+    // Get all active SmartBot escalations (for dashboard)
+    public async Task RequestSmartBotEscalations()
+    {
+        // This will trigger the server to send current escalations
+        await Clients.Caller.SendAsync("SmartBotEscalationsRequested", DateTime.UtcNow);
+    }
+
+    #endregion
 }

@@ -7,6 +7,7 @@ namespace CallCenter.Application.Services;
 public interface IQaService
 {
     // Scorecards
+    Task<List<QaScorecardDto>> GetAllScorecardsAsync();
     Task<QaScorecardDto?> GetScorecardByIdAsync(Guid id);
     Task<QaScorecardDto?> GetScorecardByRecordingIdAsync(Guid recordingId);
     Task<QaScorecardDto?> GetScorecardByCallSidAsync(string callSid);
@@ -35,6 +36,12 @@ public class QaService : IQaService
     {
         _scorecardRepository = scorecardRepository;
         _formRepository = formRepository;
+    }
+
+    public async Task<List<QaScorecardDto>> GetAllScorecardsAsync()
+    {
+        var scorecards = await _scorecardRepository.GetAllAsync();
+        return scorecards.Select(MapToDto).ToList();
     }
 
     public async Task<QaScorecardDto?> GetScorecardByIdAsync(Guid id)

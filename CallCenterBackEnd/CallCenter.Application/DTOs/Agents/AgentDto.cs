@@ -16,6 +16,10 @@ public class AgentDto
     public AgentStatus Status { get; set; }
     public DateOnly? HireDate { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Real-time state information
+    public string? CurrentState { get; set; }
+    public DateTime? StateChangedAt { get; set; }
 }
 
 public class AgentDetailDto : AgentDto

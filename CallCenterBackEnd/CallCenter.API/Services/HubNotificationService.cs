@@ -157,4 +157,30 @@ public class HubNotificationService : IHubNotificationService
     }
 
     #endregion
+
+    #region SmartBot Escalation Notifications
+
+    public async Task NotifySmartBotEscalationAsync(Guid escalationId, string eventType)
+    {
+        await _hubContext.Clients.All.SendAsync("SmartBotEscalation", new
+        {
+            escalationId,
+            eventType,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    public async Task NotifySmartBotMessageAsync(Guid escalationId, Guid conversationId, string message, string senderType)
+    {
+        await _hubContext.Clients.All.SendAsync("SmartBotMessage", new
+        {
+            escalationId,
+            conversationId,
+            message,
+            senderType,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    #endregion
 }

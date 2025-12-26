@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download,
-  Plus,
   Search,
   FileText,
   FileSpreadsheet,
@@ -15,7 +14,6 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Filter,
   Play,
   Pause,
   MoreVertical,
@@ -23,7 +21,7 @@ import {
   AlertCircle,
   Archive,
 } from 'lucide-react';
-import { Button, Badge, Card, CardContent, Modal, Input, Select } from '../../../components/ui';
+import { Button, Badge, Card, CardContent, Modal, Input } from '../../../components/ui';
 import apiClient from '../../../api/client';
 
 interface DataExport {
@@ -80,103 +78,14 @@ const FORMAT_INFO = {
   pdf: { label: 'PDF', icon: FileText, color: 'text-red-500' },
 };
 
-const mockExports: DataExport[] = [
-  {
-    id: 'export-1',
-    name: 'Monthly Call Report',
-    type: 'manual',
-    dataSource: 'calls',
-    format: 'xlsx',
-    status: 'completed',
-    fileSize: 2456789,
-    fileUrl: '/exports/monthly-call-report.xlsx',
-    recordCount: 15420,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    createdBy: 'John Smith',
-  },
-  {
-    id: 'export-2',
-    name: 'Customer Database Export',
-    type: 'manual',
-    dataSource: 'customers',
-    format: 'csv',
-    status: 'processing',
-    progress: 65,
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    createdBy: 'Emily Davis',
-  },
-  {
-    id: 'export-3',
-    name: 'QA Scores - Q4 2024',
-    type: 'manual',
-    dataSource: 'qa_scores',
-    format: 'xlsx',
-    status: 'completed',
-    fileSize: 1234567,
-    fileUrl: '/exports/qa-scores-q4.xlsx',
-    recordCount: 3240,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-    createdBy: 'John Smith',
-  },
-  {
-    id: 'export-4',
-    name: 'Ticket Export Attempt',
-    type: 'manual',
-    dataSource: 'tickets',
-    format: 'json',
-    status: 'failed',
-    errorMessage: 'Connection timeout while fetching data',
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    createdBy: 'Admin User',
-  },
-];
-
-const mockScheduled: ScheduledExport[] = [
-  {
-    id: 'sched-1',
-    name: 'Daily Call Summary',
-    dataSource: 'calls',
-    format: 'xlsx',
-    schedule: 'daily',
-    scheduleTime: '06:00',
-    recipients: ['reports@company.com', 'manager@company.com'],
-    isActive: true,
-    lastRunAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-    nextRunAt: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'sched-2',
-    name: 'Weekly Agent Performance',
-    dataSource: 'agents',
-    format: 'xlsx',
-    schedule: 'weekly',
-    scheduleTime: '08:00',
-    scheduleDayOfWeek: 1,
-    recipients: ['hr@company.com'],
-    isActive: true,
-    lastRunAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    nextRunAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'sched-3',
-    name: 'Monthly Customer Report',
-    dataSource: 'customers',
-    format: 'csv',
-    schedule: 'monthly',
-    scheduleTime: '00:00',
-    scheduleDayOfMonth: 1,
-    recipients: ['analytics@company.com'],
-    isActive: false,
-    lastRunAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+// Response interfaces
+interface ExportsResponse {
+  items: DataExport[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
 
 interface ExportFormData {
   name: string;
@@ -227,30 +136,24 @@ export const DataExports = () => {
     isActive: true,
   });
 
-  // Fetch exports
-  const { data: exports = [], isLoading: exportsLoading } = useQuery<DataExport[]>({
+  // Fetch exports from real backend API
+  const { data: exportsResponse, isLoading: exportsLoading } = useQuery<ExportsResponse>({
     queryKey: ['data-exports'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/exports');
-        return response.data.items || response.data || [];
-      } catch {
-        return mockExports;
-      }
+      const response = await apiClient.get('/admin/exports');
+      return response.data;
     },
     refetchInterval: 5000, // Poll for processing status
   });
 
-  // Fetch scheduled exports
+  const exports: DataExport[] = exportsResponse?.items || [];
+
+  // Fetch scheduled exports from real backend API
   const { data: scheduled = [], isLoading: scheduledLoading } = useQuery<ScheduledExport[]>({
     queryKey: ['scheduled-exports'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/exports/scheduled');
-        return response.data.items || response.data || [];
-      } catch {
-        return mockScheduled;
-      }
+      const response = await apiClient.get('/admin/exports/scheduled');
+      return Array.isArray(response.data) ? response.data : response.data.items || [];
     },
   });
 

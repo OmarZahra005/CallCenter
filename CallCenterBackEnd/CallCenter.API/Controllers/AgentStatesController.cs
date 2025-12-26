@@ -15,6 +15,17 @@ public class AgentStatesController : ControllerBase
         _agentStateService = agentStateService;
     }
 
+    /// <summary>
+    /// Get current states for all agents.
+    /// Used by CRM integration for real-time agent status display.
+    /// </summary>
+    [HttpGet("current")]
+    public async Task<ActionResult<List<AgentStateDto>>> GetAllCurrentStates()
+    {
+        var result = await _agentStateService.GetAllCurrentStatesAsync();
+        return Ok(result);
+    }
+
     [HttpGet("{agentId:guid}/current")]
     public async Task<ActionResult<AgentStateDto>> GetCurrentState(Guid agentId)
     {

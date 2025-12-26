@@ -160,6 +160,25 @@ public class IvrNode : Entity
     /// </summary>
     public Guid? NextNodeId { get; set; }
 
+    // ==================== SetVariable Configuration ====================
+
+    /// <summary>
+    /// Variable name to set (for SetVariable node)
+    /// </summary>
+    public string? VariableName { get; set; }
+
+    /// <summary>
+    /// Value to assign to the variable (supports {variableName} substitution)
+    /// </summary>
+    public string? VariableValue { get; set; }
+
+    // ==================== SubFlow Configuration ====================
+
+    /// <summary>
+    /// ID of the sub-flow to execute (for SubFlow node)
+    /// </summary>
+    public Guid? SubFlowId { get; set; }
+
     // ==================== Voicemail Configuration ====================
 
     /// <summary>

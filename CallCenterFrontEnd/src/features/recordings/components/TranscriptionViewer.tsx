@@ -136,7 +136,6 @@ export const TranscriptionViewer = ({
     data: transcription,
     isLoading,
     error,
-    refetch,
   } = useQuery<Transcription>({
     queryKey: ['transcription', recordingId],
     queryFn: async () => {
@@ -145,8 +144,9 @@ export const TranscriptionViewer = ({
     },
     enabled: !!recordingId,
     retry: false,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll while processing
+      const data = query.state.data;
       if (data?.status === 'Processing' || data?.status === 'Pending') {
         return 5000;
       }
@@ -229,7 +229,7 @@ export const TranscriptionViewer = ({
     };
   };
 
-  const sentimentDisplay = getSentimentDisplay(transcription?.sentiment);
+  const sentimentDisplay = getSentimentDisplay(transcription?.sentiment ?? null);
   const statusBadge = getStatusBadge(transcription?.status || 'Pending');
   const StatusIcon = statusBadge.icon;
 

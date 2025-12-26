@@ -6,6 +6,7 @@ using CallCenter.Application.Interfaces;
 using CallCenter.Application.Services;
 using CallCenter.Infrastructure;
 using CallCenter.API.Authorization;
+using CallCenter.API.Authentication;
 using CallCenter.API.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +17,12 @@ using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Ensure camelCase for JSON responses (required for frontend compatibility)
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache(); // For permission caching
 
@@ -60,7 +66,15 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
-});
+})
+.AddScheme<SmartBotApiKeyAuthOptions, SmartBotApiKeyAuthHandler>(
+    SmartBotApiKeyAuthOptions.DefaultScheme,
+    options =>
+    {
+        options.ApiKey = builder.Configuration["SmartBotIntegration:ApiKey"] ?? "sb_live_default_key_change_me";
+        var allowedIps = builder.Configuration.GetSection("SmartBotIntegration:AllowedIpAddresses").Get<string[]>();
+        options.AllowedIpAddresses = allowedIps ?? Array.Empty<string>();
+    });
 
 // Configure Authorization with permission-based policies
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
@@ -97,6 +111,29 @@ builder.Services.AddScoped<CallCenter.Application.Interfaces.IHubNotificationSer
 
 // Register AgentRoutingService
 builder.Services.AddScoped<IAgentRoutingService, AgentRoutingService>();
+
+// Register Enhanced Routing Service for SmartBot escalations
+builder.Services.AddScoped<IEnhancedRoutingService, EnhancedRoutingService>();
+
+// Register SmartBot Escalation Service
+builder.Services.AddScoped<ISmartBotEscalationService, SmartBotEscalationService>();
+
+// Register SmartBot Webhook Service for sending notifications to SmartBot
+builder.Services.AddHttpClient<ISmartBotWebhookService, SmartBotWebhookService>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler();
+        // Allow self-signed certificates for localhost in development
+        handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+        {
+            // Allow localhost certificates
+            if (message.RequestUri?.Host == "localhost" || message.RequestUri?.Host == "127.0.0.1")
+                return true;
+            // For other hosts, only allow if no errors
+            return errors == System.Net.Security.SslPolicyErrors.None;
+        };
+        return handler;
+    });
 
 // Configure TranscriptionApi options
 builder.Services.Configure<TranscriptionApiOptions>(builder.Configuration.GetSection("TranscriptionApi"));

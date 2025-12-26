@@ -3,7 +3,9 @@ using CallCenter.Application.DTOs.Conversations;
 using CallCenter.Application.Interfaces;
 using CallCenter.Domain.Entities;
 using CallCenter.Domain.Enums;
+using CallCenter.Domain.Interfaces;
 using CallCenter.Domain.Interfaces.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace CallCenter.Application.Services;
 
@@ -41,18 +43,27 @@ public class ConversationService : IConversationService
     private readonly IConversationNoteRepository _conversationNoteRepository;
     private readonly IAgentRepository _agentRepository;
     private readonly IWhatsAppService? _whatsAppService;
+    private readonly ISmartBotWebhookService _smartBotWebhookService;
+    private readonly IRepository<SmartBotEscalation> _smartBotEscalationRepository;
+    private readonly ILogger<ConversationService> _logger;
 
     public ConversationService(
         IConversationRepository conversationRepository,
         ICustomerRepository customerRepository,
         IConversationNoteRepository conversationNoteRepository,
         IAgentRepository agentRepository,
+        ILogger<ConversationService> logger,
+        ISmartBotWebhookService smartBotWebhookService,
+        IRepository<SmartBotEscalation> smartBotEscalationRepository,
         IWhatsAppService? whatsAppService = null)
     {
         _conversationRepository = conversationRepository;
         _customerRepository = customerRepository;
         _conversationNoteRepository = conversationNoteRepository;
         _agentRepository = agentRepository;
+        _logger = logger;
+        _smartBotWebhookService = smartBotWebhookService;
+        _smartBotEscalationRepository = smartBotEscalationRepository;
         _whatsAppService = whatsAppService;
     }
 
@@ -122,6 +133,7 @@ public class ConversationService : IConversationService
             Id = conversation.Id,
             CustomerId = conversation.CustomerId,
             CustomerName = conversation.Customer?.Name ?? string.Empty,
+            PhoneNumber = conversation.Customer?.Phone,
             AgentId = conversation.AgentId,
             AgentName = conversation.Agent?.Name,
             QueueId = conversation.QueueId,
@@ -130,7 +142,15 @@ public class ConversationService : IConversationService
             State = conversation.State,
             StartTime = conversation.StartTime,
             EndTime = conversation.EndTime,
+            DurationSeconds = conversation.DurationSeconds,
             MessageCount = conversation.Messages?.Count ?? 0,
+            // SmartBot Handoff fields
+            HandoffStatus = conversation.HandoffStatus,
+            SmartBotSessionId = conversation.SmartBotSessionId,
+            HandoffRequestedAt = conversation.HandoffRequestedAt,
+            HandoffAcceptedAt = conversation.HandoffAcceptedAt,
+            HandoffEndedAt = conversation.HandoffEndedAt,
+            HandoffEndedBy = conversation.HandoffEndedBy,
             Messages = conversation.Messages?.OrderBy(m => m.CreatedAt).Select(m => new ConversationMessageDto
             {
                 Id = m.Id,
@@ -183,6 +203,53 @@ public class ConversationService : IConversationService
         conversation.State = ConversationState.Closed;
         conversation.EndTime = DateTime.UtcNow;
 
+        // Handle SmartBot handoff closure
+        if (conversation.HandoffStatus == HandoffStatus.Connected ||
+            conversation.HandoffStatus == HandoffStatus.WaitingForAgent)
+        {
+            conversation.HandoffStatus = HandoffStatus.Ended;
+            conversation.HandoffEndedAt = DateTime.UtcNow;
+            conversation.HandoffEndedBy = "Agent";
+
+            // Find the escalation and notify SmartBot
+            if (!string.IsNullOrEmpty(conversation.SmartBotSessionId))
+            {
+                try
+                {
+                    var escalations = await _smartBotEscalationRepository.GetAllAsync();
+                    var escalation = escalations.FirstOrDefault(e => e.ConversationId == id);
+
+                    if (escalation != null)
+                    {
+                        // Update escalation status
+                        escalation.Status = SmartBotEscalationStatus.Closed;
+                        escalation.ResolvedAt = DateTime.UtcNow;
+                        escalation.Resolution = "Closed by agent";
+                        _smartBotEscalationRepository.Update(escalation);
+
+                        // Notify SmartBot via webhook
+                        _ = _smartBotWebhookService.NotifyResolvedAsync(
+                            escalation.SmartBotConversationId,
+                            escalation.Id.ToString(),
+                            "Closed by agent",
+                            null,
+                            conversation.AgentId?.ToString(),
+                            conversation.Agent?.Name);
+
+                        _logger.LogInformation(
+                            "SmartBot handoff closed for conversation {ConversationId}, escalation {EscalationId}",
+                            id, escalation.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to notify SmartBot about conversation closure for {ConversationId}",
+                        id);
+                }
+            }
+        }
+
         _conversationRepository.Update(conversation);
         await _conversationRepository.SaveChangesAsync();
         return MapToDto(conversation);
@@ -215,6 +282,7 @@ public class ConversationService : IConversationService
 
     public async Task<ConversationMessageDto?> SendMessageAsync(Guid conversationId, SendMessageRequest request)
     {
+        // Check if conversation exists without tracking to avoid concurrency issues
         var conversation = await _conversationRepository.GetByIdAsync(conversationId);
         if (conversation == null) return null;
 
@@ -229,17 +297,14 @@ public class ConversationService : IConversationService
             IsRead = false
         };
 
-        conversation.Messages ??= new List<ConversationMessage>();
-        conversation.Messages.Add(message);
+        // Add message directly to repository instead of through navigation property
+        await _conversationRepository.AddMessageAsync(conversationId, message);
 
-        // Update conversation state to active if it was waiting
+        // Update conversation state if needed (separate operation)
         if (conversation.State == ConversationState.Waiting)
         {
-            conversation.State = ConversationState.Active;
+            await _conversationRepository.UpdateStateAsync(conversationId, ConversationState.Active);
         }
-
-        _conversationRepository.Update(conversation);
-        await _conversationRepository.SaveChangesAsync();
 
         // Dispatch to WhatsApp if this is a WhatsApp conversation and sender is agent
         if (conversation.Channel == Channel.Whatsapp &&
@@ -250,6 +315,87 @@ public class ConversationService : IConversationService
             if (customer?.Phone != null)
             {
                 await _whatsAppService.SendTextMessageAsync(customer.Phone, request.Content);
+            }
+        }
+
+        // Debug logging for SmartBot webhook dispatch
+        _logger.LogInformation(
+            "SmartBot webhook check: Channel={Channel}, SenderType={SenderType}",
+            conversation.Channel, request.SenderType);
+
+        // Dispatch to SmartBot if this is a SmartBot conversation and sender is agent
+        if (conversation.Channel == Channel.SmartBot &&
+            request.SenderType == SenderType.Agent)
+        {
+            try
+            {
+                // Find the escalation record for this conversation
+                var escalations = await _smartBotEscalationRepository.GetAllAsync();
+                var escalation = escalations.FirstOrDefault(e => e.ConversationId == conversationId);
+
+                if (escalation != null)
+                {
+                    // Get agent info
+                    var agent = request.SenderId.HasValue
+                        ? await _agentRepository.GetByIdAsync(request.SenderId.Value)
+                        : null;
+
+                    // If agent not yet assigned to escalation, assign now (first message)
+                    if (escalation.AssignedAgentId == null && request.SenderId.HasValue)
+                    {
+                        _logger.LogInformation(
+                            "Assigning agent {AgentId} to SmartBot escalation {EscalationId}",
+                            request.SenderId, escalation.Id);
+
+                        // Update escalation with agent assignment
+                        escalation.AssignedAgentId = request.SenderId.Value;
+                        escalation.AssignedAgentName = agent?.Name ?? "Agent";
+                        escalation.AgentAssignedAt = DateTime.UtcNow;
+                        escalation.Status = SmartBotEscalationStatus.Assigned;
+
+                        // Also update the conversation with agent assignment
+                        conversation.AgentId = request.SenderId.Value;
+                        await _conversationRepository.SaveChangesAsync();
+
+                        // Send agent-assigned webhook to SmartBot
+                        await _smartBotWebhookService.NotifyAgentAssignedAsync(
+                            escalation.SmartBotConversationId,
+                            escalation.Id.ToString(),
+                            escalation.TicketId.ToString(),
+                            request.SenderId.Value.ToString(),
+                            agent?.Name ?? "Agent",
+                            agent?.Email);
+
+                        _logger.LogInformation(
+                            "Agent {AgentName} assigned to SmartBot escalation {EscalationId}",
+                            agent?.Name ?? "Agent", escalation.Id);
+                    }
+
+                    // Send message to SmartBot webhook
+                    var webhookResult = await _smartBotWebhookService.SendAgentMessageAsync(
+                        escalation.SmartBotConversationId,
+                        escalation.Id.ToString(),
+                        request.Content,
+                        request.SenderId?.ToString() ?? string.Empty,
+                        agent?.Name ?? "Agent");
+
+                    _logger.LogInformation(
+                        "Sent agent message to SmartBot webhook for conversation {ConversationId}. Success: {Success}",
+                        conversationId, webhookResult);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "No escalation found for SmartBot conversation {ConversationId}",
+                        conversationId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to send message to SmartBot webhook for conversation {ConversationId}",
+                    conversationId);
+                // Don't fail the entire operation if webhook fails
             }
         }
 
@@ -509,7 +655,14 @@ public class ConversationService : IConversationService
             StartTime = conversation.StartTime,
             EndTime = conversation.EndTime,
             DurationSeconds = conversation.DurationSeconds,
-            MessageCount = conversation.Messages?.Count ?? 0
+            MessageCount = conversation.Messages?.Count ?? 0,
+            // SmartBot Handoff fields
+            HandoffStatus = conversation.HandoffStatus,
+            SmartBotSessionId = conversation.SmartBotSessionId,
+            HandoffRequestedAt = conversation.HandoffRequestedAt,
+            HandoffAcceptedAt = conversation.HandoffAcceptedAt,
+            HandoffEndedAt = conversation.HandoffEndedAt,
+            HandoffEndedBy = conversation.HandoffEndedBy
         };
     }
 }

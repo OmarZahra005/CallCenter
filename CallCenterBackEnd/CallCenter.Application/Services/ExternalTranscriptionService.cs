@@ -1,7 +1,6 @@
 using System.Text.Json;
 using CallCenter.Application.DTOs.Transcription;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace CallCenter.Application.Services;
 
@@ -31,20 +30,17 @@ public interface IExternalTranscriptionService
 public class ExternalTranscriptionService : IExternalTranscriptionService
 {
     private readonly HttpClient _httpClient;
-    private readonly TranscriptionApiOptions _options;
+    private readonly IDatabaseOptionsProvider _optionsProvider;
     private readonly ILogger<ExternalTranscriptionService> _logger;
 
     public ExternalTranscriptionService(
         HttpClient httpClient,
-        IOptions<TranscriptionApiOptions> options,
+        IDatabaseOptionsProvider optionsProvider,
         ILogger<ExternalTranscriptionService> logger)
     {
         _httpClient = httpClient;
-        _options = options.Value;
+        _optionsProvider = optionsProvider;
         _logger = logger;
-
-        // Configure timeout
-        _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
     }
 
     /// <summary>
@@ -57,6 +53,12 @@ public class ExternalTranscriptionService : IExternalTranscriptionService
         try
         {
             _logger.LogInformation("Starting transcription analysis for file: {FilePath}", filePath);
+
+            // Get options from database
+            var options = await _optionsProvider.GetTranscriptionApiOptionsAsync();
+
+            // Configure timeout per request
+            _httpClient.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 
             if (!File.Exists(filePath))
             {
@@ -74,7 +76,7 @@ public class ExternalTranscriptionService : IExternalTranscriptionService
             content.Add(fileContent, "File", Path.GetFileName(filePath));
 
             // Build full URL
-            var url = $"{_options.BaseUrl.TrimEnd('/')}{_options.Endpoint}";
+            var url = $"{options.BaseUrl.TrimEnd('/')}{options.Endpoint}";
             _logger.LogInformation("Sending request to transcription API: {Url}", url);
 
             // Send request
@@ -116,7 +118,7 @@ public class ExternalTranscriptionService : IExternalTranscriptionService
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "Transcription API request timed out after {Timeout} seconds", _options.TimeoutSeconds);
+            _logger.LogError(ex, "Transcription API request timed out");
             return null;
         }
         catch (HttpRequestException ex)

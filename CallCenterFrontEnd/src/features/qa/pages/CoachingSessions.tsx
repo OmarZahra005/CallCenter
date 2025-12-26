@@ -14,10 +14,7 @@ import {
   Eye,
   Edit2,
   Trash2,
-  Filter,
-  ChevronDown,
   Loader2,
-  MessageSquare,
   Target,
   UserCheck,
   CalendarDays,
@@ -27,8 +24,6 @@ import {
 } from 'lucide-react';
 import {
   Card,
-  CardContent,
-  CardHeader,
   Button,
   Badge,
   Modal,
@@ -57,12 +52,6 @@ interface CoachingSession {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  email: string;
 }
 
 // Session type config
@@ -125,13 +114,13 @@ const CoachingSessions = () => {
   const [editingSession, setEditingSession] = useState<CoachingSession | null>(null);
   const [viewingSession, setViewingSession] = useState<CoachingSession | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<CoachingSession | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [_isFilterOpen, _setIsFilterOpen] = useState(false);
 
   // Fetch sessions
   const {
     data: sessions = [],
     isLoading,
-    error,
+    error: _error,
   } = useQuery<CoachingSession[]>({
     queryKey: ['coaching-sessions'],
     queryFn: async () => {
@@ -202,19 +191,6 @@ const CoachingSessions = () => {
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [sessions, searchTerm, statusFilter, typeFilter]);
-
-  // Group sessions by date for calendar view
-  const sessionsByDate = useMemo(() => {
-    const grouped: Record<string, CoachingSession[]> = {};
-    filteredSessions.forEach((session) => {
-      const dateKey = new Date(session.sessionDate).toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(session);
-    });
-    return grouped;
-  }, [filteredSessions]);
 
   // Stats
   const stats = useMemo(() => {
@@ -422,7 +398,6 @@ const CoachingSessions = () => {
                 const typeConfig = SESSION_TYPE_CONFIG[session.sessionType];
                 const statusConfig = SESSION_STATUS_CONFIG[session.status];
                 const StatusIcon = statusConfig.icon;
-                const upcoming = isUpcoming(session.sessionDate);
                 const today = isToday(session.sessionDate);
 
                 return (

@@ -402,7 +402,7 @@ export const SurveyBuilder = ({
                                           }
                                           className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         />
-                                        {question.options.length > 2 && (
+                                        {(question.options?.length ?? 0) > 2 && (
                                           <button
                                             onClick={() => removeOption(question.id, optIndex)}
                                             className="p-1 text-gray-400 hover:text-red-500"

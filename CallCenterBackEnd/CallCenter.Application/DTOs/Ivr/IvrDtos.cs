@@ -112,6 +112,13 @@ public record IvrNodeDto
     public string? HttpMethod { get; init; }
     public Guid? NextNodeId { get; init; }
 
+    // SetVariable configuration
+    public string? VariableName { get; init; }
+    public string? VariableValue { get; init; }
+
+    // SubFlow configuration
+    public Guid? SubFlowId { get; init; }
+
     // Voicemail configuration
     public int MaxRecordingLength { get; init; }
     public bool TranscribeVoicemail { get; init; }
@@ -164,6 +171,13 @@ public record CreateIvrNodeRequest
     public string? HttpUrl { get; init; }
     public string? HttpMethod { get; init; }
     public Guid? NextNodeId { get; init; }
+
+    // SetVariable configuration
+    public string? VariableName { get; init; }
+    public string? VariableValue { get; init; }
+
+    // SubFlow configuration
+    public Guid? SubFlowId { get; init; }
 
     // Voicemail configuration
     public int MaxRecordingLength { get; init; } = 120;
@@ -295,6 +309,9 @@ public record IvrNodeExportDto
     public string? HttpUrl { get; init; }
     public string? HttpMethod { get; init; }
     public string? NextNodeName { get; init; }
+    public string? VariableName { get; init; }
+    public string? VariableValue { get; init; }
+    public string? SubFlowName { get; init; }
     public int MaxRecordingLength { get; init; }
     public bool TranscribeVoicemail { get; init; }
     public string? VoicemailEmail { get; init; }

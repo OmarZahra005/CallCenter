@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Shield, Users, Grid3X3, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, Button } from '../../../components/ui';
 import { PermissionGate } from '../../../components/auth';
 import { Permissions } from '../../../constants/permissions';
 import RolesList from '../components/RolesList';

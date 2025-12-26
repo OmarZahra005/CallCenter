@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   Users,
   Target,
-  Clock,
   CheckCircle,
   BarChart3,
   ArrowUp,
@@ -16,7 +15,7 @@ import {
   Minus,
   User,
 } from 'lucide-react';
-import { Card, Badge } from '../../../components/ui';
+import { Card } from '../../../components/ui';
 import apiClient from '../../../api/client';
 import { AgentTrendChart } from './AgentTrendChart';
 
@@ -44,43 +43,6 @@ interface AgentPerformance {
   trendValue: number;
 }
 
-// Mock data generator for demo
-const generateMockData = () => {
-  const mockScorecards: QaScorecard[] = [];
-  const agents = [
-    { id: '1', name: 'John Smith' },
-    { id: '2', name: 'Emily Davis' },
-    { id: '3', name: 'Michael Brown' },
-    { id: '4', name: 'Sarah Wilson' },
-    { id: '5', name: 'David Lee' },
-  ];
-
-  // Generate scorecards for last 30 days
-  for (let i = 0; i < 50; i++) {
-    const agent = agents[Math.floor(Math.random() * agents.length)];
-    const daysAgo = Math.floor(Math.random() * 30);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    const percentage = 60 + Math.random() * 40; // 60-100%
-
-    mockScorecards.push({
-      id: `scorecard-${i}`,
-      formId: 'form-1',
-      agentId: agent.id,
-      agentName: agent.name,
-      evaluatorId: 'evaluator-1',
-      totalScore: Math.round(percentage),
-      maxScore: 100,
-      percentage: percentage,
-      status: 'Completed',
-      passed: percentage >= 80,
-      evaluationDate: date.toISOString(),
-      createdAt: date.toISOString(),
-    });
-  }
-
-  return mockScorecards;
-};
 
 export const QaDashboardStats = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -89,13 +51,8 @@ export const QaDashboardStats = () => {
   const { data: scorecards = [], isLoading } = useQuery<QaScorecard[]>({
     queryKey: ['qa-scorecards-stats'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/qa/scorecards');
-        return response.data.items || response.data || [];
-      } catch {
-        // Return mock data for development
-        return generateMockData();
-      }
+      const response = await apiClient.get('/qa/scorecards');
+      return response.data.items || response.data || [];
     },
   });
 
@@ -154,7 +111,6 @@ export const QaDashboardStats = () => {
   const agentPerformance = useMemo(() => {
     const agentMap = new Map<string, { scores: number[]; name: string; recentScores: number[] }>();
 
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     scorecards.forEach((s) => {

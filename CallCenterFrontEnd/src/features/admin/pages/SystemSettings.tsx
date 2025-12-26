@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -6,153 +6,178 @@ import {
   Phone,
   Globe,
   Bell,
-  Shield,
-  Database,
   Mail,
+  MessageSquare,
   Clock,
   Save,
   RefreshCw,
-  AlertCircle,
   CheckCircle,
   Loader2,
   ChevronRight,
   Search,
   Info,
+  Key,
+  Mic,
+  HardDrive,
+  Plus,
+  Trash2,
+  Download,
+  Upload,
+  AlertTriangle,
 } from 'lucide-react';
-import { Card, CardContent, Button, Badge } from '../../../components/ui';
+import { Card, CardContent, Button, Badge, Modal, Input, Select } from '../../../components/ui';
 import { staggerContainer, fadeUp } from '../../../utils/animations';
-import apiClient from '../../../api/client';
+import { settingsApi, type SystemSettingDto, type SettingCategory as ApiSettingCategory, type SettingDataType, type CreateSettingRequest } from '../api/settingsApi';
 
-// Types
-interface SystemSetting {
+// Types for local state
+interface DisplaySetting {
+  id: string;
   key: string;
   value: string;
   category: string;
   description?: string;
-  type: 'string' | 'number' | 'boolean' | 'select' | 'json';
-  options?: { value: string; label: string }[];
-  isSecret?: boolean;
+  dataType: 'String' | 'Int' | 'Bool' | 'Json';
+  isSensitive: boolean;
 }
 
-interface SettingCategory {
-  id: string;
+interface SettingCategoryConfig {
+  id: ApiSettingCategory;
   name: string;
   icon: React.ElementType;
   description: string;
 }
 
-const CATEGORIES: SettingCategory[] = [
-  { id: 'general', name: 'General', icon: Settings, description: 'Basic system configuration' },
-  { id: 'voice', name: 'Voice & Telephony', icon: Phone, description: 'Call center and Twilio settings' },
-  { id: 'notifications', name: 'Notifications', icon: Bell, description: 'Alert and notification preferences' },
-  { id: 'security', name: 'Security', icon: Shield, description: 'Authentication and access control' },
-  { id: 'integrations', name: 'Integrations', icon: Globe, description: 'Third-party service connections' },
-  { id: 'email', name: 'Email', icon: Mail, description: 'Email server configuration' },
-  { id: 'database', name: 'Database', icon: Database, description: 'Data storage and backup settings' },
+const CATEGORIES: SettingCategoryConfig[] = [
+  { id: 'General', name: 'General', icon: Settings, description: 'Basic system configuration' },
+  { id: 'Twilio', name: 'Twilio / Voice', icon: Phone, description: 'Voice call and telephony settings' },
+  { id: 'WhatsApp', name: 'WhatsApp', icon: MessageSquare, description: 'WhatsApp Business API configuration' },
+  { id: 'Sms', name: 'SMS', icon: MessageSquare, description: 'SMS messaging configuration' },
+  { id: 'Email', name: 'Email', icon: Mail, description: 'Email server configuration' },
+  { id: 'Transcription', name: 'Transcription', icon: Mic, description: 'Speech-to-text API settings' },
+  { id: 'RecordingStorage', name: 'Recording Storage', icon: HardDrive, description: 'Call recording storage settings' },
+  { id: 'Jwt', name: 'JWT / Security', icon: Key, description: 'Authentication token settings' },
+  { id: 'Sla', name: 'SLA', icon: Clock, description: 'Service Level Agreement settings' },
+  { id: 'Notification', name: 'Notifications', icon: Bell, description: 'Alert and notification preferences' },
+  { id: 'Integration', name: 'Integrations', icon: Globe, description: 'Third-party service connections' },
 ];
 
-// Mock settings
-const generateMockSettings = (): SystemSetting[] => [
-  // General
-  { key: 'company_name', value: 'Call Center Pro', category: 'general', description: 'Company display name', type: 'string' },
-  { key: 'timezone', value: 'America/New_York', category: 'general', description: 'Default system timezone', type: 'select', options: [
-    { value: 'America/New_York', label: 'Eastern Time (ET)' },
-    { value: 'America/Chicago', label: 'Central Time (CT)' },
-    { value: 'America/Denver', label: 'Mountain Time (MT)' },
-    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-    { value: 'UTC', label: 'UTC' },
-  ]},
-  { key: 'date_format', value: 'MM/DD/YYYY', category: 'general', description: 'Date display format', type: 'select', options: [
-    { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
-    { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
-    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
-  ]},
-  { key: 'language', value: 'en', category: 'general', description: 'Default system language', type: 'select', options: [
-    { value: 'en', label: 'English' },
-    { value: 'ar', label: 'Arabic' },
-    { value: 'es', label: 'Spanish' },
-  ]},
+// Map numeric category enum to string
+const CATEGORY_MAP: Record<number, ApiSettingCategory> = {
+  0: 'General',
+  1: 'WhatsApp',
+  2: 'Twilio',
+  3: 'Sms',
+  4: 'Email',
+  5: 'Transcription',
+  6: 'RecordingStorage',
+  7: 'Jwt',
+  8: 'Sla',
+  9: 'Notification',
+  10: 'Integration',
+};
 
-  // Voice
-  { key: 'twilio_account_sid', value: 'AC*********************', category: 'voice', description: 'Twilio Account SID', type: 'string', isSecret: true },
-  { key: 'twilio_auth_token', value: '********************************', category: 'voice', description: 'Twilio Auth Token', type: 'string', isSecret: true },
-  { key: 'twilio_phone_number', value: '+1234567890', category: 'voice', description: 'Main Twilio phone number', type: 'string' },
-  { key: 'call_recording_enabled', value: 'true', category: 'voice', description: 'Enable call recording', type: 'boolean' },
-  { key: 'max_call_duration', value: '3600', category: 'voice', description: 'Maximum call duration (seconds)', type: 'number' },
-  { key: 'wrap_up_time', value: '30', category: 'voice', description: 'After-call work time (seconds)', type: 'number' },
-
-  // Notifications
-  { key: 'email_notifications', value: 'true', category: 'notifications', description: 'Enable email notifications', type: 'boolean' },
-  { key: 'push_notifications', value: 'true', category: 'notifications', description: 'Enable push notifications', type: 'boolean' },
-  { key: 'sound_alerts', value: 'true', category: 'notifications', description: 'Enable sound alerts', type: 'boolean' },
-  { key: 'notification_frequency', value: 'instant', category: 'notifications', description: 'Notification delivery timing', type: 'select', options: [
-    { value: 'instant', label: 'Instant' },
-    { value: 'batched', label: 'Batched (every 5 min)' },
-    { value: 'hourly', label: 'Hourly digest' },
-  ]},
-
-  // Security
-  { key: 'session_timeout', value: '30', category: 'security', description: 'Session timeout (minutes)', type: 'number' },
-  { key: 'password_min_length', value: '8', category: 'security', description: 'Minimum password length', type: 'number' },
-  { key: 'two_factor_enabled', value: 'false', category: 'security', description: 'Require two-factor authentication', type: 'boolean' },
-  { key: 'ip_whitelist', value: '', category: 'security', description: 'IP whitelist (comma-separated)', type: 'string' },
-
-  // Integrations
-  { key: 'webhook_url', value: '', category: 'integrations', description: 'Webhook endpoint URL', type: 'string' },
-  { key: 'api_rate_limit', value: '100', category: 'integrations', description: 'API requests per minute', type: 'number' },
-  { key: 'crm_integration', value: 'none', category: 'integrations', description: 'CRM integration', type: 'select', options: [
-    { value: 'none', label: 'None' },
-    { value: 'salesforce', label: 'Salesforce' },
-    { value: 'hubspot', label: 'HubSpot' },
-    { value: 'zoho', label: 'Zoho CRM' },
-  ]},
-
-  // Email
-  { key: 'smtp_host', value: 'smtp.example.com', category: 'email', description: 'SMTP server hostname', type: 'string' },
-  { key: 'smtp_port', value: '587', category: 'email', description: 'SMTP port', type: 'number' },
-  { key: 'smtp_username', value: 'notifications@example.com', category: 'email', description: 'SMTP username', type: 'string' },
-  { key: 'smtp_password', value: '********', category: 'email', description: 'SMTP password', type: 'string', isSecret: true },
-  { key: 'from_email', value: 'no-reply@example.com', category: 'email', description: 'Default sender email', type: 'string' },
-
-  // Database
-  { key: 'backup_enabled', value: 'true', category: 'database', description: 'Enable automatic backups', type: 'boolean' },
-  { key: 'backup_frequency', value: 'daily', category: 'database', description: 'Backup frequency', type: 'select', options: [
-    { value: 'hourly', label: 'Hourly' },
-    { value: 'daily', label: 'Daily' },
-    { value: 'weekly', label: 'Weekly' },
-  ]},
-  { key: 'data_retention_days', value: '365', category: 'database', description: 'Data retention period (days)', type: 'number' },
-];
+// Transform API data to display format
+const transformSettings = (settings: SystemSettingDto[]): DisplaySetting[] => {
+  return settings.map(s => ({
+    id: s.id,
+    key: s.key,
+    value: s.value,
+    // Handle both numeric and string category values from API
+    category: typeof s.category === 'number' ? CATEGORY_MAP[s.category] || 'General' : s.category,
+    description: s.description,
+    dataType: typeof s.dataType === 'number' ? (['String', 'Int', 'Bool', 'Json'][s.dataType] || 'String') as DisplaySetting['dataType'] : s.dataType,
+    isSensitive: s.isSensitive,
+  }));
+};
 
 export const SystemSettings = () => {
   const queryClient = useQueryClient();
-  const [activeCategory, setActiveCategory] = useState('general');
+  const [activeCategory, setActiveCategory] = useState<ApiSettingCategory>('General');
   const [searchQuery, setSearchQuery] = useState('');
   const [editedSettings, setEditedSettings] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Fetch settings
-  const { data: settings = [], isLoading } = useQuery<SystemSetting[]>({
+  // Create/Delete modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [settingToDelete, setSettingToDelete] = useState<DisplaySetting | null>(null);
+  const [newSetting, setNewSetting] = useState<Partial<CreateSettingRequest>>({
+    key: '',
+    value: '',
+    dataType: 'String',
+    category: 'General',
+    description: '',
+    isSensitive: false,
+  });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Import/Export state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[] | null>(null);
+  const [importResult, setImportResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
+
+  // Fetch settings from API
+  const { data: settings = [], isLoading, error } = useQuery<DisplaySetting[]>({
     queryKey: ['system-settings'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/settings');
-        return response.data.items || response.data || [];
-      } catch {
-        return generateMockSettings();
-      }
+      const data = await settingsApi.getAll();
+      return transformSettings(data);
     },
   });
 
-  // Save mutation
+  // Save mutation using bulk update
   const saveMutation = useMutation({
     mutationFn: async (updates: { key: string; value: string }[]) => {
-      return apiClient.put('/settings', { settings: updates });
+      await settingsApi.bulkUpdate({ settings: updates });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
       setEditedSettings({});
       setHasChanges(false);
+    },
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (request: CreateSettingRequest) => {
+      return await settingsApi.create(request);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      setIsCreateModalOpen(false);
+      setNewSetting({
+        key: '',
+        value: '',
+        dataType: 'String',
+        category: 'General',
+        description: '',
+        isSensitive: false,
+      });
+      setValidationErrors({});
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await settingsApi.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      setIsDeleteModalOpen(false);
+      setSettingToDelete(null);
+    },
+  });
+
+  // Import mutation
+  const importMutation = useMutation({
+    mutationFn: async (settings: CreateSettingRequest[]) => {
+      return await settingsApi.importSettings(settings);
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      setImportResult(result);
     },
   });
 
@@ -171,7 +196,7 @@ export const SystemSettings = () => {
     setHasChanges(true);
   };
 
-  const getValue = (setting: SystemSetting) => {
+  const getValue = (setting: DisplaySetting) => {
     return editedSettings[setting.key] ?? setting.value;
   };
 
@@ -185,58 +210,196 @@ export const SystemSettings = () => {
     setHasChanges(false);
   };
 
-  const renderSettingInput = (setting: SystemSetting) => {
+  // Validate new setting
+  const validateNewSetting = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!newSetting.key?.trim()) {
+      errors.key = 'Key is required';
+    } else if (!/^[A-Za-z][A-Za-z0-9_:]*$/.test(newSetting.key)) {
+      errors.key = 'Key must start with a letter and contain only letters, numbers, underscores, or colons';
+    } else if (settings.some(s => s.key.toLowerCase() === newSetting.key?.toLowerCase())) {
+      errors.key = 'A setting with this key already exists';
+    }
+
+    if (newSetting.dataType === 'Int' && newSetting.value && isNaN(parseInt(newSetting.value))) {
+      errors.value = 'Value must be a valid number for Int type';
+    }
+
+    if (newSetting.dataType === 'Bool' && newSetting.value && !['true', 'false', 'True', 'False', '0', '1'].includes(newSetting.value)) {
+      errors.value = 'Value must be true or false for Bool type';
+    }
+
+    if (newSetting.dataType === 'Json' && newSetting.value) {
+      try {
+        JSON.parse(newSetting.value);
+      } catch {
+        errors.value = 'Value must be valid JSON';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle create setting
+  const handleCreateSetting = () => {
+    if (!validateNewSetting()) return;
+
+    createMutation.mutate(newSetting as CreateSettingRequest);
+  };
+
+  // Handle open create modal
+  const handleOpenCreateModal = () => {
+    setNewSetting({
+      key: `${activeCategory}:`,
+      value: '',
+      dataType: 'String',
+      category: activeCategory,
+      description: '',
+      isSensitive: false,
+    });
+    setValidationErrors({});
+    setIsCreateModalOpen(true);
+  };
+
+  // Handle delete setting
+  const handleDeleteSetting = (setting: DisplaySetting) => {
+    setSettingToDelete(setting);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = () => {
+    if (settingToDelete) {
+      deleteMutation.mutate(settingToDelete.id);
+    }
+  };
+
+  // Export settings
+  const handleExport = async () => {
+    try {
+      const allSettings = await settingsApi.exportAll();
+      // Transform to export format (exclude sensitive values, include structure)
+      const exportData = allSettings.map(s => ({
+        key: s.key,
+        value: s.isSensitive ? '' : s.value, // Don't export sensitive values
+        dataType: s.dataType,
+        category: s.category,
+        description: s.description,
+        isSensitive: s.isSensitive,
+      }));
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `system-settings-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
+
+  // Handle file selection for import
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFile(file);
+    setImportResult(null);
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (Array.isArray(data)) {
+        setImportPreview(data);
+      } else {
+        setImportPreview(null);
+      }
+    } catch {
+      setImportPreview(null);
+    }
+  };
+
+  // Perform import
+  const handlePerformImport = () => {
+    if (!importPreview) return;
+
+    const settingsToImport: CreateSettingRequest[] = importPreview.map(s => ({
+      key: s.key,
+      value: s.value || '',
+      dataType: s.dataType || 'String',
+      category: s.category || 'General',
+      description: s.description || '',
+      isSensitive: s.isSensitive || false,
+    }));
+
+    importMutation.mutate(settingsToImport);
+  };
+
+  // Close import modal and reset state
+  const handleCloseImportModal = () => {
+    setIsImportModalOpen(false);
+    setImportFile(null);
+    setImportPreview(null);
+    setImportResult(null);
+  };
+
+  const formatSettingLabel = (key: string): string => {
+    // Remove category prefix (e.g., "Twilio:" from "Twilio:AccountSid")
+    const parts = key.split(':');
+    const name = parts.length > 1 ? parts[1] : key;
+    // Convert camelCase/PascalCase to Title Case with spaces
+    return name
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
+  const renderSettingInput = (setting: DisplaySetting) => {
     const value = getValue(setting);
 
-    switch (setting.type) {
-      case 'boolean':
-        return (
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={value === 'true'}
-              onChange={(e) => handleSettingChange(setting.key, e.target.checked ? 'true' : 'false')}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
-          </label>
-        );
-
-      case 'select':
-        return (
-          <select
-            value={value}
-            onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-            className="w-full max-w-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-          >
-            {setting.options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        );
-
-      case 'number':
-        return (
+    // Boolean type
+    if (setting.dataType === 'Bool') {
+      return (
+        <label className="relative inline-flex items-center cursor-pointer">
           <input
-            type="number"
-            value={value}
-            onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-            className="w-full max-w-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+            type="checkbox"
+            checked={value === 'true' || value === 'True'}
+            onChange={(e) => handleSettingChange(setting.key, e.target.checked ? 'true' : 'false')}
+            className="sr-only peer"
           />
-        );
-
-      default:
-        return (
-          <input
-            type={setting.isSecret ? 'password' : 'text'}
-            value={value}
-            onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-            className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-          />
-        );
+          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+        </label>
+      );
     }
+
+    // Number type
+    if (setting.dataType === 'Int') {
+      return (
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+        />
+      );
+    }
+
+    // String type (default) - use password field for sensitive values
+    return (
+      <input
+        type={setting.isSensitive ? 'password' : 'text'}
+        value={value}
+        placeholder={setting.isSensitive ? 'Enter new value' : ''}
+        onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+        className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+      />
+    );
   };
 
   const activeCateg = CATEGORIES.find((c) => c.id === activeCategory);
@@ -261,6 +424,18 @@ export const SystemSettings = () => {
             {hasChanges && (
               <Badge variant="warning">Unsaved Changes</Badge>
             )}
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Import
+            </Button>
+            <Button variant="outline" onClick={handleOpenCreateModal}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Setting
+            </Button>
             <Button variant="outline" onClick={handleReset} disabled={!hasChanges}>
               Reset
             </Button>
@@ -312,9 +487,11 @@ export const SystemSettings = () => {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{category.name}</p>
                   </div>
-                  <Badge variant="outline" size="sm">
-                    {count}
-                  </Badge>
+                  {count > 0 && (
+                    <Badge variant="default" size="sm">
+                      {count}
+                    </Badge>
+                  )}
                   <ChevronRight className={`w-4 h-4 ${isActive ? 'text-primary-600' : 'text-gray-400'}`} />
                 </button>
               );
@@ -345,10 +522,15 @@ export const SystemSettings = () => {
               <div className="flex items-center justify-center py-12">
                 <RefreshCw className="w-6 h-6 animate-spin text-primary-500" />
               </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <Settings className="w-12 h-12 mx-auto text-red-300 mb-3" />
+                <p className="text-red-500">Failed to load settings</p>
+              </div>
             ) : filteredSettings.length === 0 ? (
               <div className="text-center py-12">
                 <Settings className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500">No settings found</p>
+                <p className="text-gray-500">No settings found in this category</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -357,7 +539,7 @@ export const SystemSettings = () => {
 
                   return (
                     <div
-                      key={setting.key}
+                      key={setting.id}
                       className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg ${
                         isEdited ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-gray-50 dark:bg-gray-800/50'
                       }`}
@@ -365,11 +547,11 @@ export const SystemSettings = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-medium text-gray-900 dark:text-white">
-                            {setting.key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                            {formatSettingLabel(setting.key)}
                           </p>
-                          {setting.isSecret && (
-                            <Badge variant="outline" size="sm">
-                              Secret
+                          {setting.isSensitive && (
+                            <Badge variant="default" size="sm">
+                              Sensitive
                             </Badge>
                           )}
                           {isEdited && (
@@ -384,8 +566,19 @@ export const SystemSettings = () => {
                             {setting.description}
                           </p>
                         )}
+                        <p className="text-xs text-gray-400 mt-1 font-mono">{setting.key}</p>
                       </div>
-                      <div className="flex-shrink-0">{renderSettingInput(setting)}</div>
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        {renderSettingInput(setting)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSetting(setting)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -406,6 +599,318 @@ export const SystemSettings = () => {
           Settings saved successfully
         </motion.div>
       )}
+
+      {saveMutation.isError && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg shadow-lg"
+        >
+          <Settings className="w-5 h-5" />
+          Failed to save settings
+        </motion.div>
+      )}
+
+      {/* Create Setting Modal */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Add New Setting"
+      >
+        <div className="space-y-4">
+          <div>
+            <Input
+              label="Setting Key"
+              value={newSetting.key || ''}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setNewSetting({ ...newSetting, key: e.target.value })
+              }
+              placeholder="Category:SettingName"
+              error={validationErrors.key}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Use format: Category:SettingName (e.g., Twilio:AccountSid)
+            </p>
+          </div>
+
+          <Select
+            label="Category"
+            value={newSetting.category || 'General'}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setNewSetting({ ...newSetting, category: e.target.value as ApiSettingCategory })
+            }
+            options={CATEGORIES.map(c => ({ value: c.id, label: c.name }))}
+          />
+
+          <Select
+            label="Data Type"
+            value={newSetting.dataType || 'String'}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setNewSetting({ ...newSetting, dataType: e.target.value as SettingDataType })
+            }
+            options={[
+              { value: 'String', label: 'String' },
+              { value: 'Int', label: 'Integer' },
+              { value: 'Bool', label: 'Boolean' },
+              { value: 'Json', label: 'JSON' },
+            ]}
+          />
+
+          <div>
+            {newSetting.dataType === 'Bool' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Value
+                </label>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newSetting.value === 'true'}
+                    onChange={(e) => setNewSetting({ ...newSetting, value: e.target.checked ? 'true' : 'false' })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                  <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                    {newSetting.value === 'true' ? 'True' : 'False'}
+                  </span>
+                </label>
+              </div>
+            ) : newSetting.dataType === 'Json' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Value (JSON)
+                </label>
+                <textarea
+                  value={newSetting.value || ''}
+                  onChange={(e) => setNewSetting({ ...newSetting, value: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                  rows={4}
+                  placeholder='{"key": "value"}'
+                />
+                {validationErrors.value && (
+                  <p className="text-sm text-red-500 mt-1">{validationErrors.value}</p>
+                )}
+              </div>
+            ) : (
+              <Input
+                label="Value"
+                type={newSetting.dataType === 'Int' ? 'number' : 'text'}
+                value={newSetting.value || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewSetting({ ...newSetting, value: e.target.value })
+                }
+                error={validationErrors.value}
+              />
+            )}
+          </div>
+
+          <Input
+            label="Description (optional)"
+            value={newSetting.description || ''}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setNewSetting({ ...newSetting, description: e.target.value })
+            }
+            placeholder="Brief description of this setting"
+          />
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isSensitive"
+              checked={newSetting.isSensitive || false}
+              onChange={(e) => setNewSetting({ ...newSetting, isSensitive: e.target.checked })}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+            />
+            <label htmlFor="isSensitive" className="text-sm text-gray-700 dark:text-gray-300">
+              Sensitive value (will be masked in UI and encrypted in database)
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateSetting} disabled={createMutation.isPending}>
+              {createMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              Create Setting
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Setting"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Are you sure you want to delete this setting? This action cannot be undone.
+              </p>
+              {settingToDelete && (
+                <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formatSettingLabel(settingToDelete.key)}
+                  </p>
+                  <p className="text-xs text-gray-500 font-mono mt-1">{settingToDelete.key}</p>
+                  {settingToDelete.description && (
+                    <p className="text-sm text-gray-500 mt-1">{settingToDelete.description}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete Setting
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={handleCloseImportModal}
+        title="Import Settings"
+      >
+        <div className="space-y-4">
+          {!importResult ? (
+            <>
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Upload a JSON file to import settings. Existing settings with matching keys will be updated.
+                  New settings will be created. Sensitive values must be entered manually after import.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Select JSON File
+                </label>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleImportFileChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              {importFile && importPreview && (
+                <div className="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300">Key</th>
+                        <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300">Type</th>
+                        <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300">Category</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {importPreview.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">
+                            {item.key}
+                          </td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                            {item.dataType || 'String'}
+                          </td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                            {item.category || 'General'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {importFile && !importPreview && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Invalid JSON file. Please ensure the file contains an array of settings.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button variant="outline" onClick={handleCloseImportModal}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePerformImport}
+                  disabled={!importPreview || importMutation.isPending}
+                >
+                  {importMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Import {importPreview?.length || 0} Settings
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={`p-4 rounded-lg ${importResult.errors.length > 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className={`w-5 h-5 ${importResult.errors.length > 0 ? 'text-yellow-500' : 'text-green-500'}`} />
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    Import Complete
+                  </p>
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                  <p>Created: {importResult.created} settings</p>
+                  <p>Updated: {importResult.updated} settings</p>
+                  {importResult.errors.length > 0 && (
+                    <p className="text-red-600 dark:text-red-400">
+                      Errors: {importResult.errors.length}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="max-h-32 overflow-y-auto p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">Errors:</p>
+                  <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                    {importResult.errors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button onClick={handleCloseImportModal}>
+                  Close
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </motion.div>
   );
 };

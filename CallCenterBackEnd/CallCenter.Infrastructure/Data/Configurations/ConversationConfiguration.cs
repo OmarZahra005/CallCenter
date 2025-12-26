@@ -24,5 +24,19 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
             .WithMany(q => q.Conversations)
             .HasForeignKey(c => c.QueueId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // SmartBot Handoff configuration
+        builder.Property(c => c.HandoffStatus)
+            .HasDefaultValue(CallCenter.Domain.Enums.HandoffStatus.None);
+
+        builder.Property(c => c.SmartBotSessionId)
+            .HasMaxLength(200);
+
+        builder.Property(c => c.HandoffEndedBy)
+            .HasMaxLength(50);
+
+        // Index for efficient handoff queries
+        builder.HasIndex(c => c.HandoffStatus);
+        builder.HasIndex(c => c.SmartBotSessionId);
     }
 }

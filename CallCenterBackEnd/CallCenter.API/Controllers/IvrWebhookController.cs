@@ -1,8 +1,6 @@
 using CallCenter.Application.DTOs.Ivr;
-using CallCenter.Application.DTOs.Twilio;
 using CallCenter.Application.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace CallCenter.API.Controllers;
 
@@ -16,18 +14,15 @@ public class IvrWebhookController : ControllerBase
     private readonly IIvrService _ivrService;
     private readonly ITwilioVoiceService _twilioVoiceService;
     private readonly ILogger<IvrWebhookController> _logger;
-    private readonly TwilioOptions _twilioOptions;
 
     public IvrWebhookController(
         IIvrService ivrService,
         ITwilioVoiceService twilioVoiceService,
-        ILogger<IvrWebhookController> logger,
-        IOptions<TwilioOptions> twilioOptions)
+        ILogger<IvrWebhookController> logger)
     {
         _ivrService = ivrService;
         _twilioVoiceService = twilioVoiceService;
         _logger = logger;
-        _twilioOptions = twilioOptions.Value;
     }
 
     /// <summary>
@@ -40,7 +35,7 @@ public class IvrWebhookController : ControllerBase
         try
         {
             // Validate Twilio signature
-            if (!ValidateTwilioSignature())
+            if (!await ValidateTwilioSignatureAsync())
             {
                 _logger.LogWarning("Invalid Twilio signature for IVR entry");
                 return Unauthorized("Invalid signature");
@@ -82,7 +77,7 @@ public class IvrWebhookController : ControllerBase
         try
         {
             // Validate Twilio signature
-            if (!ValidateTwilioSignature())
+            if (!await ValidateTwilioSignatureAsync())
             {
                 _logger.LogWarning("Invalid Twilio signature for DTMF webhook");
                 return Unauthorized("Invalid signature");
@@ -124,7 +119,7 @@ public class IvrWebhookController : ControllerBase
         try
         {
             // Validate Twilio signature
-            if (!ValidateTwilioSignature())
+            if (!await ValidateTwilioSignatureAsync())
             {
                 _logger.LogWarning("Invalid Twilio signature for timeout webhook");
                 return Unauthorized("Invalid signature");
@@ -217,19 +212,13 @@ public class IvrWebhookController : ControllerBase
 
     // ==================== Helper Methods ====================
 
-    private bool ValidateTwilioSignature()
+    private async Task<bool> ValidateTwilioSignatureAsync()
     {
-        // In development, you might want to skip validation
-        if (string.IsNullOrEmpty(_twilioOptions.WebhookAuthToken))
-        {
-            return true;
-        }
-
         var signature = Request.Headers["X-Twilio-Signature"].ToString();
         var url = $"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}";
         var parameters = Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString());
 
-        return _twilioVoiceService.ValidateSignature(signature, url, parameters);
+        return await _twilioVoiceService.ValidateSignatureAsync(signature, url, parameters);
     }
 
     private string GenerateErrorTwiml()

@@ -6,14 +6,12 @@ import {
   TrendingDown,
   Minus,
   User,
-  Calendar,
   Target,
   BarChart3,
   ChevronDown,
-  Filter,
   RefreshCw,
 } from 'lucide-react';
-import { Card, Button, Badge } from '../../../components/ui';
+import { Card, Button } from '../../../components/ui';
 import apiClient from '../../../api/client';
 
 interface QaScorecard {
@@ -38,11 +36,6 @@ interface QaScorecard {
   }[];
 }
 
-interface Agent {
-  id: string;
-  name: string;
-}
-
 interface DailyScore {
   date: string;
   score: number;
@@ -57,63 +50,6 @@ interface CriteriaBreakdown {
   trend: 'up' | 'down' | 'stable';
 }
 
-// Generate mock data for demo
-const generateMockScorecards = (agents: Agent[]) => {
-  const mockData: QaScorecard[] = [];
-  const criteria = [
-    'Greeting & Opening',
-    'Product Knowledge',
-    'Problem Resolution',
-    'Communication Skills',
-    'Compliance',
-  ];
-
-  // Generate 60 days of data
-  for (let day = 0; day < 60; day++) {
-    const date = new Date();
-    date.setDate(date.getDate() - day);
-
-    // Generate 2-4 evaluations per day
-    const evaluationsPerDay = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < evaluationsPerDay; i++) {
-      const agent = agents[Math.floor(Math.random() * agents.length)];
-      const baseScore = 70 + Math.random() * 25; // Base score 70-95
-      const variance = day * 0.1; // Slight improvement trend over time
-
-      mockData.push({
-        id: `scorecard-${day}-${i}`,
-        formId: 'form-1',
-        agentId: agent.id,
-        agentName: agent.name,
-        evaluatorId: 'evaluator-1',
-        evaluatorName: 'QA Supervisor',
-        totalScore: Math.round(baseScore + variance),
-        maxScore: 100,
-        percentage: Math.min(100, baseScore + variance),
-        status: 'Completed',
-        passed: baseScore + variance >= 80,
-        evaluationDate: date.toISOString(),
-        createdAt: date.toISOString(),
-        details: criteria.map((c, idx) => ({
-          criteriaId: `criteria-${idx}`,
-          criteriaName: c,
-          pointsEarned: Math.round((15 + Math.random() * 5) * (baseScore / 100)),
-          maxPoints: 20,
-        })),
-      });
-    }
-  }
-
-  return mockData;
-};
-
-const mockAgents: Agent[] = [
-  { id: 'agent-1', name: 'John Smith' },
-  { id: 'agent-2', name: 'Emily Davis' },
-  { id: 'agent-3', name: 'Michael Brown' },
-  { id: 'agent-4', name: 'Sarah Wilson' },
-  { id: 'agent-5', name: 'David Lee' },
-];
 
 interface AgentTrendChartProps {
   selectedAgentId?: string;
@@ -134,13 +70,8 @@ export const AgentTrendChart = ({
   const { data: scorecards = [], isLoading } = useQuery<QaScorecard[]>({
     queryKey: ['qa-scorecards-trends'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/qa/scorecards');
-        return response.data.items || response.data || [];
-      } catch {
-        // Return mock data for development
-        return generateMockScorecards(mockAgents);
-      }
+      const response = await apiClient.get('/qa/scorecards');
+      return response.data.items || response.data || [];
     },
   });
 

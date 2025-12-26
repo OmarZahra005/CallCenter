@@ -49,7 +49,15 @@
       "Bash(CallCenterBackEnd/CallCenter.Infrastructure/Services/IvrService.cs )",
       "Bash(CallCenterFrontEnd/src/features/ivr/ )",
       "Bash(CallCenterFrontEnd/src/router.tsx)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nAdd IVR system with visual flow builder\n\nImplement complete IVR (Interactive Voice Response) system:\n- Database schema for flows, nodes, menu options, and call sessions\n- 12 node types: Menu, PlayMessage, Transfer (Queue/Agent/Number), \n  Voicemail, Hangup, CollectDigits, Condition, and more\n- TwiML generation for Twilio voice responses\n- DTMF input handling with invalid input retry logic\n- Business hours routing support\n- Session state management for caller progress tracking\n- Flow import/export and validation\n- Visual flow builder UI with drag-and-drop nodes\n- Integration with TwilioVoiceController for automatic IVR routing\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd IVR system with visual flow builder\n\nImplement complete IVR (Interactive Voice Response) system:\n- Database schema for flows, nodes, menu options, and call sessions\n- 12 node types: Menu, PlayMessage, Transfer (Queue/Agent/Number), \n  Voicemail, Hangup, CollectDigits, Condition, and more\n- TwiML generation for Twilio voice responses\n- DTMF input handling with invalid input retry logic\n- Business hours routing support\n- Session state management for caller progress tracking\n- Flow import/export and validation\n- Visual flow builder UI with drag-and-drop nodes\n- Integration with TwilioVoiceController for automatic IVR routing\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(dotnet restore:*)",
+      "Bash(Select-String -Pattern \"error|Build succeeded\")",
+      "Bash(Select-Object -First 10)",
+      "Bash(Select-String -Pattern \"error|warn|Error|success|Successfully|built\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(Select-String -Pattern \"error|warning|success\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")"
     ],
     "deny": [],
     "ask": []

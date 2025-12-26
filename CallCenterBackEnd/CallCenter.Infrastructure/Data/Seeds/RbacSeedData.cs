@@ -141,7 +141,8 @@ public static class RbacSeedData
             p.SystemName.StartsWith("customers.") ||
             p.SystemName.StartsWith("reports.") ||
             p.SystemName.StartsWith("analytics.") ||
-            p.SystemName.StartsWith("dialer.")
+            p.SystemName.StartsWith("dialer.") ||
+            p.SystemName.StartsWith("knowledge.")
         ).ToList();
 
         foreach (var permission in supervisorPermissions)
@@ -184,7 +185,8 @@ public static class RbacSeedData
             p.SystemName == "agents.view" ||
             p.SystemName == "calls.view" ||
             p.SystemName == "reports.view" ||
-            p.SystemName == "analytics.view"
+            p.SystemName == "analytics.view" ||
+            p.SystemName == "knowledge.view"
         ).ToList();
 
         foreach (var permission in teamLeadPermissions)
@@ -208,7 +210,8 @@ public static class RbacSeedData
             p.SystemName == "tickets.edit" ||
             p.SystemName == "customers.view" ||
             p.SystemName == "customers.create" ||
-            p.SystemName == "customers.edit"
+            p.SystemName == "customers.edit" ||
+            p.SystemName == "knowledge.view"
         ).ToList();
 
         foreach (var permission in agentPermissions)
@@ -319,6 +322,10 @@ public static class RbacSeedData
         permissions.Add(CreatePermission("ivr.view", "View IVR", "IVR", "View IVR flows", ++order));
         permissions.Add(CreatePermission("ivr.manage", "Manage IVR", "IVR", "Create, edit, delete IVR flows", ++order));
 
+        // Knowledge
+        permissions.Add(CreatePermission("knowledge.view", "View Knowledge Base", "Knowledge", "View knowledge base articles", ++order));
+        permissions.Add(CreatePermission("knowledge.manage", "Manage Knowledge Base", "Knowledge", "Create, edit, delete knowledge base articles", ++order));
+
         // Admin
         permissions.Add(CreatePermission("admin.settings", "System Settings", "Admin", "Access and modify system settings", ++order));
         permissions.Add(CreatePermission("admin.audit_logs", "View Audit Logs", "Admin", "View system audit logs", ++order));
@@ -330,6 +337,7 @@ public static class RbacSeedData
         // System (RBAC)
         permissions.Add(CreatePermission("system.roles_manage", "Manage Roles", "System", "Create, edit, delete roles and assign permissions", ++order));
         permissions.Add(CreatePermission("system.permissions_view", "View Permissions", "System", "View available permissions", ++order));
+        permissions.Add(CreatePermission("system.settings_manage", "Manage Settings", "System", "View and modify system settings", ++order));
 
         return permissions;
     }

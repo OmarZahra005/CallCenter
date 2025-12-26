@@ -1,9 +1,6 @@
 using CallCenter.Application.DTOs.Recordings;
 using CallCenter.Application.DTOs.Twilio;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Net.Http;
 
 namespace CallCenter.Application.Services;
 
@@ -15,31 +12,39 @@ public class RecordingStorageService : IRecordingStorageService
     private readonly ICallRecordingService _recordingService;
     private readonly ICallLogService _callLogService;
     private readonly ILogger<RecordingStorageService> _logger;
-    private readonly IConfiguration _configuration;
-    private readonly TwilioOptions _twilioOptions;
+    private readonly IDatabaseOptionsProvider _optionsProvider;
     private readonly HttpClient _httpClient;
-    private readonly string _storageBasePath;
+    private string? _storageBasePath;
 
     public RecordingStorageService(
         ICallRecordingService recordingService,
         ICallLogService callLogService,
         ILogger<RecordingStorageService> logger,
-        IConfiguration configuration,
-        IOptions<TwilioOptions> twilioOptions)
+        IDatabaseOptionsProvider optionsProvider)
     {
         _recordingService = recordingService;
         _callLogService = callLogService;
         _logger = logger;
-        _configuration = configuration;
-        _twilioOptions = twilioOptions.Value;
+        _optionsProvider = optionsProvider;
         _httpClient = new HttpClient();
+    }
 
-        // Get storage path from configuration or use default
-        _storageBasePath = _configuration["RecordingStorage:Path"]
-            ?? Path.Combine(Directory.GetCurrentDirectory(), "Recordings");
+    /// <summary>
+    /// Get storage base path, initializing from database settings if needed
+    /// </summary>
+    private async Task<string> GetStorageBasePathAsync()
+    {
+        if (_storageBasePath == null)
+        {
+            var options = await _optionsProvider.GetRecordingStorageOptionsAsync();
+            _storageBasePath = !string.IsNullOrEmpty(options.Path)
+                ? options.Path
+                : Path.Combine(Directory.GetCurrentDirectory(), "Recordings");
 
-        // Ensure base directory exists
-        Directory.CreateDirectory(_storageBasePath);
+            // Ensure base directory exists
+            Directory.CreateDirectory(_storageBasePath);
+        }
+        return _storageBasePath;
     }
 
     /// <summary>
@@ -83,9 +88,10 @@ public class RecordingStorageService : IRecordingStorageService
             await LogToFileAsync($"Downloaded {recordingBytes.Length} bytes from Twilio");
 
             // 2. Generate file path (organized by year-month)
+            var storageBasePath = await GetStorageBasePathAsync();
             var fileName = $"{callSid}_{recordingSid}_{DateTime.UtcNow:yyyyMMddHHmmss}.wav";
             var relativePath = Path.Combine(DateTime.UtcNow.ToString("yyyy-MM"), fileName);
-            var fullPath = Path.Combine(_storageBasePath, relativePath);
+            var fullPath = Path.Combine(storageBasePath, relativePath);
             await LogToFileAsync($"Generated file path: {fullPath}");
 
             // Ensure subdirectory exists
@@ -100,22 +106,28 @@ public class RecordingStorageService : IRecordingStorageService
             await LogToFileAsync($"Recording saved to disk: {fullPath}, Size: {recordingBytes.Length} bytes");
             _logger.LogInformation("Recording saved to disk: {Path}, Size: {Size} bytes", fullPath, recordingBytes.Length);
 
-            // 4. Create CallRecording entity in database
+            // 4. Get CallLog to retrieve ConversationId for linking
+            await LogToFileAsync($"Looking up CallLog for CallSid: {callSid} to get ConversationId");
+            var callLog = await _callLogService.GetByProviderIdAsync(callSid);
+            Guid? conversationId = callLog?.ConversationId;
+            await LogToFileAsync($"CallLog found: {callLog != null}, ConversationId: {conversationId?.ToString() ?? "null"}");
+
+            // 5. Create CallRecording entity in database
             await LogToFileAsync($"Creating CallRecording entity in database for CallSid: {callSid}");
             var recording = await _recordingService.CreateRecordingAsync(new CreateRecordingRequest
             {
                 CallId = callSid,
-                ConversationId = null, // Can be linked later if needed
+                ConversationId = conversationId, // Link to conversation from CallLog
                 Url = relativePath, // Store relative path for portability
                 DurationSeconds = durationSeconds,
                 SizeBytes = recordingBytes.Length,
                 Format = "wav",
                 IsEncrypted = false, // Not encrypted at rest (can be enabled later)
-                RetentionUntil = CalculateRetentionDate()
+                RetentionUntil = await CalculateRetentionDateAsync()
             });
-            await LogToFileAsync($"CallRecording created with ID: {recording.Id}");
+            await LogToFileAsync($"CallRecording created with ID: {recording.Id}, ConversationId: {conversationId?.ToString() ?? "null"}");
 
-            // 5. Update CallLog with recording reference
+            // 6. Update CallLog with recording reference
             await LogToFileAsync($"Updating CallLog with recording path for CallSid: {callSid}");
             await _callLogService.UpdateStatusAsync(callSid, null, null, relativePath);
             await LogToFileAsync($"CallLog updated successfully");
@@ -145,15 +157,17 @@ public class RecordingStorageService : IRecordingStorageService
             await LogToFileAsync($"Starting download from Twilio: {downloadUrl}");
             _logger.LogInformation("Downloading recording from Twilio: {Url}", recordingUrl);
 
-            // Get Twilio credentials from injected options
+            // Get Twilio credentials from database options provider
+            var twilioOptions = await _optionsProvider.GetTwilioOptionsAsync();
+
             // AuthToken is the main Twilio Auth Token for API calls
             // WebhookAuthToken is a fallback (often the same token)
-            var accountSid = _twilioOptions.AccountSid;
-            var authToken = !string.IsNullOrEmpty(_twilioOptions.AuthToken)
-                ? _twilioOptions.AuthToken
-                : _twilioOptions.WebhookAuthToken;
+            var accountSid = twilioOptions.AccountSid;
+            var authToken = !string.IsNullOrEmpty(twilioOptions.AuthToken)
+                ? twilioOptions.AuthToken
+                : twilioOptions.WebhookAuthToken;
 
-            var usingAuthToken = !string.IsNullOrEmpty(_twilioOptions.AuthToken) ? "AuthToken" : "WebhookAuthToken";
+            var usingAuthToken = !string.IsNullOrEmpty(twilioOptions.AuthToken) ? "AuthToken" : "WebhookAuthToken";
             await LogToFileAsync($"Using credentials - AccountSid: {(accountSid?.Length > 6 ? accountSid.Substring(0, 6) + "..." : "[empty]")}, TokenSource: {usingAuthToken}");
 
             if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
@@ -218,7 +232,8 @@ public class RecordingStorageService : IRecordingStorageService
                 return null;
             }
 
-            var fullPath = Path.Combine(_storageBasePath, recording.Url);
+            var storageBasePath = await GetStorageBasePathAsync();
+            var fullPath = Path.Combine(storageBasePath, recording.Url);
             if (!File.Exists(fullPath))
             {
                 _logger.LogWarning("Recording file not found on disk: {Path}", fullPath);
@@ -248,7 +263,8 @@ public class RecordingStorageService : IRecordingStorageService
                 return null;
             }
 
-            var fullPath = Path.Combine(_storageBasePath, recording.Url);
+            var storageBasePath = await GetStorageBasePathAsync();
+            var fullPath = Path.Combine(storageBasePath, recording.Url);
             return File.Exists(fullPath) ? fullPath : null;
         }
         catch (Exception ex)
@@ -288,19 +304,20 @@ public class RecordingStorageService : IRecordingStorageService
     }
 
     /// <summary>
-    /// Calculate retention date based on configuration (default: 90 days)
+    /// Calculate retention date based on database settings (default: 90 days)
     /// </summary>
-    private DateTime? CalculateRetentionDate()
+    private async Task<DateTime?> CalculateRetentionDateAsync()
     {
-        var retentionDays = _configuration.GetValue<int>("RecordingStorage:RetentionDays", 90);
-        return DateTime.UtcNow.AddDays(retentionDays);
+        var options = await _optionsProvider.GetRecordingStorageOptionsAsync();
+        return DateTime.UtcNow.AddDays(options.RetentionDays);
     }
 
     /// <summary>
-    /// Get the base storage path for recordings
+    /// Synchronous version for backwards compatibility (uses cached path if available)
     /// </summary>
     public string GetStorageBasePath()
     {
-        return _storageBasePath;
+        // Use cached path if available, otherwise return default
+        return _storageBasePath ?? Path.Combine(Directory.GetCurrentDirectory(), "Recordings");
     }
 }

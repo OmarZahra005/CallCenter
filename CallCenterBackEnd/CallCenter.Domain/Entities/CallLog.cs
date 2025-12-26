@@ -21,6 +21,11 @@ public class CallLog : Entity
     // Link to Conversation
     public Guid? ConversationId { get; set; }
 
+    // Outbound call tracking
+    public bool CustomerDialed { get; set; } = false;
+    public string? OutboundConferenceSid { get; set; }
+    public string? IdempotencyKey { get; set; }
+
     // Navigation properties
     public virtual Agent? AssignedAgent { get; set; }
     public virtual Conversation? Conversation { get; set; }

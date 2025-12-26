@@ -19,12 +19,9 @@ import {
   Scale,
   Star,
   AlertTriangle,
-  ChevronRight,
 } from 'lucide-react';
 import {
   Card,
-  CardContent,
-  CardHeader,
   Button,
   Badge,
   Modal,
@@ -55,12 +52,6 @@ interface EvaluationForm {
   createdAt: string;
   updatedAt: string;
   criteria: FormCriteria[];
-}
-
-interface FormStats {
-  totalEvaluations: number;
-  averageScore: number;
-  passRate: number;
 }
 
 const EvaluationForms = () => {

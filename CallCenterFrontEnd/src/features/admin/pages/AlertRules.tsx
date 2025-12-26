@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Bell,
   Plus,
@@ -17,18 +17,15 @@ import {
   Mail,
   MessageSquare,
   Webhook,
-  ChevronDown,
   X,
   Save,
   Loader2,
-  Filter,
   Activity,
   CheckCircle,
   XCircle,
   Play,
-  Pause,
 } from 'lucide-react';
-import { Button, Badge, Card, CardContent, Modal, Input, Select, Textarea } from '../../../components/ui';
+import { Button, Badge, Card, CardContent, Modal, Input, Textarea } from '../../../components/ui';
 import apiClient from '../../../api/client';
 
 interface AlertRule {
@@ -114,121 +111,6 @@ const CATEGORY_INFO = {
   sla: { label: 'SLA', icon: Clock, color: 'bg-red-500' },
 };
 
-const mockRules: AlertRule[] = [
-  {
-    id: 'rule-1',
-    name: 'High Queue Wait Time',
-    description: 'Alert when customers wait more than 5 minutes',
-    category: 'queue',
-    metric: 'queue_wait_time',
-    operator: 'gt',
-    threshold: 300,
-    unit: 's',
-    severity: 'critical',
-    channels: ['email', 'inApp', 'slack'],
-    recipients: ['supervisor@company.com'],
-    isActive: true,
-    cooldownMinutes: 15,
-    lastTriggeredAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    triggerCount: 12,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'rule-2',
-    name: 'Low Agent Availability',
-    description: 'Alert when available agents drop below 3',
-    category: 'agent',
-    metric: 'agents_available',
-    operator: 'lt',
-    threshold: 3,
-    severity: 'warning',
-    channels: ['email', 'inApp'],
-    recipients: ['manager@company.com'],
-    isActive: true,
-    cooldownMinutes: 10,
-    triggerCount: 8,
-    createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'rule-3',
-    name: 'SLA Breach Warning',
-    description: 'Alert when SLA breach rate exceeds 10%',
-    category: 'sla',
-    metric: 'sla_breach_rate',
-    operator: 'gt',
-    threshold: 10,
-    unit: '%',
-    severity: 'critical',
-    channels: ['email', 'webhook', 'inApp'],
-    webhookUrl: 'https://hooks.slack.com/services/xxx',
-    isActive: true,
-    cooldownMinutes: 30,
-    lastTriggeredAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    triggerCount: 3,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'rule-4',
-    name: 'Low QA Score Alert',
-    description: 'Alert when QA score drops below 70%',
-    category: 'quality',
-    metric: 'qa_score',
-    operator: 'lt',
-    threshold: 70,
-    unit: '%',
-    severity: 'warning',
-    channels: ['email'],
-    recipients: ['qa-team@company.com'],
-    isActive: false,
-    cooldownMinutes: 60,
-    triggerCount: 0,
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-const mockHistory: AlertHistory[] = [
-  {
-    id: 'alert-1',
-    ruleId: 'rule-1',
-    ruleName: 'High Queue Wait Time',
-    severity: 'critical',
-    message: 'Queue wait time exceeded 300s threshold (actual: 342s)',
-    metricValue: 342,
-    threshold: 300,
-    triggeredAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    resolvedAt: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
-    acknowledged: true,
-    acknowledgedBy: 'John Smith',
-  },
-  {
-    id: 'alert-2',
-    ruleId: 'rule-2',
-    ruleName: 'Low Agent Availability',
-    severity: 'warning',
-    message: 'Available agents dropped below 3 (actual: 2)',
-    metricValue: 2,
-    threshold: 3,
-    triggeredAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    acknowledged: false,
-  },
-  {
-    id: 'alert-3',
-    ruleId: 'rule-3',
-    ruleName: 'SLA Breach Warning',
-    severity: 'critical',
-    message: 'SLA breach rate exceeded 10% threshold (actual: 12.5%)',
-    metricValue: 12.5,
-    threshold: 10,
-    triggeredAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    resolvedAt: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
-    acknowledged: true,
-    acknowledgedBy: 'Emily Davis',
-  },
-];
 
 const initialFormData: Partial<AlertRule> = {
   name: '',
@@ -261,12 +143,8 @@ export const AlertRules = () => {
   const { data: rules = [], isLoading: rulesLoading } = useQuery<AlertRule[]>({
     queryKey: ['alert-rules'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/alert-rules');
-        return response.data.items || response.data || [];
-      } catch {
-        return mockRules;
-      }
+      const response = await apiClient.get('/admin/alert-rules');
+      return response.data.items || response.data || [];
     },
   });
 
@@ -274,12 +152,8 @@ export const AlertRules = () => {
   const { data: history = [], isLoading: historyLoading } = useQuery<AlertHistory[]>({
     queryKey: ['alert-history'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/admin/alert-history');
-        return response.data.items || response.data || [];
-      } catch {
-        return mockHistory;
-      }
+      const response = await apiClient.get('/admin/alert-history');
+      return response.data.items || response.data || [];
     },
   });
 
@@ -645,7 +519,7 @@ export const AlertRules = () => {
                               <h3 className="font-semibold text-gray-900 dark:text-white">{rule.name}</h3>
                               {getSeverityBadge(rule.severity)}
                               {!rule.isActive && (
-                                <Badge variant="outline" size="sm">
+                                <Badge variant="default" size="sm">
                                   Paused
                                 </Badge>
                               )}

@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Headphones,
   Phone,
+  PhoneOutgoing,
   Inbox,
   Users,
   UsersRound,
@@ -35,7 +36,7 @@ import {
   Settings,
   FileText,
   ChevronDown,
-  ChevronRight,
+  LogOut,
 } from 'lucide-react';
 
 interface NavChild {
@@ -105,15 +106,17 @@ const MainLayout = () => {
       label: t('nav.dashboard'),
       icon: <LayoutDashboard className="w-5 h-5" />,
       path: '/dashboard',
+      permission: 'dashboard.view',
     },
     {
       id: 'operations',
       label: 'Operations',
       icon: <Headphones className="w-5 h-5" />,
       children: [
-        { path: '/agent-desktop', label: 'Agent Desktop', icon: <Headphones className="w-4 h-4" /> },
-        { path: '/call-center', label: t('nav.calls'), icon: <Phone className="w-4 h-4" /> },
-        { path: '/communications', label: 'Inbox', icon: <Inbox className="w-4 h-4" /> },
+        { path: '/agent-desktop', label: 'Agent Desktop', icon: <Headphones className="w-4 h-4" />, permission: 'calls.view' },
+        { path: '/outcall', label: 'Outbound Call', icon: <PhoneOutgoing className="w-4 h-4" />, permission: 'calls.view' },
+        { path: '/call-center', label: t('nav.calls'), icon: <Phone className="w-4 h-4" />, permission: 'calls.view' },
+        { path: '/communications', label: 'Inbox', icon: <Inbox className="w-4 h-4" />, permission: 'calls.view' },
       ],
     },
     {
@@ -121,9 +124,9 @@ const MainLayout = () => {
       label: 'Workforce',
       icon: <Users className="w-5 h-5" />,
       children: [
-        { path: '/agents', label: t('nav.agents'), icon: <UserCircle className="w-4 h-4" /> },
-        { path: '/teams', label: 'Teams', icon: <UsersRound className="w-4 h-4" /> },
-        { path: '/wfm', label: 'WFM', icon: <Calendar className="w-4 h-4" /> },
+        { path: '/agents', label: t('nav.agents'), icon: <UserCircle className="w-4 h-4" />, permission: 'agents.view' },
+        { path: '/teams', label: 'Teams', icon: <UsersRound className="w-4 h-4" />, permission: 'teams.view' },
+        { path: '/wfm', label: 'WFM', icon: <Calendar className="w-4 h-4" />, permission: 'wfm.view' },
       ],
     },
     {
@@ -131,8 +134,8 @@ const MainLayout = () => {
       label: t('nav.customers'),
       icon: <UserCircle className="w-5 h-5" />,
       children: [
-        { path: '/customers', label: t('nav.customers'), icon: <UserCircle className="w-4 h-4" /> },
-        { path: '/tickets', label: t('nav.tickets'), icon: <Ticket className="w-4 h-4" /> },
+        { path: '/customers', label: t('nav.customers'), icon: <UserCircle className="w-4 h-4" />, permission: 'customers.view' },
+        { path: '/tickets', label: t('nav.tickets'), icon: <Ticket className="w-4 h-4" />, permission: 'tickets.view' },
       ],
     },
     {
@@ -140,9 +143,9 @@ const MainLayout = () => {
       label: 'Quality',
       icon: <ClipboardCheck className="w-5 h-5" />,
       children: [
-        { path: '/recordings', label: 'Recordings', icon: <Mic className="w-4 h-4" /> },
-        { path: '/qa', label: 'QA', icon: <ClipboardCheck className="w-4 h-4" /> },
-        { path: '/surveys', label: 'Surveys', icon: <FileQuestion className="w-4 h-4" /> },
+        { path: '/recordings', label: 'Recordings', icon: <Mic className="w-4 h-4" />, permission: 'recordings.view' },
+        { path: '/qa', label: 'QA', icon: <ClipboardCheck className="w-4 h-4" />, permission: 'qa.view' },
+        { path: '/surveys', label: 'Surveys', icon: <FileQuestion className="w-4 h-4" />, permission: 'qa.view' },
       ],
     },
     {
@@ -150,7 +153,7 @@ const MainLayout = () => {
       label: 'Knowledge',
       icon: <BookOpen className="w-5 h-5" />,
       children: [
-        { path: '/knowledge-base', label: t('nav.knowledgeBase'), icon: <BookOpen className="w-4 h-4" /> },
+        { path: '/knowledge-base', label: t('nav.knowledgeBase'), icon: <BookOpen className="w-4 h-4" />, permission: 'knowledge.view' },
       ],
     },
     {
@@ -158,8 +161,8 @@ const MainLayout = () => {
       label: t('nav.reports'),
       icon: <BarChart3 className="w-5 h-5" />,
       children: [
-        { path: '/reports', label: t('nav.reports'), icon: <BarChart3 className="w-4 h-4" /> },
-        { path: '/admin/exports', label: 'Data Exports', icon: <Download className="w-4 h-4" /> },
+        { path: '/reports', label: t('nav.reports'), icon: <BarChart3 className="w-4 h-4" />, permission: 'reports.view' },
+        { path: '/admin/exports', label: 'Data Exports', icon: <Download className="w-4 h-4" />, permission: 'reports.export' },
       ],
     },
     {
@@ -167,8 +170,8 @@ const MainLayout = () => {
       label: 'Integrations',
       icon: <Zap className="w-5 h-5" />,
       children: [
-        { path: '/admin/whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
-        { path: '/admin/cti-events', label: 'CTI Events', icon: <Zap className="w-4 h-4" /> },
+        { path: '/admin/whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" />, permission: 'admin.integrations' },
+        { path: '/admin/cti-events', label: 'CTI Events', icon: <Zap className="w-4 h-4" />, permission: 'admin.integrations' },
       ],
     },
     {
@@ -177,7 +180,7 @@ const MainLayout = () => {
       icon: <Bell className="w-5 h-5" />,
       children: [
         { path: '/settings/notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-        { path: '/admin/alerts', label: 'Alert Rules', icon: <AlertTriangle className="w-4 h-4" /> },
+        { path: '/admin/alerts', label: 'Alert Rules', icon: <AlertTriangle className="w-4 h-4" />, permission: 'admin.alerts' },
       ],
     },
     {
@@ -211,11 +214,20 @@ const MainLayout = () => {
   // Filter nav items to hide parents with no visible children
   const visibleNavItems = useMemo(() => {
     return navItems.filter(item => {
-      if (item.path) return true; // Standalone items always visible
+      // Super admin sees everything
+      if (isSuperAdmin) {
+        if (item.path) return true;
+        return (item.children?.length ?? 0) > 0;
+      }
+      // Standalone items check their own permission
+      if (item.path) {
+        return !item.permission || hasPermission(item.permission);
+      }
+      // Parent items check if any children are visible
       const visibleChildren = getVisibleChildren(item.children);
       return visibleChildren.length > 0;
     });
-  }, [navItems]);
+  }, [navItems, isSuperAdmin, hasPermission, getVisibleChildren]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -224,18 +236,12 @@ const MainLayout = () => {
       <SkipLink href="#navigation">Skip to navigation</SkipLink>
 
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 start-0 z-50 w-64 bg-white dark:bg-gray-800 border-e border-gray-200 dark:border-gray-700/50" role="navigation" aria-label="Main navigation">
+      <aside className="fixed inset-y-0 start-0 z-50 w-64 bg-white dark:bg-gray-800" role="navigation" aria-label="Main navigation">
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700/50">
-            <motion.h1
-              className="text-xl font-bold gradient-text"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              CallCenter
-            </motion.h1>
+          {/* Logo & Branding - border matches header */}
+          <div className="h-16 bg-primary-600 dark:bg-primary-700 flex items-center gap-3 px-5 border-e border-primary-600 dark:border-primary-700">
+            <Headphones className="w-7 h-7 text-white" />
+            <span className="text-lg font-semibold text-white">CallCenter</span>
           </div>
 
           {/* Navigation */}
@@ -371,94 +377,111 @@ const MainLayout = () => {
       {/* Main content */}
       <div className="ms-64">
         {/* Header */}
-        <header className="sticky top-0 z-40 h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
-          <div className="flex items-center justify-end h-full px-6 gap-3">
-            {/* Connection status */}
-            <motion.div
-              className={cn(
-                'w-2 h-2 rounded-full',
-                isConnected ? 'bg-green-500' : 'bg-gray-400'
-              )}
-              title={isConnected ? 'Connected' : 'Disconnected'}
-              animate={isConnected ? {
-                scale: [1, 1.2, 1],
-                opacity: [1, 0.8, 1],
-              } : undefined}
-              transition={isConnected ? {
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              } : undefined}
-            />
-
-            {/* Notifications */}
-            <NotificationDropdown
-              notifications={notifications}
-              onMarkRead={markNotificationRead}
-              onMarkAllRead={markAllAsRead}
-              onClear={clearNotifications}
-            />
-
-            {/* Theme toggle */}
-            <motion.button
-              onClick={toggleTheme}
-              className="p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <AnimatePresence mode="wait">
-                {theme === 'dark' ? (
-                  <motion.svg
-                    key="sun"
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    initial={{ rotate: -90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </motion.svg>
-                ) : (
-                  <motion.svg
-                    key="moon"
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    initial={{ rotate: 90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: -90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </motion.svg>
+        <header className="sticky top-0 z-40 h-16 bg-primary-600 dark:bg-primary-700 shadow-sm">
+          <div className="flex items-center justify-end h-full px-6">
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {/* Connection status */}
+              <motion.div
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  isConnected ? 'bg-green-400' : 'bg-white/40'
                 )}
-              </AnimatePresence>
-            </motion.button>
+                title={isConnected ? 'Connected' : 'Disconnected'}
+                animate={isConnected ? {
+                  scale: [1, 1.2, 1],
+                  opacity: [1, 0.8, 1],
+                } : undefined}
+                transition={isConnected ? {
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                } : undefined}
+              />
 
-            {/* Language toggle */}
-            <motion.button
-              onClick={toggleLanguage}
-              className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {i18n.language === 'en' ? 'العربية' : 'English'}
-            </motion.button>
+              {/* Notifications */}
+              <NotificationDropdown
+                notifications={notifications}
+                onMarkRead={markNotificationRead}
+                onMarkAllRead={markAllAsRead}
+                onClear={clearNotifications}
+                variant="light"
+              />
 
-            {/* Logout */}
-            <motion.button
-              onClick={handleLogout}
-              className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {t('auth.logout')}
-            </motion.button>
+              {/* Theme toggle */}
+              <motion.button
+                onClick={toggleTheme}
+                className="p-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <AnimatePresence mode="wait">
+                  {theme === 'dark' ? (
+                    <motion.svg
+                      key="sun"
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </motion.svg>
+                  ) : (
+                    <motion.svg
+                      key="moon"
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </motion.svg>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+
+              {/* Language toggle */}
+              <motion.button
+                onClick={toggleLanguage}
+                className="px-3 py-1.5 text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {i18n.language === 'en' ? 'العربية' : 'English'}
+              </motion.button>
+
+              {/* User Menu */}
+              <div className="relative group">
+                <button className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                </button>
+                {/* Dropdown */}
+                <div className="absolute end-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    {t('auth.logout')}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </header>
 

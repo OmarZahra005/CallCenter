@@ -19,6 +19,14 @@ public class QaController : ControllerBase
     }
 
     // Scorecards
+    [HttpGet("scorecards")]
+    [RequirePermission("qa.view")]
+    public async Task<ActionResult<List<QaScorecardDto>>> GetAllScorecards()
+    {
+        var scorecards = await _qaService.GetAllScorecardsAsync();
+        return Ok(scorecards);
+    }
+
     [HttpGet("scorecards/{id}")]
     [RequirePermission("qa.view")]
     public async Task<ActionResult<QaScorecardDto>> GetScorecard(Guid id)

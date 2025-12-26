@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   Search,
-  Filter,
   FileText,
   BarChart2,
   Copy,
@@ -13,22 +12,18 @@ import {
   MoreVertical,
   Play,
   Pause,
-  X,
-  ClipboardCheck,
   TrendingUp,
   Users,
-  MessageSquare,
   Star,
-  AlertCircle,
-  ExternalLink,
   RefreshCw,
-  Send,
+  Phone,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, Button, Badge } from '../../../components/ui';
+import { Card, CardContent, Button, Badge } from '../../../components/ui';
 import { staggerContainer, staggerItem, fadeUp } from '../../../utils/animations';
 import apiClient from '../../../api/client';
 import { SurveyBuilder } from '../components/SurveyBuilder';
 import { SurveyResults } from '../components/SurveyResults';
+import { PostCallSurveyStats } from '../components/PostCallSurveyStats';
 
 // Types
 type QuestionType = 'rating' | 'nps' | 'text' | 'multiChoice' | 'yesNo';
@@ -61,96 +56,10 @@ interface Survey {
   updatedAt: string;
 }
 
-// Mock data generator
-const generateMockSurveys = (): Survey[] => [
-  {
-    id: 'survey-1',
-    name: 'Post-Call Satisfaction',
-    description: 'Sent automatically after each call',
-    type: 'CSAT',
-    trigger: 'afterCall',
-    isActive: true,
-    responseCount: 156,
-    averageScore: 4.2,
-    questions: [
-      {
-        id: 'q1',
-        type: 'rating',
-        question: 'How satisfied are you with our service?',
-        required: true,
-        minValue: 1,
-        maxValue: 5,
-        order: 0,
-      },
-      {
-        id: 'q2',
-        type: 'text',
-        question: 'Any additional feedback?',
-        required: false,
-        order: 1,
-      },
-    ],
-    thankYouMessage: 'Thank you for your feedback!',
-    expirationDays: 7,
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-03-10T14:30:00Z',
-  },
-  {
-    id: 'survey-2',
-    name: 'NPS Survey',
-    description: 'Net Promoter Score survey',
-    type: 'NPS',
-    trigger: 'afterTicket',
-    isActive: true,
-    responseCount: 89,
-    averageScore: 8.1,
-    questions: [
-      {
-        id: 'q1',
-        type: 'nps',
-        question: 'How likely are you to recommend us to a friend?',
-        required: true,
-        minValue: 0,
-        maxValue: 10,
-        order: 0,
-      },
-    ],
-    createdAt: '2024-02-01T09:00:00Z',
-    updatedAt: '2024-03-08T11:00:00Z',
-  },
-  {
-    id: 'survey-3',
-    name: 'Chat Support Feedback',
-    description: 'Collect feedback after chat sessions',
-    type: 'CSAT',
-    trigger: 'afterChat',
-    isActive: false,
-    responseCount: 45,
-    averageScore: 3.8,
-    questions: [
-      {
-        id: 'q1',
-        type: 'rating',
-        question: 'How helpful was our chat support?',
-        required: true,
-        order: 0,
-      },
-      {
-        id: 'q2',
-        type: 'multiChoice',
-        question: 'What best describes your issue?',
-        required: true,
-        options: ['Technical Support', 'Billing', 'Product Information', 'Other'],
-        order: 1,
-      },
-    ],
-    createdAt: '2024-02-20T15:00:00Z',
-    updatedAt: '2024-02-20T15:00:00Z',
-  },
-];
 
 export const Surveys = () => {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'templates' | 'postCall'>('postCall');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -163,12 +72,8 @@ export const Surveys = () => {
   const { data: surveys = [], isLoading } = useQuery<Survey[]>({
     queryKey: ['surveys'],
     queryFn: async () => {
-      try {
-        const response = await apiClient.get('/surveys');
-        return response.data.items || response.data || [];
-      } catch {
-        return generateMockSurveys();
-      }
+      const response = await apiClient.get('/surveys');
+      return response.data.items || response.data || [];
     },
   });
 
@@ -291,13 +196,58 @@ export const Surveys = () => {
               Create and manage customer satisfaction surveys
             </p>
           </div>
-          <Button onClick={() => setShowBuilder(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Survey
-          </Button>
+          {activeTab === 'templates' && (
+            <Button onClick={() => setShowBuilder(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Survey
+            </Button>
+          )}
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit mb-6">
+          <button
+            onClick={() => setActiveTab('postCall')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'postCall'
+                ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <Phone className="w-4 h-4" />
+            Post-Call Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'templates'
+                ? 'bg-white dark:bg-gray-700 text-primary-600 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Survey Templates
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Post-Call Survey Analytics Tab */}
+      {activeTab === 'postCall' && (
+        <motion.div
+          key="postCall"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+        >
+          <PostCallSurveyStats />
+        </motion.div>
+      )}
+
+      {/* Survey Templates Tab */}
+      {activeTab === 'templates' && (
+        <>
         {/* Stats Cards */}
+        <motion.div variants={fadeUp}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center justify-between">
@@ -352,7 +302,7 @@ export const Surveys = () => {
             </div>
           </Card>
         </div>
-      </motion.div>
+        </motion.div>
 
       {/* Filters */}
       <motion.div variants={staggerItem}>
@@ -447,7 +397,7 @@ export const Surveys = () => {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" size="sm">
+                          <Badge variant="default" size="sm">
                             {survey.type}
                           </Badge>
                           <span className="text-xs text-gray-500">
@@ -581,6 +531,8 @@ export const Surveys = () => {
           </div>
         )}
       </motion.div>
+      </>
+      )}
 
       {/* Survey Builder Modal */}
       <AnimatePresence>

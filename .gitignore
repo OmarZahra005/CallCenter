@@ -102,3 +102,4 @@ build/
 .cache/
 coverage/
 *.tsbuildinfo
+/CallCenterBackEnd/CallCenter.API/appsettings.json

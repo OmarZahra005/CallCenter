@@ -5,7 +5,11 @@
       "Bash(dotnet ef migrations add:*)",
       "Bash(dotnet build:*)",
       "Bash(dotnet ef database update:*)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(dotnet tool update:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(dotnet script:*)",
+      "Bash(powershell -Command \"Invoke-Sqlcmd -ServerInstance ''.'' -Database ''callcenterDB'' -Username ''sa'' -Password ''S@123456'' -TrustServerCertificate -Query \"\"UPDATE agents SET password_hash = ''\\\\`$2a\\\\`$11\\\\`$QmoLcqa5/Xq274qGiPzgvuynQ54Z6M0HRAWob5Du.MEk/XydYD5X2'' WHERE email = ''admin@callcenter.com''\"\"\")"
     ],
     "deny": [],
     "ask": []

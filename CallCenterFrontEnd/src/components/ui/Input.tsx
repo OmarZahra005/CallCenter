@@ -70,7 +70,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         'border-gray-200 dark:border-gray-700',
         'shadow-[0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_2px_rgba(0,0,0,0.02)]',
         'focus:border-primary-500 dark:focus:border-primary-400',
-        'focus:shadow-[0_0_0_3px_rgba(139,126,255,0.15),0_1px_2px_rgba(0,0,0,0.04)]'
+        'focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15),0_1px_2px_rgba(0,0,0,0.04)]'
       ),
       filled: cn(
         'border-0 rounded-xl bg-gray-100 dark:bg-gray-800',
@@ -95,7 +95,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             )}
             animate={{
               color: isFocused
-                ? 'rgb(139, 126, 255)'
+                ? 'rgb(17, 168, 199)'
                 : error
                   ? 'rgb(239, 68, 68)'
                   : success
@@ -114,7 +114,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                 'absolute left-3 top-1/2 -translate-y-1/2',
                 isFocused ? 'text-primary-500' : 'text-gray-400'
               )}
-              animate={{ color: isFocused ? 'rgb(139, 126, 255)' : 'rgb(156, 163, 175)' }}
+              animate={{ color: isFocused ? 'rgb(17, 168, 199)' : 'rgb(156, 163, 175)' }}
               transition={{ duration: 0.2 }}
             >
               {leftIcon}
@@ -154,7 +154,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                   : success
                     ? 'rgb(16, 185, 129)'
                     : isFocused
-                      ? 'rgb(139, 126, 255)'
+                      ? 'rgb(17, 168, 199)'
                       : 'rgb(156, 163, 175)'
               }}
               transition={{ duration: 0.2 }}

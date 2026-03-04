@@ -222,6 +222,11 @@ public class SmartBotEscalationService : ISmartBotEscalationService
 
     public async Task<bool> UpdateEscalationStatusAsync(SmartBotStatusUpdateRequest request)
     {
+        // DEBUG: Log who is calling this method and with what parameters
+        _logger.LogWarning(
+            ">>> UpdateEscalationStatusAsync CALLED: ConversationId={ConversationId}, NewStatus={Status}, Reason={Reason}",
+            request.SmartBotConversationId, request.Status, request.Reason);
+
         var escalations = await _escalationRepository.GetAllAsync();
         var escalation = escalations.FirstOrDefault(e => e.SmartBotConversationId == request.SmartBotConversationId);
 
@@ -234,6 +239,24 @@ public class SmartBotEscalationService : ISmartBotEscalationService
 
         var oldStatus = escalation.Status;
         var newStatus = ParseEscalationStatus(request.Status);
+
+        // DEBUG: Log the status transition
+        _logger.LogWarning(
+            ">>> Status transition: EscalationId={EscalationId}, OldStatus={OldStatus}, NewStatus={NewStatus}, CreatedAt={CreatedAt}",
+            escalation.Id, oldStatus, newStatus, escalation.CreatedAt);
+
+        // SAFEGUARD: Prevent premature closure of newly created escalations
+        if (newStatus == SmartBotEscalationStatus.Resolved || newStatus == SmartBotEscalationStatus.Closed)
+        {
+            var timeSinceCreation = DateTime.UtcNow - escalation.CreatedAt;
+            if (timeSinceCreation.TotalSeconds < 5)
+            {
+                _logger.LogWarning(
+                    ">>> BLOCKED premature closure: EscalationId={EscalationId} was created only {Seconds:F1}s ago. Ignoring close request.",
+                    escalation.Id, timeSinceCreation.TotalSeconds);
+                return false;
+            }
+        }
 
         escalation.Status = newStatus;
         escalation.UpdatedAt = DateTime.UtcNow;
@@ -294,19 +317,31 @@ public class SmartBotEscalationService : ISmartBotEscalationService
     {
         try
         {
+            _logger.LogWarning(
+                ">>> CALLCENTER SendMessageToAgentAsync: Looking up SmartBotConversationId={ConversationId}",
+                request.SmartBotConversationId);
+
             var escalations = await _escalationRepository.GetAllAsync();
+
+            _logger.LogWarning(
+                ">>> CALLCENTER: Found {Count} total escalations. Searching for match...",
+                escalations.Count);
+
             var escalation = escalations.FirstOrDefault(e => e.SmartBotConversationId == request.SmartBotConversationId);
 
             if (escalation == null)
             {
-                _logger.LogWarning("Escalation not found for SmartBot conversation {ConversationId}",
-                    request.SmartBotConversationId);
+                // Log all escalation IDs for debugging
+                var allIds = string.Join(", ", escalations.Take(10).Select(e => $"{e.SmartBotConversationId}"));
+                _logger.LogWarning(
+                    ">>> CALLCENTER: Escalation NOT FOUND for SmartBotConversationId={ConversationId}. Available IDs: [{AllIds}]",
+                    request.SmartBotConversationId, allIds);
                 return false;
             }
 
-            _logger.LogInformation(
-                "Saving customer message for escalation {EscalationId}, conversation {ConversationId}",
-                escalation.Id, escalation.ConversationId);
+            _logger.LogWarning(
+                ">>> CALLCENTER: Escalation FOUND. EscalationId={EscalationId}, ConversationId={ConversationId}, Status={Status}",
+                escalation.Id, escalation.ConversationId, escalation.Status);
 
             // Parse sender type
             var senderType = request.SenderType?.ToLowerInvariant() == "agent"
@@ -328,8 +363,8 @@ public class SmartBotEscalationService : ISmartBotEscalationService
             await _messageRepository.AddAsync(message);
             await _messageRepository.SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Message {MessageId} saved to conversation {ConversationId}",
+            _logger.LogWarning(
+                ">>> CALLCENTER: Message {MessageId} saved to conversation {ConversationId}",
                 message.Id, escalation.ConversationId);
 
             // Notify agents via SignalR for real-time update
@@ -338,6 +373,10 @@ public class SmartBotEscalationService : ISmartBotEscalationService
                 escalation.ConversationId,
                 request.Message,
                 request.SenderType);
+
+            _logger.LogWarning(
+                ">>> CALLCENTER: SignalR notification sent for EscalationId={EscalationId}",
+                escalation.Id);
 
             // Log the event
             await LogEscalationEventAsync(escalation.Id, "MessageReceived",
@@ -348,7 +387,7 @@ public class SmartBotEscalationService : ISmartBotEscalationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save customer message for SmartBot conversation {ConversationId}",
+            _logger.LogError(ex, ">>> CALLCENTER: EXCEPTION in SendMessageToAgentAsync for SmartBot conversation {ConversationId}",
                 request.SmartBotConversationId);
             return false;
         }
@@ -529,9 +568,10 @@ public class SmartBotEscalationService : ISmartBotEscalationService
     {
         try
         {
-            _logger.LogInformation(
-                "Processing cancel request from SmartBot for conversation {ConversationId}, reason: {Reason}",
-                request.SmartBotConversationId, request.Reason);
+            // DEBUG: Enhanced logging for cancel requests
+            _logger.LogWarning(
+                ">>> CancelEscalationFromSmartBotAsync CALLED: ConversationId={ConversationId}, Reason={Reason}, CancelledBy={CancelledBy}",
+                request.SmartBotConversationId, request.Reason, request.CancelledBy);
 
             // Find escalation by SmartBot conversation ID
             var escalations = await _escalationRepository.GetAllAsync();
@@ -543,6 +583,16 @@ public class SmartBotEscalationService : ISmartBotEscalationService
                 _logger.LogWarning(
                     "Escalation not found for SmartBot conversation {ConversationId}",
                     request.SmartBotConversationId);
+                return false;
+            }
+
+            // SAFEGUARD: Prevent premature cancellation of newly created escalations
+            var timeSinceCreation = DateTime.UtcNow - escalation.CreatedAt;
+            if (timeSinceCreation.TotalSeconds < 5)
+            {
+                _logger.LogWarning(
+                    ">>> BLOCKED premature cancel: EscalationId={EscalationId} was created only {Seconds:F1}s ago. Ignoring cancel request.",
+                    escalation.Id, timeSinceCreation.TotalSeconds);
                 return false;
             }
 

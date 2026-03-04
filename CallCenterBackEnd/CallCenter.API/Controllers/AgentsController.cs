@@ -51,7 +51,7 @@ public class AgentsController : ControllerBase
 
     [HttpPost]
     [RequirePermission("agents.create")]
-    public async Task<ActionResult<AgentDto>> CreateAgent(CreateAgentRequest request)
+    public async Task<ActionResult<AgentDto>> CreateAgent([FromBody] CreateAgentRequest request)
     {
         var agent = await _agentService.CreateAgentAsync(request);
         return CreatedAtAction(nameof(GetAgent), new { id = agent.Id }, agent);
@@ -59,7 +59,7 @@ public class AgentsController : ControllerBase
 
     [HttpPut("{id}")]
     [RequirePermission("agents.edit")]
-    public async Task<ActionResult<AgentDto>> UpdateAgent(Guid id, UpdateAgentRequest request)
+    public async Task<ActionResult<AgentDto>> UpdateAgent(Guid id, [FromBody] UpdateAgentRequest request)
     {
         var agent = await _agentService.UpdateAgentAsync(id, request);
         if (agent == null) return NotFound();

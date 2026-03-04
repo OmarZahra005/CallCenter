@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, Button, Badge, Avatar, Tooltip, Skeleton, SkeletonAvatar } from '../../../components/ui';
+import { Card, Button, Badge, Avatar, Tooltip, Skeleton, SkeletonAvatar, Modal } from '../../../components/ui';
 import { MessageBubble, LiveIndicator, DateSeparator, groupMessagesByDate } from '../../../components/ui';
 import apiClient from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
@@ -97,6 +97,16 @@ const UnifiedInbox = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [ticketFormData, setTicketFormData] = useState({
+    subject: '',
+    description: '',
+    priority: 1, // 0=Low, 1=Normal, 2=High, 3=Urgent
+    category: 'Support',
+    customerId: '',
+    conversationId: '',
+    source: 0, // 0=Call, 1=Email, 2=Whatsapp, 3=Sms, 4=Webchat, 5=WalkIn, 6=SmartBot
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const hubConnectionRef = useRef<signalR.HubConnection | null>(null);
@@ -296,6 +306,27 @@ const UnifiedInbox = () => {
     },
   });
 
+  // Create ticket mutation
+  const createTicketMutation = useMutation({
+    mutationFn: async (data: typeof ticketFormData) => {
+      const response = await apiClient.post('/tickets', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      setIsTicketModalOpen(false);
+      setTicketFormData({
+        subject: '',
+        description: '',
+        priority: 1,
+        category: 'Support',
+        customerId: '',
+        conversationId: '',
+        source: 0,
+      });
+    },
+  });
+
   // Mark conversation as read when selected
   useEffect(() => {
     if (selectedConversationId && conversationDetail) {
@@ -345,8 +376,10 @@ const UnifiedInbox = () => {
     });
 
     connection.on('SmartBotMessage', (data: { escalationId: string; conversationId: string; message: string; senderType: string }) => {
-      console.log('SmartBot message via SignalR:', data);
-      console.log('Current selectedConversationId:', selectedConversationIdRef.current);
+      console.log('>>> SmartBot message via SignalR:', data);
+      console.log('>>> data.conversationId:', data.conversationId);
+      console.log('>>> Current selectedConversationId:', selectedConversationIdRef.current);
+      console.log('>>> Match:', data.conversationId === selectedConversationIdRef.current);
 
       // Map sender type to the format used in the UI
       const mapSenderTypeFromSignalR = (type: string): 'Customer' | 'Agent' | 'Bot' | 'System' => {
@@ -358,19 +391,25 @@ const UnifiedInbox = () => {
         }
       };
 
+      const newMessage = {
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        senderType: mapSenderTypeFromSignalR(data.senderType),
+        message: data.message,
+        createdAt: new Date().toISOString(),
+        isRead: false
+      };
+
+      console.log('>>> New message object:', newMessage);
+
       // Add message directly to cache for instant display
       queryClient.setQueryData(['conversation', data.conversationId], (oldData: any) => {
-        if (!oldData) return oldData;
+        console.log('>>> Cache update - oldData exists:', !!oldData);
+        if (!oldData) {
+          console.log('>>> Cache miss - no existing data for conversation:', data.conversationId);
+          return oldData;
+        }
 
-        const newMessage = {
-          id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          senderType: mapSenderTypeFromSignalR(data.senderType),
-          message: data.message,
-          createdAt: new Date().toISOString(),
-          isRead: false
-        };
-
-        console.log('Adding message to cache:', newMessage);
+        console.log('>>> Adding message to cache for conversation:', data.conversationId);
 
         return {
           ...oldData,
@@ -379,7 +418,8 @@ const UnifiedInbox = () => {
         };
       });
 
-      // Also invalidate to get the authoritative data from server (with proper IDs)
+      // Always invalidate to get the authoritative data from server (with proper IDs)
+      console.log('>>> Invalidating queries for conversation:', data.conversationId);
       queryClient.invalidateQueries({ queryKey: ['conversation', data.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     });
@@ -520,6 +560,37 @@ const UnifiedInbox = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleCreateTicket = () => {
+    if (!selectedConversation) return;
+
+    // Build description from recent messages
+    const recentMessages = conversationDetail?.messages?.slice(-5) || [];
+    const messagesSummary = recentMessages
+      .map((m: ConversationMessage) => `[${m.senderType}]: ${m.message}`)
+      .join('\n');
+
+    // Map channel to TicketSource enum: 0=Call, 1=Email, 2=Whatsapp, 3=Sms, 4=Webchat, 5=WalkIn, 6=SmartBot
+    const channelToSource: Record<string, number> = {
+      Voice: 0,
+      Email: 1,
+      Whatsapp: 2,
+      Sms: 3,
+      Webchat: 4,
+      SmartBot: 6,
+    };
+
+    setTicketFormData({
+      subject: `Support request from ${selectedConversation.customerName}`,
+      description: `Conversation summary:\n\n${messagesSummary}`,
+      priority: 1, // Normal
+      category: 'Support',
+      customerId: selectedConversation.customerId,
+      conversationId: selectedConversation.id,
+      source: channelToSource[selectedConversation.channel] ?? 0,
+    });
+    setIsTicketModalOpen(true);
   };
 
   const mapSenderType = (senderType: string): 'customer' | 'agent' | 'system' => {
@@ -1551,7 +1622,10 @@ const UnifiedInbox = () => {
                 </h5>
                 <div className="grid grid-cols-2 gap-2">
                   <Tooltip content="Create a support ticket">
-                    <button className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:border-primary-300 dark:hover:border-primary-700 transition-all group">
+                    <button
+                      onClick={handleCreateTicket}
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:border-primary-300 dark:hover:border-primary-700 transition-all group"
+                    >
                       <Ticket className="w-5 h-5 text-gray-400 group-hover:text-primary-500" />
                       <span className="text-xs text-gray-600 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400">Create Ticket</span>
                     </button>
@@ -1605,6 +1679,89 @@ const UnifiedInbox = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Create Ticket Modal */}
+      <Modal
+        isOpen={isTicketModalOpen}
+        onClose={() => setIsTicketModalOpen(false)}
+        title="Create Support Ticket"
+        size="lg"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          createTicketMutation.mutate(ticketFormData);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+            <input
+              type="text"
+              value={ticketFormData.subject}
+              onChange={(e) => setTicketFormData({ ...ticketFormData, subject: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <textarea
+              value={ticketFormData.description}
+              onChange={(e) => setTicketFormData({ ...ticketFormData, description: e.target.value })}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+              <select
+                value={ticketFormData.priority}
+                onChange={(e) => setTicketFormData({ ...ticketFormData, priority: parseInt(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value={0}>Low</option>
+                <option value={1}>Normal</option>
+                <option value={2}>High</option>
+                <option value={3}>Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+              <select
+                value={ticketFormData.category}
+                onChange={(e) => setTicketFormData({ ...ticketFormData, category: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="Support">Support</option>
+                <option value="Billing">Billing</option>
+                <option value="Technical">Technical</option>
+                <option value="Sales">Sales</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <User className="w-4 h-4 text-gray-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Customer: {selectedConversation?.customerName}
+            </span>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button type="button" variant="outline" onClick={() => setIsTicketModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createTicketMutation.isPending}>
+              {createTicketMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Ticket'
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

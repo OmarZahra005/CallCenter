@@ -7,6 +7,7 @@ using CallCenter.Domain.Constants;
 using CallCenter.Domain.Entities;
 using CallCenter.Domain.Enums;
 using CallCenter.Domain.Interfaces;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -278,14 +279,17 @@ public class AuthService : IAuthService
         return refreshToken;
     }
 
+    private static readonly PasswordHasher<Agent> _passwordHasher = new();
+
     private static string HashPassword(string password)
     {
-        return BCrypt.Net.BCrypt.HashPassword(password);
+        return _passwordHasher.HashPassword(null!, password);
     }
 
     private static bool VerifyPassword(string password, string hash)
     {
-        return BCrypt.Net.BCrypt.Verify(password, hash);
+        var result = _passwordHasher.VerifyHashedPassword(null!, hash, password);
+        return result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded;
     }
 
     private static string GenerateEmployeeId()

@@ -4,21 +4,69 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "Cairo", "Segoe UI", system-ui, sans-serif;
   --font-arabic: "Cairo", system-ui, sans-serif;
   --font-mono: "Fira Code", monospace;
 
-  /* Primary colors */
-  --color-primary-50: oklch(0.97 0.02 250);
-  --color-primary-100: oklch(0.93 0.04 250);
-  --color-primary-200: oklch(0.86 0.08 250);
-  --color-primary-300: oklch(0.76 0.12 250);
-  --color-primary-400: oklch(0.64 0.16 250);
-  --color-primary-500: oklch(0.55 0.18 250);
-  --color-primary-600: oklch(0.48 0.18 250);
-  --color-primary-700: oklch(0.42 0.16 250);
-  --color-primary-800: oklch(0.36 0.14 250);
-  --color-primary-900: oklch(0.30 0.12 250);
+  /* ============================================
+     REDF BRAND THEME
+     Brand Colors: #FFFFFF, #00754A (Emerald Green), #1B4332 (Dark Forest)
+     ============================================ */
+
+  /* Brand Color Palette */
+  --color-brand-white: #ffffff;
+  --color-brand-green: #00754a;
+  --color-brand-dark-green: #1b4332;
+
+  /* Brand Green Variants (opacity-based) */
+  --color-brand-green-15: rgba(0, 117, 74, 0.15);
+  --color-brand-green-25: rgba(0, 117, 74, 0.25);
+  --color-brand-green-35: rgba(0, 117, 74, 0.35);
+
+  /* Brand Dark Green Variants (opacity-based) */
+  --color-brand-dark-90: rgba(27, 67, 50, 0.90);
+  --color-brand-dark-70: rgba(27, 67, 50, 0.70);
+  --color-brand-dark-40: rgba(27, 67, 50, 0.40);
+  --color-brand-dark-20: rgba(27, 67, 50, 0.20);
+  --color-brand-dark-15: rgba(27, 67, 50, 0.15);
+  --color-brand-dark-12: rgba(27, 67, 50, 0.12);
+  --color-brand-dark-10: rgba(27, 67, 50, 0.10);
+  --color-brand-dark-5: rgba(27, 67, 50, 0.05);
+
+  /* White Variants for Dark Mode */
+  --color-brand-white-85: rgba(255, 255, 255, 0.85);
+  --color-brand-white-80: rgba(255, 255, 255, 0.80);
+  --color-brand-white-60: rgba(255, 255, 255, 0.60);
+  --color-brand-white-40: rgba(255, 255, 255, 0.40);
+  --color-brand-white-20: rgba(255, 255, 255, 0.20);
+  --color-brand-white-12: rgba(255, 255, 255, 0.12);
+  --color-brand-white-8: rgba(255, 255, 255, 0.08);
+
+  /* Primary colors - REDF Green based palette */
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #00754a;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #1b4332;
+
+  /* Accent Indigo - #6366F1 (for stats, charts, badges) */
+  --color-accent-indigo: #6366f1;
+  --color-accent-indigo-light: #818cf8;
+  --color-accent-indigo-dark: #4f46e5;
+  --color-accent-indigo-15: rgba(99, 102, 241, 0.15);
+  --color-accent-indigo-25: rgba(99, 102, 241, 0.25);
+
+  /* Accent Amber - #F59E0B (for alerts, warnings) */
+  --color-accent-amber: #f59e0b;
+  --color-accent-amber-light: #fbbf24;
+  --color-accent-amber-dark: #d97706;
+  --color-accent-amber-15: rgba(245, 158, 11, 0.15);
+  --color-accent-amber-25: rgba(245, 158, 11, 0.25);
 
   /* Agent state colors */
   --color-agent-available: #10b981;
@@ -34,22 +82,104 @@
   --color-sla-breached: #ef4444;
   --color-sla-paused: #6b7280;
 
-  /* Elevation shadows - 8 levels */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  --shadow-3xl: 0 35px 60px -15px rgba(0, 0, 0, 0.2);
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  /* Border Radius (Brand Guidelines) */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  /* Elevation shadows - 8 levels (Dark Green based) */
+  --shadow-xs: 0 1px 2px rgba(27, 67, 50, 0.04);
+  --shadow-sm: 0 1px 3px rgba(27, 67, 50, 0.06), 0 1px 2px rgba(27, 67, 50, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(27, 67, 50, 0.08), 0 2px 4px -1px rgba(27, 67, 50, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(27, 67, 50, 0.08), 0 4px 6px -2px rgba(27, 67, 50, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(27, 67, 50, 0.08), 0 10px 10px -5px rgba(27, 67, 50, 0.03);
+  --shadow-2xl: 0 25px 50px -12px rgba(27, 67, 50, 0.15);
+  --shadow-3xl: 0 35px 60px -15px rgba(27, 67, 50, 0.2);
+  --shadow-inner: inset 0 2px 4px 0 rgba(27, 67, 50, 0.05);
+
+  /* Brand Shadows */
+  --shadow-brand: 0 8px 20px rgba(27, 67, 50, 0.12);
+  --shadow-brand-lg: 0 12px 28px rgba(27, 67, 50, 0.16);
 
   /* Colored shadows */
-  --shadow-primary: 0 10px 40px -10px rgba(139, 126, 255, 0.35);
+  --shadow-primary: 0 10px 40px -10px rgba(0, 117, 74, 0.35);
   --shadow-success: 0 10px 40px -10px rgba(16, 185, 129, 0.35);
   --shadow-warning: 0 10px 40px -10px rgba(245, 158, 11, 0.35);
   --shadow-danger: 0 10px 40px -10px rgba(239, 68, 68, 0.35);
   --shadow-info: 0 10px 40px -10px rgba(59, 130, 246, 0.35);
+}
+
+/* CSS Custom Properties for easy access */
+:root {
+  /* Brand Base Colors */
+  --brand-white: #ffffff;
+  --brand-green: #00754a;
+  --brand-dark-green: #1b4332;
+
+  /* Custom Theme Colors */
+  --custom-primary: #00754a;
+  --custom-secondary: #047857;
+  --custom-accent: #00754a;
+  --custom-warning: #f59e0b;
+  --custom-error: #ef4444;
+  --custom-success: #10b981;
+
+  /* Sidebar Colors Light Mode */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #374151;
+  --sidebar-hover: #f3f4f6;
+  --sidebar-active: #e5e7eb;
+  --sidebar-icon: #00754a;
+
+  /* Sidebar Colors Dark Mode */
+  --sidebar-bg-dark: #1f2937;
+  --sidebar-text-dark: #e5e7eb;
+  --sidebar-hover-dark: #374151;
+  --sidebar-active-dark: #4b5563;
+  --sidebar-icon-dark: #40916c;
+
+  /* Accent Colors (5% usage) */
+  --accent-indigo: #6366f1;
+  --accent-indigo-light: #818cf8;
+  --accent-indigo-dark: #4f46e5;
+  --accent-amber: #f59e0b;
+  --accent-amber-light: #fbbf24;
+  --accent-amber-dark: #d97706;
+
+  /* Text Colors */
+  --text-primary: rgba(27, 67, 50, 0.90);
+  --text-secondary: rgba(27, 67, 50, 0.70);
+  --text-muted: rgba(27, 67, 50, 0.40);
+
+  /* Borders & Surfaces */
+  --border-default: rgba(27, 67, 50, 0.20);
+  --border-subtle: rgba(27, 67, 50, 0.10);
+  --surface-light: rgba(27, 67, 50, 0.05);
+
+  /* Focus Ring */
+  --focus-ring: rgba(0, 117, 74, 0.15);
+  --focus-ring-strong: rgba(0, 117, 74, 0.25);
+
+  /* Hover Backgrounds */
+  --hover-bg: rgba(0, 117, 74, 0.15);
+  --active-bg: rgba(0, 117, 74, 0.25);
+}
+
+/* Dark Mode CSS Variables */
+html.dark {
+  --text-primary: rgba(255, 255, 255, 0.90);
+  --text-secondary: rgba(255, 255, 255, 0.80);
+  --text-muted: rgba(255, 255, 255, 0.60);
+
+  --border-default: rgba(255, 255, 255, 0.20);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --surface-light: rgba(255, 255, 255, 0.08);
+
+  --sidebar-bg: var(--sidebar-bg-dark);
+  --sidebar-text: var(--sidebar-text-dark);
+  --sidebar-hover: var(--sidebar-hover-dark);
+  --sidebar-active: var(--sidebar-active-dark);
+  --sidebar-icon: var(--sidebar-icon-dark);
 }
 
 @layer base {
@@ -77,17 +207,71 @@
 }
 
 @layer components {
-  /* Glass morphism */
+  /* Glass morphism - Enhanced */
   .glass {
     @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-lg;
   }
 
+  /* Primary glass card with enhanced frosted effect */
   .glass-card {
-    @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 rounded-2xl shadow-xl;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    @apply rounded-2xl;
+  }
+
+  .dark .glass-card {
+    background: rgba(31, 41, 55, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Subtle glass for nested elements */
+  .glass-subtle {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .dark .glass-subtle {
+    background: rgba(55, 65, 81, 0.4);
   }
 
   .glass-dark {
     @apply bg-gray-900/80 backdrop-blur-xl border border-gray-700/30 shadow-2xl;
+  }
+
+  /* Dashboard background with gradient orbs */
+  .dashboard-glass-bg {
+    background:
+      radial-gradient(at 0% 0%, rgba(0, 117, 74, 0.08) 0%, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
+      linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+
+  .dark .dashboard-glass-bg {
+    background:
+      radial-gradient(at 0% 0%, rgba(0, 117, 74, 0.12) 0%, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+      linear-gradient(180deg, #111827 0%, #1f2937 100%);
+  }
+
+  /* Glass tooltip for charts */
+  .glass-tooltip {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    @apply rounded-xl px-3 py-2;
+  }
+
+  .dark .glass-tooltip {
+    background: rgba(31, 41, 55, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
   /* Status dot */
@@ -122,43 +306,43 @@
 
   /* Gradient header */
   .gradient-header {
-    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-purple-600 text-white;
+    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-primary-400 text-white;
   }
 
   /* Gradient border */
   .gradient-border {
     position: relative;
     background: linear-gradient(white, white) padding-box,
-                linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899) border-box;
+                linear-gradient(135deg, #00754a, #047857, #1b4332) border-box;
     border: 2px solid transparent;
     border-radius: 1rem;
   }
 
   .dark .gradient-border {
     background: linear-gradient(#1f2937, #1f2937) padding-box,
-                linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899) border-box;
+                linear-gradient(135deg, #00754a, #047857, #1b4332) border-box;
   }
 
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 via-purple-500 to-pink-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-700 via-primary-500 to-primary-400 bg-clip-text text-transparent;
   }
 
   /* Subtle gradient backgrounds */
   .gradient-subtle {
-    @apply bg-gradient-to-br from-primary-50/50 via-white to-purple-50/50 dark:from-primary-900/20 dark:via-gray-800 dark:to-purple-900/20;
+    @apply bg-gradient-to-br from-primary-50/50 via-white to-primary-100/30 dark:from-primary-900/20 dark:via-gray-800 dark:to-primary-900/10;
   }
 
   .gradient-mesh {
     background:
-      radial-gradient(at 40% 20%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, rgba(236, 72, 153, 0.05) 0px, transparent 50%);
+      radial-gradient(at 40% 20%, rgba(0, 117, 74, 0.1) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(27, 67, 50, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, rgba(0, 117, 74, 0.05) 0px, transparent 50%);
   }
 
   /* Glow effects */
   .glow-primary {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 20px rgba(0, 117, 74, 0.3), 0 0 40px rgba(0, 117, 74, 0.1);
   }
 
   .glow-success {
@@ -305,9 +489,9 @@
   }
 
   .card-refined:hover {
-    border-color: rgba(139, 126, 255, 0.2);
+    border-color: rgba(0, 117, 74, 0.2);
     box-shadow:
-      0 0 0 1px rgba(139, 126, 255, 0.1),
+      0 0 0 1px rgba(0, 117, 74, 0.1),
       0 4px 8px rgba(0, 0, 0, 0.04),
       0 16px 32px -8px rgba(0, 0, 0, 0.12);
     transform: translateY(-2px);
@@ -326,9 +510,9 @@
   /* Premium gradient backgrounds */
   .gradient-aurora {
     background:
-      linear-gradient(135deg, rgba(139, 126, 255, 0.1) 0%, transparent 50%),
-      linear-gradient(225deg, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-      linear-gradient(315deg, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+      linear-gradient(135deg, rgba(0, 117, 74, 0.1) 0%, transparent 50%),
+      linear-gradient(225deg, rgba(27, 67, 50, 0.1) 0%, transparent 50%),
+      linear-gradient(315deg, rgba(0, 117, 74, 0.08) 0%, transparent 50%);
   }
 
   .gradient-shine {
@@ -350,7 +534,7 @@
   .gradient-radial {
     background: radial-gradient(
       ellipse at top,
-      rgba(139, 126, 255, 0.15) 0%,
+      rgba(0, 117, 74, 0.15) 0%,
       transparent 50%
     );
   }
@@ -400,7 +584,7 @@
   .focus-ring-animated::after {
     content: '';
     @apply absolute -inset-1 rounded-xl opacity-0 transition-opacity duration-200;
-    box-shadow: 0 0 0 3px rgba(139, 126, 255, 0.3);
+    box-shadow: 0 0 0 3px rgba(0, 117, 74, 0.3);
   }
 
   .focus-ring-animated:focus-visible::after {
@@ -416,7 +600,7 @@
     content: '';
     @apply absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300;
     padding: 1px;
-    background: linear-gradient(135deg, #8b7eff, #3b82f6, #ec4899);
+    background: linear-gradient(135deg, #00754a, #047857, #1b4332);
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -467,7 +651,7 @@
 
   .input-refined:focus {
     @apply border-primary-500 dark:border-primary-400;
-    box-shadow: 0 0 0 3px rgba(139, 126, 255, 0.15), var(--shadow-xs);
+    box-shadow: 0 0 0 3px rgba(0, 117, 74, 0.15), var(--shadow-xs);
   }
 
   /* Button with shine effect */
@@ -539,8 +723,8 @@
   .page-container {
     @apply min-h-screen bg-gray-50 dark:bg-gray-900;
     background-image:
-      radial-gradient(at 100% 0%, rgba(139, 126, 255, 0.03) 0%, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+      radial-gradient(at 100% 0%, rgba(0, 117, 74, 0.03) 0%, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(27, 67, 50, 0.03) 0%, transparent 50%);
   }
 
   /* Tabs refined style */

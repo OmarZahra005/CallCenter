@@ -57,7 +57,14 @@
       "Bash(Select-Object -First 30)",
       "Bash(Select-String -Pattern \"error|warning|success\")",
       "Bash(Select-Object -First 20)",
-      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")"
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "WebFetch(domain:advisor.redf.gov.sa)",
+      "WebFetch(domain:redf.gov.sa)",
+      "WebFetch(domain:portal.redf.gov.sa)",
+      "Bash(copy \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\fullLogoColor.34dca471.svg\" \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\CallCenterFrontEnd\\\\public\\\\redf-logo.svg\")"
     ],
     "deny": [],
     "ask": []

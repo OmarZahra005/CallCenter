@@ -155,7 +155,15 @@ public class SmartBotIntegrationController : ControllerBase
     public async Task<IActionResult> SendMessage(
         [FromBody] SmartBotMessageRequest request)
     {
+        _logger.LogWarning(
+            ">>> CALLCENTER RECEIVED MESSAGE: SmartBotConversationId={ConversationId}, Message={Message}, SenderType={SenderType}",
+            request.SmartBotConversationId, request.Message, request.SenderType);
+
         var success = await _escalationService.SendMessageToAgentAsync(request);
+
+        _logger.LogWarning(
+            ">>> CALLCENTER MESSAGE RESULT: SmartBotConversationId={ConversationId}, Success={Success}",
+            request.SmartBotConversationId, success);
 
         if (!success)
         {

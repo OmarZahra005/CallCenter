@@ -127,7 +127,19 @@ const Agents = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: AgentFormData) => apiClient.post('/agents', data),
+    mutationFn: (data: AgentFormData) => {
+      // Transform payload to match backend expectations
+      const requestPayload = {
+        employeeId: data.employeeId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        role: data.role,
+        teamId: data.teamId || null, // Send null instead of empty string
+        skillLevel: 1, // Default skill level
+      };
+      return apiClient.post('/agents', requestPayload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       setIsModalOpen(false);
@@ -140,8 +152,19 @@ const Agents = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: string; payload: AgentFormData }) =>
-      apiClient.put(`/agents/${data.id}`, data.payload),
+    mutationFn: (data: { id: string; payload: AgentFormData }) => {
+      // Transform payload to match backend expectations
+      const requestPayload = {
+        name: data.payload.name,
+        email: data.payload.email,
+        phone: data.payload.phone || null,
+        role: data.payload.role,
+        status: data.payload.status,
+        teamId: data.payload.teamId || null, // Send null instead of empty string
+        skillLevel: 1, // Default skill level
+      };
+      return apiClient.put(`/agents/${data.id}`, requestPayload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       setIsModalOpen(false);
@@ -296,6 +319,7 @@ const Agents = () => {
   const roleOptions = [
     { value: 'Agent', label: 'Agent' },
     { value: 'Supervisor', label: 'Supervisor' },
+    { value: 'QaEvaluator', label: 'QA Evaluator' },
     { value: 'Admin', label: 'Admin' },
   ];
 
@@ -303,6 +327,7 @@ const Agents = () => {
     { value: 'Active', label: 'Active' },
     { value: 'Inactive', label: 'Inactive' },
     { value: 'OnLeave', label: 'On Leave' },
+    { value: 'Terminated', label: 'Terminated' },
   ];
 
   const teamOptions = teams.map((team: { id: string; name: string }) => ({

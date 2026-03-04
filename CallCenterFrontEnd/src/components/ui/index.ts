@@ -23,6 +23,7 @@ export { MessageBubble, ConversationItem, DateSeparator, SystemMessage, groupMes
 export { MetricCard, QueueMonitor, AgentStatusGrid } from './MetricCard';
 export { default as KanbanBoard } from './KanbanBoard';
 export { BarChart, LineChart, DonutChart, ProgressBar } from './Chart';
+export { SparklineArea, TrendAreaChart, GlassDonutChart, GlassBarChart, MultiAreaChart, chartColors } from './RechartsComponents';
 export { default as NotificationDropdown } from './NotificationDropdown';
 export { default as Toast } from './Toast';
 export { default as ConfirmDialog } from './ConfirmDialog';

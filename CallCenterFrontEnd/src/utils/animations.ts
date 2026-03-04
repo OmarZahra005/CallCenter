@@ -169,13 +169,13 @@ export const incomingCallShake: Variants = {
 };
 
 export const pulseGlow: Variants = {
-  initial: { scale: 1, boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.5)' },
+  initial: { scale: 1, boxShadow: '0 0 0 0 rgba(0, 117, 74, 0.5)' },
   animate: {
     scale: [1, 1.05, 1],
     boxShadow: [
-      '0 0 0 0 rgba(59, 130, 246, 0.5)',
-      '0 0 0 10px rgba(59, 130, 246, 0)',
-      '0 0 0 0 rgba(59, 130, 246, 0)',
+      '0 0 0 0 rgba(0, 117, 74, 0.5)',
+      '0 0 0 10px rgba(0, 117, 74, 0)',
+      '0 0 0 0 rgba(0, 117, 74, 0)',
     ],
     transition: {
       duration: 1.5,
@@ -724,10 +724,10 @@ export const buttonRipple: Variants = {
 
 export const buttonGlow: Variants = {
   initial: {
-    boxShadow: '0 0 0 0 rgba(139, 126, 255, 0)',
+    boxShadow: '0 0 0 0 rgba(0, 117, 74, 0)',
   },
   hover: {
-    boxShadow: '0 0 20px 5px rgba(139, 126, 255, 0.3)',
+    boxShadow: '0 0 20px 5px rgba(0, 117, 74, 0.3)',
     transition: {
       duration: 0.3,
     }
@@ -751,10 +751,10 @@ export const buttonSuccess: Variants = {
 
 export const inputFocus: Variants = {
   initial: {
-    boxShadow: '0 0 0 0 rgba(139, 126, 255, 0)',
+    boxShadow: '0 0 0 0 rgba(0, 117, 74, 0)',
   },
   focus: {
-    boxShadow: '0 0 0 3px rgba(139, 126, 255, 0.15)',
+    boxShadow: '0 0 0 3px rgba(0, 117, 74, 0.15)',
     transition: {
       duration: 0.2,
     }
@@ -770,7 +770,7 @@ export const floatingLabel: Variants = {
   float: {
     y: -24,
     scale: 0.85,
-    color: 'rgb(139, 126, 255)',
+    color: 'rgb(17, 168, 199)',
     transition: {
       duration: 0.2,
       ease: [0.4, 0, 0.2, 1],
@@ -976,9 +976,9 @@ export const tableSortIndicator: Variants = {
 };
 
 export const tableRowSelect: Variants = {
-  initial: { backgroundColor: 'rgba(139, 126, 255, 0)' },
+  initial: { backgroundColor: 'rgba(0, 117, 74, 0)' },
   selected: {
-    backgroundColor: 'rgba(139, 126, 255, 0.08)',
+    backgroundColor: 'rgba(0, 117, 74, 0.08)',
     transition: {
       duration: 0.2,
     }
@@ -1146,6 +1146,6 @@ export const tapShrink = {
 };
 
 export const focusGlow = {
-  boxShadow: '0 0 0 3px rgba(139, 126, 255, 0.2)',
+  boxShadow: '0 0 0 3px rgba(0, 117, 74, 0.2)',
   transition: { duration: 0.15 },
 };

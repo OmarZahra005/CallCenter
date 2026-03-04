@@ -22,6 +22,8 @@ builder.Services.AddControllers()
     {
         // Ensure camelCase for JSON responses (required for frontend compatibility)
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Allow string values for enums (e.g., "Agent" instead of 0)
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache(); // For permission caching
@@ -82,17 +84,12 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 builder.Services.AddAuthorization();
 
 // Configure CORS
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                  "http://localhost:5173",   // Vite dev server (HTTP)
-                  "http://localhost:5175",
-                  "http://localhost:5174",
-                  "https://localhost:5174",// Vite dev server alternate port
-                  "https://localhost:5173",  // Vite dev server (HTTPS)
-                  "https://localhost:5175")  // Vite dev server alternate port (HTTPS)
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

@@ -19,6 +19,8 @@ public static class RbacSeedData
 
     // Admin user ID (existing)
     public static readonly Guid AdminUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    // OmarZahra user ID
+    public static readonly Guid OmarZahraUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     public static void SeedRbac(ModelBuilder modelBuilder)
     {
@@ -229,13 +231,19 @@ public static class RbacSeedData
 
     private static void SeedDefaultAdminRoleAssignment(ModelBuilder modelBuilder)
     {
-        // Assign Super Admin role to the default admin user
+        // Assign Super Admin role to the default admin user and OmarZahra
         modelBuilder.Entity<AgentRoleAssignment>().HasData(
             new AgentRoleAssignment
             {
                 AgentId = AdminUserId,
                 RoleId = SuperAdminRoleId,
                 AssignedAt = SeedDate
+            },
+            new AgentRoleAssignment
+            {
+                AgentId = OmarZahraUserId,
+                RoleId = SuperAdminRoleId,
+                AssignedAt = new DateTime(2025, 12, 7, 0, 0, 0, DateTimeKind.Utc)
             }
         );
     }
@@ -359,8 +367,11 @@ public static class RbacSeedData
     private static Guid GeneratePermissionId(string systemName)
     {
         // Generate a deterministic GUID based on the system name for consistency
-        using var md5 = System.Security.Cryptography.MD5.Create();
-        var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes("permission_" + systemName));
-        return new Guid(hash);
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes("permission_" + systemName));
+        // Take first 16 bytes of SHA256 hash to form a GUID
+        var guidBytes = new byte[16];
+        Array.Copy(hash, guidBytes, 16);
+        return new Guid(guidBytes);
     }
 }

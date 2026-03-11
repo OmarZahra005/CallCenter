@@ -22,14 +22,15 @@ namespace CallCenter.Infrastructure.Data.Migrations
                     new DateOnly(2025, 12, 7),
                     null,
                     "OmarZahra",
-                    "$2a$11$4ur4pvLzIgwTlUMchrar4eQYdgWKMaySjUni8Tr8I0uIF8DMv2Pi.",
+                    "AQAAAAIAAYagAAAAEOJxuO92MLN7XE7EPQ3Bue31LffoINetW58iZIf3CjeP5alHxX5ikZGiDJ5qpAQpng==", // Uses ASP.NET Identity PasswordHasher (same as admin seed)
                     null,
-                    0, // AgentRole.Agent (changed from Admin to Agent)
+                    0, // AgentRole.Agent
                     1,
                     0, // AgentStatus.Active
                     new Guid("00000000-0000-0000-0000-000000000001"),
                     new DateTime(2025, 12, 7, 0, 0, 0, 0, DateTimeKind.Utc)
                 });
+
         }
 
         /// <inheritdoc />

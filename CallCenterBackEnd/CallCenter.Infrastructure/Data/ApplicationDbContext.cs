@@ -166,6 +166,16 @@ public class ApplicationDbContext : DbContext
             UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
 
+        // Seed initial AgentState for admin user
+        modelBuilder.Entity<AgentState>().HasData(new AgentState
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+            AgentId = adminId,
+            State = Domain.Enums.AgentStateType.Available,
+            Reason = "Initial state - system seeded",
+            ChangedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
         // Seed RBAC (Roles, Permissions, RolePermissions, AgentRoleAssignment)
         RbacSeedData.SeedRbac(modelBuilder);
 

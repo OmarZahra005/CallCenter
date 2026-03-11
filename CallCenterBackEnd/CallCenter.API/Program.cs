@@ -5,11 +5,13 @@ using CallCenter.Application.DTOs.Transcription;
 using CallCenter.Application.Interfaces;
 using CallCenter.Application.Services;
 using CallCenter.Infrastructure;
+using CallCenter.Infrastructure.Data;
 using CallCenter.API.Authorization;
 using CallCenter.API.Authentication;
 using CallCenter.API.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -160,9 +162,30 @@ app.MapControllers();
 // Map SignalR hub
 app.MapHub<CallCenterHub>("/hubs/callcenter");
 
-// Initialize mock WhatsApp data if enabled
-using (var scope = app.Services.CreateScope())
+// Auto-migrate database on startup (creates DB + applies all migrations)
+try
 {
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigration");
+
+        logger.LogInformation("Checking database and applying pending migrations...");
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Database is up to date.");
+    }
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigration");
+    logger.LogError(ex, "Failed to auto-migrate database. Ensure SQL Server is running and the connection string is correct.");
+    throw; // Cannot start without a database
+}
+
+// Initialize mock WhatsApp data if enabled
+try
+{
+    using var scope = app.Services.CreateScope();
     var whatsAppOptions = scope.ServiceProvider.GetRequiredService<IOptions<WhatsAppOptions>>().Value;
     if (whatsAppOptions.UseMockData)
     {
@@ -172,6 +195,11 @@ using (var scope = app.Services.CreateScope())
             await mockService.InitializeMockDataAsync();
         }
     }
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Program");
+    logger.LogWarning(ex, "Failed to initialize mock WhatsApp data. Continuing without mock data.");
 }
 
 app.Run();

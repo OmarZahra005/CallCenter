@@ -58,7 +58,7 @@ public static class SystemSettingSeedData
         // Recording Storage settings
         settings.AddRange(CreateCategorySettings(SettingCategory.RecordingStorage, new[]
         {
-            ("RecordingStorage:Path", "C:\\CallCenterRecordings", SettingDataType.String, "Recording Storage Path", false),
+            ("RecordingStorage:Path", "./recordings", SettingDataType.String, "Recording Storage Path", false),
             ("RecordingStorage:RetentionDays", "90", SettingDataType.Int, "Retention Period (days)", false),
             ("RecordingStorage:MaxFileSizeMB", "100", SettingDataType.Int, "Max File Size (MB)", false),
         }));
@@ -138,8 +138,11 @@ public static class SystemSettingSeedData
     /// </summary>
     private static Guid GenerateSettingId(string key)
     {
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes("setting_" + key));
-        return new Guid(hash);
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes("setting_" + key));
+        // Take first 16 bytes of SHA256 hash to form a GUID
+        var guidBytes = new byte[16];
+        Array.Copy(hash, guidBytes, 16);
+        return new Guid(guidBytes);
     }
 }

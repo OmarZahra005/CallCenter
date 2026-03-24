@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Download, Star,
@@ -99,6 +100,9 @@ interface Transcription {
 }
 
 const QualityAssurance = () => {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
+
   // Get current user from auth store
   const user = useAuthStore((state) => state.user);
 
@@ -135,6 +139,17 @@ const QualityAssurance = () => {
   const [transcription, setTranscription] = useState<Transcription | null>(null);
   const [isLoadingTranscription, setIsLoadingTranscription] = useState(false);
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<'summary' | 'issues' | 'transcript'>('summary');
+
+  // Helper functions that use t()
+  const getTranscriptionStatusText = (status: number): string => {
+    switch (status) {
+      case 0: return t('qaPage.transcriptionPending');
+      case 1: return t('qaPage.transcriptionProcessing');
+      case 2: return t('qaPage.transcriptionCompleted');
+      case 3: return t('qaPage.transcriptionFailed');
+      default: return 'Unknown';
+    }
+  };
 
   // Fetch evaluation forms on mount
   useEffect(() => {
@@ -182,7 +197,7 @@ const QualityAssurance = () => {
             agentName: call.assignedAgentIdentity || (call.direction === 'inbound' ? 'Agent' : 'Outbound'),
             customerId: call.fromNumber,
             duration: calculateDuration(call),
-            date: new Date(call.startedAtUtc).toLocaleString(),
+            date: call.startedAtUtc,
             status: 'pending' as const,
             callRecordingId: call.recordingUrl || undefined,
             providerCallId: call.providerCallId,
@@ -386,16 +401,6 @@ const QualityAssurance = () => {
     }
   };
 
-  const getTranscriptionStatusText = (status: number): string => {
-    switch (status) {
-      case 0: return 'Pending';
-      case 1: return 'Processing';
-      case 2: return 'Completed';
-      case 3: return 'Failed';
-      default: return 'Unknown';
-    }
-  };
-
   const handleSaveDraft = async () => {
     if (!selectedRecording || !evaluationForm) return;
     setIsSaving(true);
@@ -420,10 +425,10 @@ const QualityAssurance = () => {
       };
 
       await apiClient.post('/qa/scorecards', request);
-      alert('Draft saved successfully!');
+      alert(t('qaPage.draftSaved'));
     } catch (error) {
       console.error('Failed to save draft:', error);
-      alert('Failed to save draft');
+      alert(t('qaPage.draftFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -461,10 +466,10 @@ const QualityAssurance = () => {
           : r
       ));
 
-      alert('Review submitted successfully!');
+      alert(t('qaPage.reviewSubmitted'));
     } catch (error) {
       console.error('Failed to submit review:', error);
-      alert('Failed to submit review');
+      alert(t('qaPage.reviewFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -481,8 +486,8 @@ const QualityAssurance = () => {
       <motion.div variants={fadeUp}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quality Assurance</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Review and score agent interactions</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('qaPage.title')}</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('qaPage.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             {/* View Toggle */}
@@ -496,7 +501,7 @@ const QualityAssurance = () => {
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4" />
-                Dashboard
+                {t('qaPage.dashboard')}
               </button>
               <button
                 onClick={() => setActiveView('evaluations')}
@@ -507,12 +512,12 @@ const QualityAssurance = () => {
                 }`}
               >
                 <ClipboardList className="w-4 h-4" />
-                Evaluations
+                {t('qaPage.evaluations')}
               </button>
             </div>
             <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
+              <Download className="w-4 h-4 me-2" />
+              {t('qaPage.exportReport')}
             </Button>
           </div>
         </div>
@@ -538,35 +543,35 @@ const QualityAssurance = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
                   <Headphones className="w-4 h-4" />
-                  <span className="text-xs font-medium">Total</span>
+                  <span className="text-xs font-medium">{t('qaPage.total')}</span>
                 </div>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
                   <Clock className="w-4 h-4" />
-                  <span className="text-xs font-medium">Pending</span>
+                  <span className="text-xs font-medium">{t('qaPage.pending')}</span>
                 </div>
                 <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
                   <CheckCircle className="w-4 h-4" />
-                  <span className="text-xs font-medium">Reviewed</span>
+                  <span className="text-xs font-medium">{t('qaPage.reviewed')}</span>
                 </div>
                 <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.reviewed}</p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="text-xs font-medium">Flagged</span>
+                  <span className="text-xs font-medium">{t('qaPage.flagged')}</span>
                 </div>
                 <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats.flagged}</p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 mb-1">
                   <Award className="w-4 h-4" />
-                  <span className="text-xs font-medium">Avg Score</span>
+                  <span className="text-xs font-medium">{t('qaPage.avgScore')}</span>
                 </div>
                 <p className="text-xl font-bold text-primary-600 dark:text-primary-400">{stats.avgScore}%</p>
               </div>
@@ -581,36 +586,41 @@ const QualityAssurance = () => {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Headphones className="w-4 h-4" />
-                  Recordings
+                  {t('qaPage.recordings')}
                 </h2>
                 <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  {filteredRecordings.length} of {recordings.length}
+                  {t('qaPage.ofCount', { filtered: filteredRecordings.length, total: recordings.length })}
                 </span>
               </div>
               {/* Search & Filter */}
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute start-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search by agent or customer..."
+                    placeholder={t('qaPage.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    className="w-full ps-9 pe-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                   />
                 </div>
                 <div className="flex gap-1">
-                  {['all', 'pending', 'reviewed', 'flagged'].map((status) => (
+                  {[
+                    { key: 'all', label: t('qaPage.all') },
+                    { key: 'pending', label: t('qaPage.pending') },
+                    { key: 'reviewed', label: t('qaPage.reviewed') },
+                    { key: 'flagged', label: t('qaPage.flagged') },
+                  ].map((status) => (
                     <button
-                      key={status}
-                      onClick={() => setStatusFilter(status)}
+                      key={status.key}
+                      onClick={() => setStatusFilter(status.key)}
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        statusFilter === status
+                        statusFilter === status.key
                           ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                      {status.label}
                     </button>
                   ))}
                 </div>
@@ -620,13 +630,13 @@ const QualityAssurance = () => {
               {isLoading ? (
                 <div className="p-8 text-center">
                   <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-500" />
-                  <p className="text-sm text-gray-500">Loading recordings...</p>
+                  <p className="text-sm text-gray-500">{t('qaPage.loadingRecordings')}</p>
                 </div>
               ) : filteredRecordings.length === 0 ? (
                 <div className="p-8 text-center">
                   <Headphones className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                   <p className="text-sm text-gray-500">
-                    {recordings.length === 0 ? 'No recordings found' : 'No matching recordings'}
+                    {recordings.length === 0 ? t('qaPage.noRecordingsFound') : t('qaPage.noMatchingRecordings')}
                   </p>
                 </div>
               ) : (
@@ -636,10 +646,10 @@ const QualityAssurance = () => {
                       key={recording.id}
                       whileHover={{ x: 2 }}
                       onClick={() => handleRecordingSelect(recording)}
-                      className={`w-full p-3 text-start transition-all border-l-3 ${
+                      className={`w-full p-3 text-start transition-all border-s-3 ${
                         selectedRecording?.id === recording.id
-                          ? 'bg-primary-50 dark:bg-primary-900/20 border-l-primary-500'
-                          : 'border-l-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                          ? 'bg-primary-50 dark:bg-primary-900/20 border-s-primary-500'
+                          : 'border-s-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -675,7 +685,7 @@ const QualityAssurance = () => {
                             <Clock className="w-3 h-3" />
                             {recording.duration}
                           </span>
-                          <span>{recording.date}</span>
+                          <span>{new Date(recording.date).toLocaleString(isArabic ? 'ar-SA' : 'en-US')}</span>
                         </div>
                         {recording.score !== undefined && (
                           <div className={`flex items-center gap-1 font-medium ${
@@ -706,9 +716,9 @@ const QualityAssurance = () => {
                     <Headphones className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Recording Playback</h3>
+                    <h3 className="font-semibold">{t('qaPage.recordingPlayback')}</h3>
                     {selectedRecording && (
-                      <p className="text-xs text-white/70">{selectedRecording.agentName} - {selectedRecording.date}</p>
+                      <p className="text-xs text-white/70">{selectedRecording.agentName} - {new Date(selectedRecording.date).toLocaleString(isArabic ? 'ar-SA' : 'en-US')}</p>
                     )}
                   </div>
                 </div>
@@ -816,7 +826,7 @@ const QualityAssurance = () => {
                         onClick={() => {
                           if (audioRef.current) audioRef.current.currentTime = Math.max(0, currentTime - 10);
                         }}
-                        title="Skip back 10s"
+                        title={t('qaPage.skipBack')}
                       >
                         <SkipBack className="w-4 h-4" />
                       </Button>
@@ -829,7 +839,7 @@ const QualityAssurance = () => {
                         }}
                         className="w-12 h-12 rounded-full"
                       >
-                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ms-0.5" />}
                       </Button>
                       <Button
                         variant="ghost"
@@ -837,7 +847,7 @@ const QualityAssurance = () => {
                         onClick={() => {
                           if (audioRef.current) audioRef.current.currentTime = Math.min(duration, currentTime + 10);
                         }}
-                        title="Skip forward 10s"
+                        title={t('qaPage.skipForward')}
                       >
                         <SkipForward className="w-4 h-4" />
                       </Button>
@@ -865,8 +875,8 @@ const QualityAssurance = () => {
                   <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
                     <Play className="w-6 h-6 text-gray-400" />
                   </div>
-                  <p className="text-gray-500">Select a recording to play</p>
-                  <p className="text-xs text-gray-400 mt-1">Choose from the list on the left</p>
+                  <p className="text-gray-500">{t('qaPage.selectRecording')}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('qaPage.chooseFromList')}</p>
                 </div>
               )}
             </CardContent>
@@ -881,12 +891,12 @@ const QualityAssurance = () => {
                   <div className="flex items-center gap-2">
                     <ClipboardCheck className="w-5 h-5 text-primary-600" />
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      Scorecard
+                      {t('qaPage.scorecard')}
                     </h3>
                   </div>
                   {existingScorecard && (
                     <Badge variant="info" size="sm">
-                      Previously: {existingScorecard.percentage.toFixed(0)}%
+                      {t('qaPage.previously', { score: existingScorecard.percentage.toFixed(0) })}
                     </Badge>
                   )}
                 </div>
@@ -898,12 +908,12 @@ const QualityAssurance = () => {
                 {!evaluationForm ? (
                   <div className="text-center py-6">
                     <ClipboardCheck className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm text-gray-500">No evaluation form available</p>
+                    <p className="text-sm text-gray-500">{t('qaPage.noEvalForm')}</p>
                   </div>
                 ) : !selectedRecording ? (
                   <div className="text-center py-6">
                     <Target className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm text-gray-500">Select a recording to start scoring</p>
+                    <p className="text-sm text-gray-500">{t('qaPage.selectRecordingToScore')}</p>
                   </div>
                 ) : (
                   <>
@@ -946,13 +956,13 @@ const QualityAssurance = () => {
                           {totalScore}<span className="text-sm font-normal text-gray-500">/{maxScore}</span>
                         </p>
                         <p className={`text-xs font-medium ${isPassing ? 'text-green-600' : 'text-red-600'}`}>
-                          {isPassing ? 'Passing' : 'Below Passing'} (min: {evaluationForm.passingScore})
+                          {isPassing ? t('qaPage.passing') : t('qaPage.belowPassing')} {t('qaPage.minPassing', { score: evaluationForm.passingScore })}
                         </p>
                       </div>
                     </div>
 
                     {/* Criteria List - Compact */}
-                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto pe-1">
                       {scores.map((score) => {
                         const percentage = Math.round((score.pointsEarned / score.maxPoints) * 100);
                         const isExpanded = expandedCriteria.includes(score.criteriaId);
@@ -985,7 +995,7 @@ const QualityAssurance = () => {
                                     style={{ width: `${percentage}%` }}
                                   />
                                 </div>
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-12 text-right">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-12 text-end">
                                   {score.pointsEarned}/{score.maxPoints}
                                 </span>
                               </div>
@@ -1001,7 +1011,7 @@ const QualityAssurance = () => {
                                 >
                                   <div className="p-3 bg-gray-50 dark:bg-gray-800/30">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-xs text-gray-500">Score:</span>
+                                      <span className="text-xs text-gray-500">{t('qaPage.score')}</span>
                                       <div className="flex items-center gap-1">
                                         {[...Array(score.maxPoints)].map((_, i) => (
                                           <button
@@ -1018,9 +1028,9 @@ const QualityAssurance = () => {
                                         ))}
                                         <button
                                           onClick={() => handleScoreChange(score.criteriaId, 0)}
-                                          className="ml-1 text-xs text-gray-400 hover:text-gray-600"
+                                          className="ms-1 text-xs text-gray-400 hover:text-gray-600"
                                         >
-                                          Clear
+                                          {t('qaPage.clear')}
                                         </button>
                                       </div>
                                     </div>
@@ -1036,10 +1046,10 @@ const QualityAssurance = () => {
                     {/* Comments */}
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                       <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                        Supervisor Comments
+                        {t('qaPage.supervisorComments')}
                       </label>
                       <Textarea
-                        placeholder="Add feedback for the agent..."
+                        placeholder={t('qaPage.addFeedback')}
                         rows={2}
                         value={comments}
                         onChange={(e) => setComments(e.target.value)}
@@ -1049,12 +1059,12 @@ const QualityAssurance = () => {
 
                     <div className="flex items-center justify-end gap-2 mt-3">
                       <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving}>
-                        <Save className="w-3.5 h-3.5 mr-1.5" />
-                        Draft
+                        <Save className="w-3.5 h-3.5 me-1.5" />
+                        {t('qaPage.draft')}
                       </Button>
                       <Button size="sm" onClick={handleSubmitReview} disabled={isSaving}>
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Submit
+                        <CheckCircle className="w-3.5 h-3.5 me-1.5" />
+                        {t('qaPage.submit')}
                       </Button>
                     </div>
                   </>
@@ -1068,7 +1078,7 @@ const QualityAssurance = () => {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary-600" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Call Analysis</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{t('qaPage.callAnalysis')}</h3>
                   </div>
                   {transcription && (
                     <Badge
@@ -1084,9 +1094,9 @@ const QualityAssurance = () => {
                 {selectedRecording && transcription && (
                   <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-4 px-4">
                     {[
-                      { id: 'summary', label: 'Summary', icon: FileText },
-                      { id: 'issues', label: 'Issues', icon: AlertTriangle, count: parseJsonArray(transcription.detectedIssues).length },
-                      { id: 'transcript', label: 'Transcript', icon: MessageSquare },
+                      { id: 'summary', label: t('qaPage.summaryTab'), icon: FileText },
+                      { id: 'issues', label: t('qaPage.issuesTab'), icon: AlertTriangle, count: parseJsonArray(transcription.detectedIssues).length },
+                      { id: 'transcript', label: t('qaPage.transcriptTab'), icon: MessageSquare },
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -1100,7 +1110,7 @@ const QualityAssurance = () => {
                         <tab.icon className="w-3.5 h-3.5" />
                         {tab.label}
                         {tab.count !== undefined && tab.count > 0 && (
-                          <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
+                          <span className={`ms-1 px-1.5 py-0.5 text-xs rounded-full ${
                             tab.id === 'issues' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-600'
                           }`}>
                             {tab.count}
@@ -1115,17 +1125,17 @@ const QualityAssurance = () => {
                 {!selectedRecording ? (
                   <div className="text-center py-6">
                     <BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm text-gray-500">Select a recording to view analysis</p>
+                    <p className="text-sm text-gray-500">{t('qaPage.selectRecordingAnalysis')}</p>
                   </div>
                 ) : isLoadingTranscription ? (
                   <div className="text-center py-6">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-500" />
-                    <p className="text-sm text-gray-500">Loading analysis...</p>
+                    <p className="text-sm text-gray-500">{t('qaPage.loadingAnalysis')}</p>
                   </div>
                 ) : !transcription ? (
                   <div className="text-center py-6">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm text-gray-500">No transcription available</p>
+                    <p className="text-sm text-gray-500">{t('qaPage.noTranscription')}</p>
                   </div>
                 ) : (
                   <AnimatePresence mode="wait">
@@ -1146,12 +1156,12 @@ const QualityAssurance = () => {
                                 {getSentimentIcon(transcription.sentiment)}
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Overall Sentiment</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('qaPage.overallSentiment')}</p>
                                 <p className="font-medium text-gray-900 dark:text-white capitalize">{transcription.sentiment}</p>
                               </div>
                               {transcription.confidence && (
-                                <div className="ml-auto text-right">
-                                  <p className="text-xs text-gray-500">Confidence</p>
+                                <div className="ms-auto text-end">
+                                  <p className="text-xs text-gray-500">{t('qaPage.confidence')}</p>
                                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     {(transcription.confidence * 100).toFixed(0)}%
                                   </p>
@@ -1163,7 +1173,7 @@ const QualityAssurance = () => {
                           {/* Summary */}
                           {transcription.summary && (
                             <div>
-                              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Summary</h4>
+                              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t('qaPage.summary')}</h4>
                               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{transcription.summary}</p>
                             </div>
                           )}
@@ -1173,7 +1183,7 @@ const QualityAssurance = () => {
                             <div>
                               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1">
                                 <ListTodo className="w-3 h-3" />
-                                Action Items
+                                {t('qaPage.actionItems')}
                               </h4>
                               <div className="space-y-1.5">
                                 {parseJsonArray(transcription.actionItems).map((item, index) => (
@@ -1190,7 +1200,7 @@ const QualityAssurance = () => {
                           {transcription.completedAt && (
                             <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
                               <p className="text-xs text-gray-400">
-                                Analyzed {new Date(transcription.completedAt).toLocaleString()}
+                                {t('qaPage.analyzed', { date: new Date(transcription.completedAt).toLocaleString(isArabic ? 'ar-SA' : 'en-US') })}
                               </p>
                             </div>
                           )}
@@ -1205,7 +1215,7 @@ const QualityAssurance = () => {
                               <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-3">
                                 <AlertTriangle className="w-4 h-4" />
                                 <span className="text-sm font-medium">
-                                  {parseJsonArray(transcription.detectedIssues).length} issue(s) detected
+                                  {t('qaPage.issuesDetected', { count: parseJsonArray(transcription.detectedIssues).length })}
                                 </span>
                               </div>
                               {parseJsonArray(transcription.detectedIssues).map((issue, index) => (
@@ -1221,8 +1231,8 @@ const QualityAssurance = () => {
                           ) : (
                             <div className="text-center py-6">
                               <CheckCircle className="w-10 h-10 mx-auto mb-2 text-green-500" />
-                              <p className="text-sm font-medium text-green-600 dark:text-green-400">No issues detected</p>
-                              <p className="text-xs text-gray-500 mt-1">This call appears to meet quality standards</p>
+                              <p className="text-sm font-medium text-green-600 dark:text-green-400">{t('qaPage.noIssues')}</p>
+                              <p className="text-xs text-gray-500 mt-1">{t('qaPage.meetsStandards')}</p>
                             </div>
                           )}
                         </div>
@@ -1234,7 +1244,7 @@ const QualityAssurance = () => {
                           {transcription.content ? (
                             <>
                               <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs text-gray-500">{transcription.wordCount} words</span>
+                                <span className="text-xs text-gray-500">{t('qaPage.words', { count: transcription.wordCount })}</span>
                                 {transcription.language && (
                                   <Badge variant="default" size="sm">{transcription.language}</Badge>
                                 )}
@@ -1248,7 +1258,7 @@ const QualityAssurance = () => {
                           ) : (
                             <div className="text-center py-6">
                               <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                              <p className="text-sm text-gray-500">Transcript not available</p>
+                              <p className="text-sm text-gray-500">{t('qaPage.transcriptNotAvailable')}</p>
                             </div>
                           )}
                         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardCheck,
@@ -44,45 +45,45 @@ const CATEGORY_CONFIG: Record<DispositionCategory, {
   icon: typeof CheckCircle2;
   color: string;
   bgColor: string;
-  label: string;
+  labelKey: string;
 }> = {
   Resolved: {
     icon: CheckCircle2,
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100 dark:bg-green-900/30',
-    label: 'Resolved',
+    labelKey: 'agentDesktop.resolved',
   },
   Callback: {
     icon: RotateCcw,
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-    label: 'Callback Required',
+    labelKey: 'agentDesktop.callbackRequired',
   },
   Escalated: {
     icon: ArrowUpCircle,
     color: 'text-red-600 dark:text-red-400',
     bgColor: 'bg-red-100 dark:bg-red-900/30',
-    label: 'Escalated',
+    labelKey: 'agentDesktop.escalated',
   },
   NoAnswer: {
     icon: PhoneMissed,
     color: 'text-orange-600 dark:text-orange-400',
     bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-    label: 'No Answer',
+    labelKey: 'agentDesktop.noAnswer',
   },
   Abandoned: {
     icon: PhoneOff,
     color: 'text-gray-600 dark:text-gray-400',
     bgColor: 'bg-gray-100 dark:bg-gray-900/30',
-    label: 'Abandoned',
+    labelKey: 'agentDesktop.abandoned',
   },
 };
 
 // Sentiment configuration
-const SENTIMENT_OPTIONS: { value: Sentiment; icon: typeof Smile; color: string; label: string }[] = [
-  { value: 'Positive', icon: Smile, color: 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30', label: 'Positive' },
-  { value: 'Neutral', icon: Meh, color: 'text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30', label: 'Neutral' },
-  { value: 'Negative', icon: Frown, color: 'text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30', label: 'Negative' },
+const SENTIMENT_OPTIONS: { value: Sentiment; icon: typeof Smile; color: string; labelKey: string }[] = [
+  { value: 'Positive', icon: Smile, color: 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30', labelKey: 'agentDesktop.positive' },
+  { value: 'Neutral', icon: Meh, color: 'text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30', labelKey: 'agentDesktop.neutral' },
+  { value: 'Negative', icon: Frown, color: 'text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30', labelKey: 'agentDesktop.negative' },
 ];
 
 // Fallback dispositions when API is not available
@@ -131,6 +132,8 @@ export const ACWPanel = ({
   onComplete,
   onSkip,
 }: ACWPanelProps) => {
+  const { t } = useTranslation();
+
   // Form state
   const [selectedDisposition, setSelectedDisposition] = useState<BackendDisposition | null>(null);
   const [notes, setNotes] = useState('');
@@ -309,10 +312,10 @@ export const ACWPanel = ({
                   </motion.div>
                   <div>
                     <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">
-                      After Call Work
+                      {t('agentDesktop.afterCallWork')}
                     </h3>
                     <p className="text-sm text-amber-600 dark:text-amber-400">
-                      Complete call wrap-up before taking next call
+                      {t('agentDesktop.acwDescription')}
                     </p>
                   </div>
                 </div>
@@ -343,7 +346,7 @@ export const ACWPanel = ({
                   )}
                   {callDuration !== undefined && (
                     <Badge variant="default" size="sm">
-                      Duration: {formatDuration(callDuration)}
+                      {t('agentDesktop.duration')}: {formatDuration(callDuration)}
                     </Badge>
                   )}
                   {callId && (
@@ -359,7 +362,7 @@ export const ACWPanel = ({
               {/* Customer Sentiment */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Customer Sentiment <span className="text-red-500">*</span>
+                  {t('agentDesktop.customerSentiment')} <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
                   {SENTIMENT_OPTIONS.map((option) => {
@@ -378,7 +381,7 @@ export const ACWPanel = ({
                       >
                         <Icon className={`w-5 h-5 ${isSelected ? '' : 'text-gray-400'}`} />
                         <span className={`text-sm font-medium ${isSelected ? '' : 'text-gray-600 dark:text-gray-400'}`}>
-                          {option.label}
+                          {t(option.labelKey)}
                         </span>
                       </button>
                     );
@@ -389,7 +392,7 @@ export const ACWPanel = ({
               {/* Disposition Dropdown */}
               <div className="disposition-dropdown">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Call Disposition <span className="text-red-500">*</span>
+                  {t('agentDesktop.callDisposition')} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <button
@@ -413,14 +416,14 @@ export const ACWPanel = ({
                               </div>
                               <div>
                                 <span className="text-gray-900 dark:text-white">{selectedDisposition.name}</span>
-                                <span className={`ml-2 text-xs ${config.color}`}>({config.label})</span>
+                                <span className={`ml-2 text-xs ${config.color}`}>({t(config.labelKey)})</span>
                               </div>
                             </>
                           );
                         })()}
                       </div>
                     ) : (
-                      <span className="text-gray-400">Select disposition...</span>
+                      <span className="text-gray-400">{t('agentDesktop.selectDisposition')}</span>
                     )}
                     <ChevronDown
                       className={`w-5 h-5 text-gray-400 transition-transform ${
@@ -456,7 +459,7 @@ export const ACWPanel = ({
                               >
                                 <div className="flex items-center gap-2">
                                   <Icon className={`w-4 h-4 ${config.color}`} />
-                                  <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
+                                  <span className={`text-sm font-medium ${config.color}`}>{t(config.labelKey)}</span>
                                   <span className="text-xs text-gray-500">({categoryDispositions.length})</span>
                                 </div>
                                 <ChevronDown
@@ -496,7 +499,7 @@ export const ACWPanel = ({
                                         </div>
                                         {disp.requiresFollowup && (
                                           <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                                            Follow-up
+                                            {t('agentDesktop.followUp')}
                                           </span>
                                         )}
                                         {selectedDisposition?.id === disp.id && (
@@ -521,14 +524,14 @@ export const ACWPanel = ({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    Call Notes <span className="text-red-500">*</span>
+                    {t('agentDesktop.callNotes')} <span className="text-red-500">*</span>
                   </div>
                 </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={4}
-                  placeholder="Summarize the call and any actions taken..."
+                  placeholder={t('agentDesktop.summarizeCall')}
                   className={`w-full px-4 py-3 border rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                     notes.trim()
                       ? 'border-gray-300 dark:border-gray-600'
@@ -536,7 +539,7 @@ export const ACWPanel = ({
                   }`}
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {notes.length} characters
+                  {notes.length} {t('agentDesktop.characters')}
                 </p>
               </div>
 
@@ -545,7 +548,7 @@ export const ACWPanel = ({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <div className="flex items-center gap-2">
                     <Tag className="w-4 h-4" />
-                    Tags <span className="text-gray-400 text-xs font-normal">(optional, max 5)</span>
+                    {t('agentDesktop.tags')} <span className="text-gray-400 text-xs font-normal">({t('agentDesktop.tagsMax')})</span>
                   </div>
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -577,7 +580,7 @@ export const ACWPanel = ({
                           handleAddTag();
                         }
                       }}
-                      placeholder="Add a tag..."
+                      placeholder={t('agentDesktop.addTag')}
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                     <Button
@@ -587,7 +590,7 @@ export const ACWPanel = ({
                       onClick={handleAddTag}
                       disabled={!tagInput.trim()}
                     >
-                      Add
+                      {t('agentDesktop.add')}
                     </Button>
                   </div>
                 )}
@@ -610,11 +613,11 @@ export const ACWPanel = ({
                   <div className="flex items-center gap-2">
                     <CalendarClock className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Follow-up Required
+                      {t('agentDesktop.followUpRequired')}
                     </span>
                     {selectedDisposition?.requiresFollowup && (
                       <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                        Recommended
+                        {t('agentDesktop.recommended')}
                       </span>
                     )}
                   </div>
@@ -631,7 +634,7 @@ export const ACWPanel = ({
                     >
                       <div className="pl-8">
                         <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          Follow-up Date <span className="text-red-500">*</span>
+                          {t('agentDesktop.followUpDate')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="date"
@@ -655,7 +658,7 @@ export const ACWPanel = ({
                 >
                   <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                   <span className="text-sm text-amber-700 dark:text-amber-400">
-                    Please select sentiment, disposition, and add notes to complete ACW
+                    {t('agentDesktop.acwValidation')}
                   </span>
                 </motion.div>
               )}
@@ -671,7 +674,7 @@ export const ACWPanel = ({
                     className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-700"
                   >
                     <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Complete ACW
+                    {t('agentDesktop.completeAcw')}
                   </Button>
                 </motion.div>
 
@@ -682,9 +685,9 @@ export const ACWPanel = ({
                       variant="secondary"
                       size="lg"
                       className="px-6"
-                      title="Skip ACW and return to available"
+                      title={t('agentDesktop.skipAcwTooltip')}
                     >
-                      Skip
+                      {t('agentDesktop.skip')}
                     </Button>
                   </motion.div>
                 )}

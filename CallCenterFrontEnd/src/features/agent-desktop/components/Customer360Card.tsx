@@ -28,6 +28,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Badge, Avatar } from '../../../components/ui';
 import apiClient from '../../../api/client';
 import { initiateOutboundCall } from '../../../api/callApi';
@@ -121,23 +122,6 @@ const formatDuration = (seconds: number | null): string => {
   return `${mins}m ${secs}s`;
 };
 
-// Format date to relative time
-const formatRelativeTime = (dateStr: string | null): string => {
-  if (!dateStr) return 'Never';
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-};
-
 // Copy to clipboard helper
 const copyToClipboard = async (text: string) => {
   try {
@@ -175,11 +159,29 @@ export const Customer360Card = ({
   defaultExpanded = true,
   onViewCustomer,
 }: Customer360CardProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
   const [interactionFilter, setInteractionFilter] = useState<InteractionType>('all');
   const [showAllHistory, setShowAllHistory] = useState(false);
+
+  // Format date to relative time
+  const formatRelativeTime = (dateStr: string | null): string => {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return t('agentDesktop.justNow');
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   // Fetch customer stats from API
   const { data: stats, isLoading: statsLoading } = useQuery<CustomerStats>({
@@ -307,22 +309,22 @@ export const Customer360Card = ({
       'Sms': { name: 'SMS', icon: MessageCircle },
       4: { name: 'SMS', icon: MessageCircle },
     };
-    return channelMap[channel] || { name: 'Unknown', icon: MessageSquare };
+    return channelMap[channel] || { name: t('agentDesktop.unknown'), icon: MessageSquare };
   };
 
   // Helper to get conversation state display
   const getStateDisplay = (state: string | number): { label: string; color: string } => {
     const stateMap: Record<string | number, { label: string; color: string }> = {
-      'Waiting': { label: 'Waiting', color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30' },
-      0: { label: 'Waiting', color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30' },
-      'Active': { label: 'Active', color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
-      1: { label: 'Active', color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
-      'WrapUp': { label: 'Wrap Up', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
-      2: { label: 'Wrap Up', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
-      'Closed': { label: 'Closed', color: 'text-gray-600 bg-gray-100 dark:bg-gray-900/30' },
-      3: { label: 'Closed', color: 'text-gray-600 bg-gray-100 dark:bg-gray-900/30' },
-      'Abandoned': { label: 'Abandoned', color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
-      4: { label: 'Abandoned', color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
+      'Waiting': { label: t('agentDesktop.waiting'), color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30' },
+      0: { label: t('agentDesktop.waiting'), color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30' },
+      'Active': { label: t('agentDesktop.active'), color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
+      1: { label: t('agentDesktop.active'), color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
+      'WrapUp': { label: t('agentDesktop.wrapUp'), color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
+      2: { label: t('agentDesktop.wrapUp'), color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
+      'Closed': { label: t('agentDesktop.closed'), color: 'text-gray-600 bg-gray-100 dark:bg-gray-900/30' },
+      3: { label: t('agentDesktop.closed'), color: 'text-gray-600 bg-gray-100 dark:bg-gray-900/30' },
+      'Abandoned': { label: t('agentDesktop.abandoned'), color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
+      4: { label: t('agentDesktop.abandoned'), color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
     };
     return stateMap[state] || { label: String(state), color: 'text-gray-600 bg-gray-100' };
   };
@@ -369,7 +371,7 @@ export const Customer360Card = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <User className="w-5 h-5 text-gray-500" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Customer 360</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.customer360')}</h3>
           </div>
           <div className="flex items-center gap-2">
             {customerId && onViewCustomer && (
@@ -414,8 +416,7 @@ export const Customer360Card = ({
               ) : !customer && !callerNumber ? (
                 <div className="text-center py-8 text-gray-500">
                   <User className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No customer data available</p>
-                  <p className="text-sm mt-1">Customer info will appear during a call</p>
+                  <p>{t('agentDesktop.noCustomerData')}</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -436,12 +437,12 @@ export const Customer360Card = ({
                       </div>
                       {customer?.status && (
                         <p className="text-sm text-gray-500 mt-1">
-                          Status: <span className={customer.status === 'Active' ? 'text-green-600' : 'text-gray-600'}>{customer.status}</span>
+                          {t('agentDesktop.status')} <span className={customer.status === 'Active' ? 'text-green-600' : 'text-gray-600'}>{customer.status}</span>
                         </p>
                       )}
                       {customer?.preferredLanguage && (
                         <p className="text-sm text-gray-500">
-                          Language: {customer.preferredLanguage}
+                          {t('agentDesktop.language')} {customer.preferredLanguage}
                         </p>
                       )}
                     </div>
@@ -465,7 +466,7 @@ export const Customer360Card = ({
                               }}
                               disabled={initiateOutboundMutation.isPending}
                               className="p-1.5 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Call customer"
+                              title={t('agentDesktop.callCustomer')}
                             >
                               {initiateOutboundMutation.isPending ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -519,7 +520,7 @@ export const Customer360Card = ({
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-500">
-                          Customer since {new Date(customer.createdAt).toLocaleDateString()}
+                          {t('agentDesktop.customerSince')} {new Date(customer.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     )}
@@ -530,7 +531,7 @@ export const Customer360Card = ({
                     <div>
                       <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4" />
-                        Statistics
+                        {t('agentDesktop.statistics')}
                       </h5>
                       {statsLoading ? (
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -550,7 +551,7 @@ export const Customer360Card = ({
                                 {stats?.totalCalls || 0}
                               </p>
                             </div>
-                            <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">Total Calls</p>
+                            <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">{t('agentDesktop.totalCalls')}</p>
                           </div>
                           <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-100 dark:border-purple-800">
                             <div className="flex items-center gap-2">
@@ -559,7 +560,7 @@ export const Customer360Card = ({
                                 {stats?.totalTickets || 0}
                               </p>
                             </div>
-                            <p className="text-xs text-purple-600/70 dark:text-purple-400/70 mt-1">Total Tickets</p>
+                            <p className="text-xs text-purple-600/70 dark:text-purple-400/70 mt-1">{t('agentDesktop.totalTickets')}</p>
                           </div>
                           <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-100 dark:border-orange-800">
                             <div className="flex items-center gap-2">
@@ -568,7 +569,7 @@ export const Customer360Card = ({
                                 {stats?.openTickets || 0}
                               </p>
                             </div>
-                            <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">Open Tickets</p>
+                            <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">{t('agentDesktop.openTickets')}</p>
                           </div>
                           <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">
                             <div className="flex items-center gap-2">
@@ -577,7 +578,7 @@ export const Customer360Card = ({
                                 {formatDuration(stats?.avgCallDurationSeconds || null)}
                               </p>
                             </div>
-                            <p className="text-xs text-green-600/70 dark:text-green-400/70 mt-1">Avg Call</p>
+                            <p className="text-xs text-green-600/70 dark:text-green-400/70 mt-1">{t('agentDesktop.avgCall')}</p>
                           </div>
                         </div>
                       )}
@@ -588,19 +589,19 @@ export const Customer360Card = ({
                           <p className="text-lg font-semibold text-gray-900 dark:text-white">
                             {stats?.totalConversations || 0}
                           </p>
-                          <p className="text-xs text-gray-500">Conversations</p>
+                          <p className="text-xs text-gray-500">{t('agentDesktop.conversationsLabel')}</p>
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg text-center">
                           <p className="text-lg font-semibold text-gray-900 dark:text-white">
                             {stats?.totalMessages || 0}
                           </p>
-                          <p className="text-xs text-gray-500">Messages</p>
+                          <p className="text-xs text-gray-500">{t('agentDesktop.messages')}</p>
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg text-center">
                           <p className="text-lg font-semibold text-gray-900 dark:text-white">
                             {formatRelativeTime(stats?.lastInteractionDate || null)}
                           </p>
-                          <p className="text-xs text-gray-500">Last Contact</p>
+                          <p className="text-xs text-gray-500">{t('agentDesktop.lastContact')}</p>
                         </div>
                       </div>
                     </div>
@@ -619,7 +620,7 @@ export const Customer360Card = ({
                           }`}
                         >
                           <TrendingUp className="w-4 h-4 inline mr-1" />
-                          Overview
+                          {t('agentDesktop.overview')}
                         </button>
                         <button
                           onClick={() => setActiveTab('history')}
@@ -630,7 +631,7 @@ export const Customer360Card = ({
                           }`}
                         >
                           <History className="w-4 h-4 inline mr-1" />
-                          History
+                          {t('agentDesktop.history')}
                           {allInteractions.length > 0 && (
                             <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-600 rounded-full">
                               {allInteractions.length}
@@ -644,7 +645,7 @@ export const Customer360Card = ({
                         <div>
                           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                             <MessageSquare className="w-4 h-4" />
-                            Recent Interactions
+                            {t('agentDesktop.recentInteractions')}
                           </h5>
                           <div className="space-y-2 max-h-40 overflow-y-auto">
                             {recentInteractions.slice(0, 5).map((interaction) => (
@@ -694,7 +695,7 @@ export const Customer360Card = ({
                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                                 }`}
                               >
-                                {filter === 'all' ? 'All' : filter === 'calls' ? 'Calls' : 'Tickets'}
+                                {filter === 'all' ? t('agentDesktop.all') : filter === 'calls' ? t('agentDesktop.calls') : t('agentDesktop.tickets')}
                               </button>
                             ))}
                           </div>
@@ -707,7 +708,7 @@ export const Customer360Card = ({
                               </div>
                             ) : displayedInteractions.length === 0 ? (
                               <div className="text-center py-4 text-gray-500 text-sm">
-                                No interactions found
+                                {t('agentDesktop.noInteractions')}
                               </div>
                             ) : (
                               <>
@@ -768,13 +769,13 @@ export const Customer360Card = ({
                                             {(item.data as DetailedConversation).agentName && (
                                               <div className="flex items-center gap-2">
                                                 <User className="w-3 h-3" />
-                                                <span>Agent: {(item.data as DetailedConversation).agentName}</span>
+                                                <span>{t('agentDesktop.agentLabel')} {(item.data as DetailedConversation).agentName}</span>
                                               </div>
                                             )}
                                             {(item.data as DetailedConversation).disposition && (
                                               <div className="flex items-center gap-2">
                                                 <CheckCircle2 className="w-3 h-3" />
-                                                <span>Disposition: {(item.data as DetailedConversation).disposition}</span>
+                                                <span>{t('agentDesktop.dispositionLabel')} {(item.data as DetailedConversation).disposition}</span>
                                               </div>
                                             )}
                                           </div>
@@ -825,7 +826,7 @@ export const Customer360Card = ({
                                     className="w-full py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-center gap-1"
                                   >
                                     <MoreHorizontal className="w-4 h-4" />
-                                    {showAllHistory ? 'Show Less' : `Show All (${filteredInteractions.length})`}
+                                    {showAllHistory ? t('agentDesktop.showLess') : `${t('agentDesktop.showAll')} (${filteredInteractions.length})`}
                                   </button>
                                 )}
                               </>
@@ -839,7 +840,7 @@ export const Customer360Card = ({
                   {/* Notes Section */}
                   {customer?.notes && (
                     <div>
-                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</h5>
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentDesktop.notes')}</h5>
                       <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                         {customer.notes}
                       </p>

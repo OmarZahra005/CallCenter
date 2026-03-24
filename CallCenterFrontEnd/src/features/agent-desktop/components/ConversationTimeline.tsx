@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -112,43 +113,40 @@ const getEventColor = (eventType: string) => {
   }
 };
 
-// Format timestamp for display
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  // If less than 1 minute ago
-  if (diffMins < 1) {
-    return 'Just now';
-  }
-
-  // If less than 1 hour ago
-  if (diffMins < 60) {
-    return `${diffMins}m ago`;
-  }
-
-  // If same day
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Otherwise show date and time
-  return date.toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
 export const ConversationTimeline = ({
   conversationId,
   isCollapsible = true,
   defaultExpanded = true,
 }: ConversationTimelineProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  // Format timestamp for display
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) {
+      return t('agentDesktop.justNow');
+    }
+
+    if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    }
+
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return date.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
   const queryClient = useQueryClient();
 
   // Fetch timeline events
@@ -204,9 +202,9 @@ export const ConversationTimeline = ({
       >
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-white">Timeline</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.timeline')}</h3>
           <Badge variant="default" size="sm">
-            {events.length} events
+            {events.length} {t('agentDesktop.events')}
           </Badge>
         </div>
         {isCollapsible && (
@@ -238,12 +236,12 @@ export const ConversationTimeline = ({
               ) : error ? (
                 <div className="text-center py-8 text-red-500">
                   <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                  <p>Failed to load timeline</p>
+                  <p>{t('agentDesktop.timelineFailed')}</p>
                 </div>
               ) : events.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No events yet</p>
+                  <p>{t('agentDesktop.noEvents')}</p>
                 </div>
               ) : (
                 <div className="relative">
@@ -283,13 +281,13 @@ export const ConversationTimeline = ({
                             </div>
                             {event.agentName && (
                               <p className="text-xs text-gray-500 mt-0.5">
-                                by {event.agentName}
+                                {t('agentDesktop.byAgent')} {event.agentName}
                               </p>
                             )}
                             {/* Show metadata if available */}
                             {event.metadata?.durationSeconds != null && (
                               <p className="text-xs text-gray-400 mt-0.5">
-                                Duration: {Math.floor(Number(event.metadata.durationSeconds) / 60)}m{' '}
+                                {t('agentDesktop.durationLabel')} {Math.floor(Number(event.metadata.durationSeconds) / 60)}m{' '}
                                 {Number(event.metadata.durationSeconds) % 60}s
                               </p>
                             )}

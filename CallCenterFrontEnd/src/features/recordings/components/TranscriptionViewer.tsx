@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -78,51 +79,11 @@ const formatTimestamp = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-// Get sentiment icon and color
-const getSentimentDisplay = (sentiment: string | null) => {
-  switch (sentiment?.toLowerCase()) {
-    case 'positive':
-      return {
-        icon: ThumbsUp,
-        color: 'text-green-600 dark:text-green-400',
-        bgColor: 'bg-green-100 dark:bg-green-900/30',
-        label: 'Positive',
-      };
-    case 'negative':
-      return {
-        icon: ThumbsDown,
-        color: 'text-red-600 dark:text-red-400',
-        bgColor: 'bg-red-100 dark:bg-red-900/30',
-        label: 'Negative',
-      };
-    default:
-      return {
-        icon: Minus,
-        color: 'text-gray-600 dark:text-gray-400',
-        bgColor: 'bg-gray-100 dark:bg-gray-700',
-        label: 'Neutral',
-      };
-  }
-};
-
-// Get status badge
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'Complete':
-      return { variant: 'success' as const, icon: CheckCircle, label: 'Complete' };
-    case 'Processing':
-      return { variant: 'warning' as const, icon: Loader2, label: 'Processing' };
-    case 'Failed':
-      return { variant: 'danger' as const, icon: XCircle, label: 'Failed' };
-    default:
-      return { variant: 'default' as const, icon: Clock, label: 'Pending' };
-  }
-};
-
 export const TranscriptionViewer = ({
   recordingId,
   onTimestampClick,
 }: TranscriptionViewerProps) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   // State
@@ -130,6 +91,62 @@ export const TranscriptionViewer = ({
   const [isExpanded, setIsExpanded] = useState(true);
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [copiedText, setCopiedText] = useState(false);
+
+  // Get sentiment icon and color
+  const getSentimentDisplay = (sentiment: string | null) => {
+    switch (sentiment?.toLowerCase()) {
+      case 'positive':
+        return {
+          icon: ThumbsUp,
+          color: 'text-green-600 dark:text-green-400',
+          bgColor: 'bg-green-100 dark:bg-green-900/30',
+          label: t('transcriptionViewer.sentimentPositive'),
+        };
+      case 'negative':
+        return {
+          icon: ThumbsDown,
+          color: 'text-red-600 dark:text-red-400',
+          bgColor: 'bg-red-100 dark:bg-red-900/30',
+          label: t('transcriptionViewer.sentimentNegative'),
+        };
+      default:
+        return {
+          icon: Minus,
+          color: 'text-gray-600 dark:text-gray-400',
+          bgColor: 'bg-gray-100 dark:bg-gray-700',
+          label: t('transcriptionViewer.sentimentNeutral'),
+        };
+    }
+  };
+
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Complete':
+        return { variant: 'success' as const, icon: CheckCircle, label: t('transcriptionViewer.statusComplete') };
+      case 'Processing':
+        return { variant: 'warning' as const, icon: Loader2, label: t('transcriptionViewer.statusProcessing') };
+      case 'Failed':
+        return { variant: 'danger' as const, icon: XCircle, label: t('transcriptionViewer.statusFailed') };
+      default:
+        return { variant: 'default' as const, icon: Clock, label: t('transcriptionViewer.statusPending') };
+    }
+  };
+
+  // Get speaker display info
+  const getSpeakerDisplay = (speaker: string | null) => {
+    const isAgent = speaker?.toLowerCase().includes('agent') || speaker === 'Speaker 1';
+    return {
+      icon: isAgent ? Mic : User,
+      label: speaker || t('transcriptionViewer.unknown'),
+      color: isAgent
+        ? 'text-indigo-600 dark:text-indigo-400'
+        : 'text-green-600 dark:text-green-400',
+      bgColor: isAgent
+        ? 'bg-indigo-100 dark:bg-indigo-900/30'
+        : 'bg-green-100 dark:bg-green-900/30',
+    };
+  };
 
   // Fetch transcription
   const {
@@ -214,21 +231,6 @@ export const TranscriptionViewer = ({
     return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">$1</mark>');
   };
 
-  // Get speaker display info
-  const getSpeakerDisplay = (speaker: string | null) => {
-    const isAgent = speaker?.toLowerCase().includes('agent') || speaker === 'Speaker 1';
-    return {
-      icon: isAgent ? Mic : User,
-      label: speaker || 'Unknown',
-      color: isAgent
-        ? 'text-indigo-600 dark:text-indigo-400'
-        : 'text-green-600 dark:text-green-400',
-      bgColor: isAgent
-        ? 'bg-indigo-100 dark:bg-indigo-900/30'
-        : 'bg-green-100 dark:bg-green-900/30',
-    };
-  };
-
   const sentimentDisplay = getSentimentDisplay(transcription?.sentiment ?? null);
   const statusBadge = getStatusBadge(transcription?.status || 'Pending');
   const StatusIcon = statusBadge.icon;
@@ -242,7 +244,7 @@ export const TranscriptionViewer = ({
           className="flex items-center gap-2 text-gray-900 dark:text-white font-medium"
         >
           <FileText className="w-5 h-5 text-purple-600" />
-          Transcription
+          {t('transcriptionViewer.title')}
           {isExpanded ? (
             <ChevronUp className="w-4 h-4 text-gray-400" />
           ) : (
@@ -251,7 +253,7 @@ export const TranscriptionViewer = ({
         </button>
         {transcription && (
           <Badge variant={statusBadge.variant} size="sm">
-            <StatusIcon className={`w-3 h-3 mr-1 ${statusBadge.variant === 'warning' ? 'animate-spin' : ''}`} />
+            <StatusIcon className={`w-3 h-3 me-1 ${statusBadge.variant === 'warning' ? 'animate-spin' : ''}`} />
             {statusBadge.label}
           </Badge>
         )}
@@ -270,7 +272,7 @@ export const TranscriptionViewer = ({
             {isLoading && (
               <div className="flex items-center justify-center gap-2 p-8 text-gray-500">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Loading transcription...</span>
+                <span>{t('transcriptionViewer.loading')}</span>
               </div>
             )}
 
@@ -279,10 +281,10 @@ export const TranscriptionViewer = ({
               <div className="text-center py-8 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <FileText className="w-10 h-10 mx-auto text-gray-400 mb-3" />
                 <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                  No Transcription Available
+                  {t('transcriptionViewer.noTranscription')}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  This recording hasn't been transcribed yet
+                  {t('transcriptionViewer.notTranscribedYet')}
                 </p>
                 <Button
                   variant="primary"
@@ -292,13 +294,13 @@ export const TranscriptionViewer = ({
                 >
                   {requestTranscription.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Requesting...
+                      <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                      {t('transcriptionViewer.requesting')}
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Request Transcription
+                      <Sparkles className="w-4 h-4 me-2" />
+                      {t('transcriptionViewer.requestTranscription')}
                     </>
                   )}
                 </Button>
@@ -310,10 +312,10 @@ export const TranscriptionViewer = ({
               <div className="text-center py-8 px-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                 <Loader2 className="w-10 h-10 mx-auto text-yellow-500 animate-spin mb-3" />
                 <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Transcription in Progress
+                  {t('transcriptionViewer.inProgress')}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  This may take a few minutes. The page will update automatically.
+                  {t('transcriptionViewer.inProgressDesc')}
                 </p>
               </div>
             )}
@@ -323,10 +325,10 @@ export const TranscriptionViewer = ({
               <div className="text-center py-8 px-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <XCircle className="w-10 h-10 mx-auto text-red-500 mb-3" />
                 <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Transcription Failed
+                  {t('transcriptionViewer.failed')}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  There was an error processing this recording
+                  {t('transcriptionViewer.failedDesc')}
                 </p>
                 <Button
                   variant="outline"
@@ -334,8 +336,8 @@ export const TranscriptionViewer = ({
                   onClick={() => requestTranscription.mutate()}
                   disabled={requestTranscription.isPending}
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Retry
+                  <RefreshCw className="w-4 h-4 me-2" />
+                  {t('transcriptionViewer.retry')}
                 </Button>
               </div>
             )}
@@ -352,7 +354,7 @@ export const TranscriptionViewer = ({
                     >
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-purple-600" />
-                        <span className="font-medium text-gray-900 dark:text-white">AI Analysis</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{t('transcriptionViewer.aiAnalysis')}</span>
                       </div>
                       {showAnalysis ? (
                         <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -376,21 +378,21 @@ export const TranscriptionViewer = ({
                                 <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${sentimentDisplay.bgColor}`}>
                                   <sentimentDisplay.icon className={`w-4 h-4 ${sentimentDisplay.color}`} />
                                   <span className={`text-sm font-medium ${sentimentDisplay.color}`}>
-                                    {sentimentDisplay.label} Sentiment
+                                    {t('transcriptionViewer.sentiment', { label: sentimentDisplay.label })}
                                   </span>
                                 </div>
                               )}
                               {transcription.confidence && (
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
                                   <span className="text-sm text-blue-700 dark:text-blue-400">
-                                    {Math.round(transcription.confidence * 100)}% Confidence
+                                    {t('transcriptionViewer.confidence', { value: Math.round(transcription.confidence * 100) })}
                                   </span>
                                 </div>
                               )}
                               {transcription.wordCount > 0 && (
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
                                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                                    {transcription.wordCount} words
+                                    {t('transcriptionViewer.words', { count: transcription.wordCount })}
                                   </span>
                                 </div>
                               )}
@@ -401,7 +403,7 @@ export const TranscriptionViewer = ({
                               <div>
                                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                                   <MessageSquare className="w-4 h-4" />
-                                  Summary
+                                  {t('transcriptionViewer.summary')}
                                 </h5>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg p-3">
                                   {transcription.summary}
@@ -414,7 +416,7 @@ export const TranscriptionViewer = ({
                               <div>
                                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                                   <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                                  Detected Issues
+                                  {t('transcriptionViewer.detectedIssues')}
                                 </h5>
                                 <ul className="space-y-1">
                                   {detectedIssues.map((issue: string, index: number) => (
@@ -435,7 +437,7 @@ export const TranscriptionViewer = ({
                               <div>
                                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                                   <ListChecks className="w-4 h-4 text-green-500" />
-                                  Action Items
+                                  {t('transcriptionViewer.actionItems')}
                                 </h5>
                                 <ul className="space-y-1">
                                   {actionItems.map((item: string, index: number) => (
@@ -460,13 +462,13 @@ export const TranscriptionViewer = ({
                 {/* Search & Actions */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Search in transcription..."
+                      placeholder={t('transcriptionViewer.searchPlaceholder')}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full ps-9 pe-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
                   <Button
@@ -477,13 +479,13 @@ export const TranscriptionViewer = ({
                   >
                     {copiedText ? (
                       <>
-                        <Check className="w-4 h-4 mr-1 text-green-500" />
-                        Copied
+                        <Check className="w-4 h-4 me-1 text-green-500" />
+                        {t('transcriptionViewer.copied')}
                       </>
                     ) : (
                       <>
-                        <Copy className="w-4 h-4 mr-1" />
-                        Copy
+                        <Copy className="w-4 h-4 me-1" />
+                        {t('transcriptionViewer.copy')}
                       </>
                     )}
                   </Button>
@@ -492,12 +494,14 @@ export const TranscriptionViewer = ({
                 {/* Search results count */}
                 {searchTerm && (
                   <p className="text-sm text-gray-500">
-                    Found {filteredSegments.length} segment{filteredSegments.length !== 1 ? 's' : ''} matching "{searchTerm}"
+                    {filteredSegments.length === 1
+                      ? t('transcriptionViewer.foundSegments', { count: filteredSegments.length, term: searchTerm })
+                      : t('transcriptionViewer.foundSegmentsPlural', { count: filteredSegments.length, term: searchTerm })}
                   </p>
                 )}
 
                 {/* Transcription Segments */}
-                <div className="max-h-96 overflow-y-auto space-y-2 pr-2">
+                <div className="max-h-96 overflow-y-auto space-y-2 pe-2">
                   {filteredSegments.length > 0 ? (
                     filteredSegments.map((segment, index) => {
                       const speakerDisplay = getSpeakerDisplay(segment.speaker);
@@ -538,7 +542,7 @@ export const TranscriptionViewer = ({
                             {segment.confidence && segment.confidence < 0.7 && (
                               <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 inline-flex items-center gap-1">
                                 <AlertCircle className="w-3 h-3" />
-                                Low confidence ({Math.round(segment.confidence * 100)}%)
+                                {t('transcriptionViewer.lowConfidence', { value: Math.round(segment.confidence * 100) })}
                               </span>
                             )}
                           </div>
@@ -552,7 +556,7 @@ export const TranscriptionViewer = ({
                     </div>
                   ) : (
                     <div className="text-center py-4 text-gray-500">
-                      No transcript content available
+                      {t('transcriptionViewer.noContent')}
                     </div>
                   )}
                 </div>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge } from '../../../components/ui';
 import apiClient from '../../../api/client';
+import { useTranslation } from 'react-i18next';
 
 // Types
 interface FormCriteria {
@@ -59,6 +60,8 @@ interface CriteriaInput {
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
+  const { t } = useTranslation();
+
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -149,31 +152,31 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Form name is required';
+      newErrors.name = t('formBuilder.formNameRequired');
     }
 
     if (criteria.length === 0) {
-      newErrors.criteria = 'At least one criterion is required';
+      newErrors.criteria = t('formBuilder.atLeastOneCriterion');
     }
 
     criteria.forEach((c, index) => {
       if (!c.criteriaName.trim()) {
-        newErrors[`criteria_${index}_name`] = 'Criterion name is required';
+        newErrors[`criteria_${index}_name`] = t('formBuilder.criterionRequired');
       }
       if (c.maxPoints < 1) {
-        newErrors[`criteria_${index}_points`] = 'Max points must be at least 1';
+        newErrors[`criteria_${index}_points`] = t('formBuilder.maxPointsError');
       }
       if (c.weight < 0) {
-        newErrors[`criteria_${index}_weight`] = 'Weight cannot be negative';
+        newErrors[`criteria_${index}_weight`] = t('formBuilder.weightError');
       }
     });
 
     if (Math.abs(totalWeight - 100) > 0.1 && criteria.length > 0) {
-      newErrors.totalWeight = 'Total weight should equal 100%';
+      newErrors.totalWeight = t('formBuilder.totalWeightError');
     }
 
     if (passingScore < 0 || passingScore > 100) {
-      newErrors.passingScore = 'Passing score must be between 0 and 100';
+      newErrors.passingScore = t('formBuilder.passingScoreError');
     }
 
     setErrors(newErrors);
@@ -269,13 +272,13 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Form Name <span className="text-red-500">*</span>
+            {t('formBuilder.formName')} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Customer Service Evaluation"
+            placeholder={t('formBuilder.formNamePlaceholder')}
             className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
               errors.name
                 ? 'border-red-500'
@@ -289,12 +292,12 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Description
+            {t('formBuilder.description')}
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the purpose of this evaluation form..."
+            placeholder={t('formBuilder.descriptionPlaceholder')}
             rows={2}
             className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
@@ -303,7 +306,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Passing Score (%)
+              {t('formBuilder.passingScore')}
             </label>
             <input
               type="number"
@@ -323,7 +326,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Status
+              {t('formBuilder.status')}
             </label>
             <button
               type="button"
@@ -334,7 +337,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                   : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
               }`}
             >
-              <span>{isActive ? 'Active' : 'Inactive'}</span>
+              <span>{isActive ? t('formBuilder.active') : t('formBuilder.inactive')}</span>
               <CheckCircle
                 className={`w-5 h-5 ${isActive ? 'text-green-500' : 'text-gray-400'}`}
               />
@@ -348,10 +351,10 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">
-              Evaluation Criteria
+              {t('formBuilder.evaluationCriteria')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Drag to reorder. Total weight should equal 100%.
+              {t('formBuilder.dragToReorder')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -361,11 +364,11 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
               onClick={distributeWeightsEvenly}
               title="Distribute weights evenly"
             >
-              Auto-distribute
+              {t('formBuilder.autoDistribute')}
             </Button>
             <Button variant="outline" size="sm" onClick={addCriterion}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add Criterion
+              <Plus className="w-4 h-4 me-1" />
+              {t('formBuilder.addCriterion')}
             </Button>
           </div>
         </div>
@@ -373,7 +376,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
         {/* Weight indicator */}
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-600 dark:text-gray-400">Total Weight</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('formBuilder.totalWeight')}</span>
             <span
               className={`font-medium ${
                 Math.abs(totalWeight - 100) < 0.1
@@ -443,7 +446,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                             criteriaName: e.target.value,
                           })
                         }
-                        placeholder="Criterion name"
+                        placeholder={t('formBuilder.criterionPlaceholder')}
                         className={`w-full px-3 py-1.5 text-sm border rounded bg-transparent focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                           errors[`criteria_${index}_name`]
                             ? 'border-red-500'
@@ -456,13 +459,13 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {criterion.isCritical && (
                         <Badge variant="danger" size="sm">
-                          Critical
+                          {t('formBuilder.criticalLabel')}
                         </Badge>
                       )}
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400 w-12 text-right">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400 w-12 text-end">
                         {criterion.weight}%
                       </span>
-                      <span className="text-sm text-gray-500 w-10 text-right">
+                      <span className="text-sm text-gray-500 w-10 text-end">
                         {criterion.maxPoints}pts
                       </span>
                       <button
@@ -498,7 +501,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                           {/* Description */}
                           <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                              Description / Instructions
+                              {t('formBuilder.descriptionLabel')}
                             </label>
                             <textarea
                               value={criterion.description}
@@ -507,7 +510,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                                   description: e.target.value,
                                 })
                               }
-                              placeholder="Describe what evaluators should look for..."
+                              placeholder={t('formBuilder.descriptionInstructions')}
                               rows={2}
                               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             />
@@ -517,7 +520,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                           <div className="grid grid-cols-3 gap-3">
                             <div>
                               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                Max Points
+                                {t('formBuilder.maxPoints')}
                               </label>
                               <input
                                 type="number"
@@ -538,7 +541,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                Weight (%)
+                                {t('formBuilder.weightLabel')}
                               </label>
                               <input
                                 type="number"
@@ -559,7 +562,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                Critical
+                                {t('formBuilder.criticalLabel')}
                               </label>
                               <button
                                 type="button"
@@ -579,7 +582,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                                     criterion.isCritical ? 'text-red-500' : ''
                                   }`}
                                 />
-                                {criterion.isCritical ? 'Yes' : 'No'}
+                                {criterion.isCritical ? t('formBuilder.yes') : t('formBuilder.no')}
                               </button>
                             </div>
                           </div>
@@ -589,8 +592,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
                             <div className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-700 dark:text-red-400">
                               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                               <span>
-                                Critical criteria can cause automatic failure if scored below
-                                threshold.
+                                {t('formBuilder.criticalInfo')}
                               </span>
                             </div>
                           )}
@@ -606,10 +608,10 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
 
         {criteria.length === 0 && (
           <div className="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-            <p className="text-gray-500 dark:text-gray-400 mb-3">No criteria added yet</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-3">{t('formBuilder.noCriteria')}</p>
             <Button variant="outline" size="sm" onClick={addCriterion}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add First Criterion
+              <Plus className="w-4 h-4 me-1" />
+              {t('formBuilder.addFirstCriterion')}
             </Button>
           </div>
         )}
@@ -617,18 +619,18 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
 
       {/* Summary */}
       <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-        <h4 className="font-medium text-gray-900 dark:text-white mb-3">Form Summary</h4>
+        <h4 className="font-medium text-gray-900 dark:text-white mb-3">{t('formBuilder.formSummary')}</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div>
-            <p className="text-gray-500 dark:text-gray-400">Total Criteria</p>
+            <p className="text-gray-500 dark:text-gray-400">{t('formBuilder.totalCriteriaLabel')}</p>
             <p className="font-semibold text-gray-900 dark:text-white">{criteria.length}</p>
           </div>
           <div>
-            <p className="text-gray-500 dark:text-gray-400">Max Points</p>
+            <p className="text-gray-500 dark:text-gray-400">{t('formBuilder.maxPointsLabel')}</p>
             <p className="font-semibold text-gray-900 dark:text-white">{totalMaxPoints}</p>
           </div>
           <div>
-            <p className="text-gray-500 dark:text-gray-400">Total Weight</p>
+            <p className="text-gray-500 dark:text-gray-400">{t('formBuilder.totalWeightLabel')}</p>
             <p
               className={`font-semibold ${
                 Math.abs(totalWeight - 100) < 0.1 ? 'text-green-600' : 'text-yellow-600'
@@ -638,7 +640,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
             </p>
           </div>
           <div>
-            <p className="text-gray-500 dark:text-gray-400">Critical Items</p>
+            <p className="text-gray-500 dark:text-gray-400">{t('formBuilder.criticalItems')}</p>
             <p className="font-semibold text-red-600">{criticalCount}</p>
           </div>
         </div>
@@ -647,18 +649,18 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
         <Button variant="outline" onClick={onCancel}>
-          Cancel
+          {t('formBuilder.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              <Loader2 className="w-4 h-4 me-2 animate-spin" />
+              {t('formBuilder.saving')}
             </>
           ) : (
             <>
-              <Save className="w-4 h-4 mr-2" />
-              {form ? 'Update Form' : 'Create Form'}
+              <Save className="w-4 h-4 me-2" />
+              {form ? t('formBuilder.updateForm') : t('formBuilder.createForm')}
             </>
           )}
         </Button>
@@ -667,7 +669,7 @@ export const FormBuilder = ({ form, onSave, onCancel }: FormBuilderProps) => {
       {/* Error display */}
       {saveMutation.isError && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-          Failed to save form. Please try again.
+          {t('formBuilder.saveFailed')}
         </div>
       )}
     </div>

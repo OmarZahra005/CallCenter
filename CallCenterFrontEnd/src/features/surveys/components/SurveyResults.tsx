@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -51,6 +52,7 @@ export const SurveyResults = ({
   surveyType,
   onClose,
 }: SurveyResultsProps) => {
+  const { t, i18n } = useTranslation();
   const [timeRange, setTimeRange] = useState<'7' | '14' | '30' | 'all'>('30');
   const [selectedAgent, setSelectedAgent] = useState<string>('all');
 
@@ -162,16 +164,16 @@ export const SurveyResults = ({
   const scoreDistribution = useMemo(() => {
     const distribution = surveyType === 'NPS'
       ? [
-          { label: 'Promoters (9-10)', min: 9, max: 10, count: 0, color: 'bg-green-500' },
-          { label: 'Passives (7-8)', min: 7, max: 8, count: 0, color: 'bg-yellow-500' },
-          { label: 'Detractors (0-6)', min: 0, max: 6, count: 0, color: 'bg-red-500' },
+          { label: t('surveyPage.promoters'), min: 9, max: 10, count: 0, color: 'bg-green-500' },
+          { label: t('surveyPage.passives'), min: 7, max: 8, count: 0, color: 'bg-yellow-500' },
+          { label: t('surveyPage.detractors'), min: 0, max: 6, count: 0, color: 'bg-red-500' },
         ]
       : [
-          { label: '5 Stars', value: 5, count: 0, color: 'bg-green-500' },
-          { label: '4 Stars', value: 4, count: 0, color: 'bg-green-400' },
-          { label: '3 Stars', value: 3, count: 0, color: 'bg-yellow-500' },
-          { label: '2 Stars', value: 2, count: 0, color: 'bg-orange-500' },
-          { label: '1 Star', value: 1, count: 0, color: 'bg-red-500' },
+          { label: t('surveyPage.fiveStars'), value: 5, count: 0, color: 'bg-green-500' },
+          { label: t('surveyPage.fourStars'), value: 4, count: 0, color: 'bg-green-400' },
+          { label: t('surveyPage.threeStars'), value: 3, count: 0, color: 'bg-yellow-500' },
+          { label: t('surveyPage.twoStars'), value: 2, count: 0, color: 'bg-orange-500' },
+          { label: t('surveyPage.oneStar'), value: 1, count: 0, color: 'bg-red-500' },
         ];
 
     filteredResponses.forEach((r) => {
@@ -238,17 +240,17 @@ export const SurveyResults = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">{surveyName}</h2>
-          <p className="text-sm text-gray-500">Survey Results</p>
+          <p className="text-sm text-gray-500">{t('surveyPage.surveyResults')}</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t('surveyPage.export')}
           </Button>
           <button
             onClick={onClose}
@@ -273,7 +275,7 @@ export const SurveyResults = ({
                   : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              {range === 'all' ? 'All Time' : `${range} Days`}
+              {range === 'all' ? t('surveyPage.allTime') : t('surveyPage.days', { count: Number(range) })}
             </button>
           ))}
         </div>
@@ -284,7 +286,7 @@ export const SurveyResults = ({
           onChange={(e) => setSelectedAgent(e.target.value)}
           className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
         >
-          <option value="all">All Agents</option>
+          <option value="all">{t('surveyPage.allAgents')}</option>
           {agents.map((agent) => (
             <option key={agent.id} value={agent.id}>
               {agent.name}
@@ -298,7 +300,7 @@ export const SurveyResults = ({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Responses</p>
+              <p className="text-sm text-gray-500">{t('surveyPage.totalResponses')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stats.totalResponses}
               </p>
@@ -310,7 +312,7 @@ export const SurveyResults = ({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Average Score</p>
+              <p className="text-sm text-gray-500">{t('surveyPage.averageScore')}</p>
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -335,7 +337,7 @@ export const SurveyResults = ({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Satisfaction Rate</p>
+              <p className="text-sm text-gray-500">{t('surveyPage.satisfactionRate')}</p>
               <p className="text-2xl font-bold text-green-600">
                 {stats.satisfactionRate.toFixed(0)}%
               </p>
@@ -348,7 +350,7 @@ export const SurveyResults = ({
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">NPS Score</p>
+                <p className="text-sm text-gray-500">{t('surveyPage.npsScoreLabel')}</p>
                 <p
                   className={`text-2xl font-bold ${
                     stats.npsScore >= 50
@@ -368,7 +370,7 @@ export const SurveyResults = ({
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Response Rate</p>
+                <p className="text-sm text-gray-500">{t('surveyPage.responseRate')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">68%</p>
               </div>
               <BarChart3 className="w-8 h-8 text-purple-500" />
@@ -383,7 +385,7 @@ export const SurveyResults = ({
         <Card className="p-4">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary-600" />
-            Score Distribution
+            {t('surveyPage.scoreDistribution')}
           </h3>
           <div className="space-y-3">
             {scoreDistribution.map((bucket) => (
@@ -412,7 +414,7 @@ export const SurveyResults = ({
         <Card className="p-4">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-primary-600" />
-            Agent Performance
+            {t('surveyPage.agentPerformance')}
           </h3>
           <div className="space-y-3">
             {agentPerformance.slice(0, 5).map((agent, index) => (
@@ -434,7 +436,7 @@ export const SurveyResults = ({
                     <p className="font-medium text-sm text-gray-900 dark:text-white">
                       {agent.name}
                     </p>
-                    <p className="text-xs text-gray-500">{agent.responseCount} responses</p>
+                    <p className="text-xs text-gray-500">{t('surveyPage.responsesCount', { count: agent.responseCount })}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -446,7 +448,7 @@ export const SurveyResults = ({
               </div>
             ))}
             {agentPerformance.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No agent data available</p>
+              <p className="text-sm text-gray-500 text-center py-4">{t('surveyPage.noAgentData')}</p>
             )}
           </div>
         </Card>
@@ -456,7 +458,7 @@ export const SurveyResults = ({
       <Card className="p-4">
         <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-primary-600" />
-          Recent Feedback
+          {t('surveyPage.recentFeedback')}
         </h3>
         <div className="space-y-3">
           {recentFeedback.map((feedback) => {
@@ -500,7 +502,7 @@ export const SurveyResults = ({
             );
           })}
           {recentFeedback.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-4">No feedback comments yet</p>
+            <p className="text-sm text-gray-500 text-center py-4">{t('surveyPage.noFeedbackComments')}</p>
           )}
         </div>
       </Card>

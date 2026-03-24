@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   Play,
@@ -40,6 +41,8 @@ export const RecordingPlayer = ({
   duration,
   onTimeUpdate,
 }: RecordingPlayerProps) => {
+  const { t } = useTranslation();
+
   // Audio element ref
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -84,7 +87,7 @@ export const RecordingPlayer = ({
       } catch (err) {
         console.error('Failed to fetch recording:', err);
         if (isMounted) {
-          setError('Failed to load recording');
+          setError(t('recordingPlayer.failedToLoad'));
           setIsLoading(false);
         }
       }
@@ -99,7 +102,7 @@ export const RecordingPlayer = ({
         URL.revokeObjectURL(blobUrl);
       }
     };
-  }, [recordingId]);
+  }, [recordingId, t]);
 
   // Generate simulated waveform data
   useEffect(() => {
@@ -182,7 +185,7 @@ export const RecordingPlayer = ({
   };
 
   const handleError = () => {
-    setError('Failed to load recording');
+    setError(t('recordingPlayer.failedToLoad'));
     setIsLoading(false);
   };
 
@@ -199,11 +202,11 @@ export const RecordingPlayer = ({
     } else {
       audioRef.current.play().catch((err) => {
         console.error('Playback error:', err);
-        setError('Unable to play recording');
+        setError(t('recordingPlayer.unableToPlay'));
       });
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying]);
+  }, [isPlaying, t]);
 
   const handleSeek = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -355,7 +358,7 @@ export const RecordingPlayer = ({
       {isLoading && !error && (
         <div className="flex items-center justify-center gap-2 p-4 text-gray-500">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading recording...</span>
+          <span>{t('recordingPlayer.loading')}</span>
         </div>
       )}
 
@@ -368,7 +371,7 @@ export const RecordingPlayer = ({
         >
           {/* Channel selector */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Channel:</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('recordingPlayer.channel')}</span>
             <div className="flex gap-1">
               <button
                 onClick={() => setAudioChannel('both')}
@@ -379,7 +382,7 @@ export const RecordingPlayer = ({
                 }`}
               >
                 <Headphones className="w-4 h-4" />
-                Both
+                {t('recordingPlayer.both')}
               </button>
               <button
                 onClick={() => setAudioChannel('agent')}
@@ -390,7 +393,7 @@ export const RecordingPlayer = ({
                 }`}
               >
                 <Mic className="w-4 h-4" />
-                Agent
+                {t('recordingPlayer.agent')}
               </button>
               <button
                 onClick={() => setAudioChannel('customer')}
@@ -401,7 +404,7 @@ export const RecordingPlayer = ({
                 }`}
               >
                 <User className="w-4 h-4" />
-                Customer
+                {t('recordingPlayer.customer')}
               </button>
             </div>
           </div>
@@ -425,7 +428,6 @@ export const RecordingPlayer = ({
               className="absolute top-0 bottom-0 w-0.5 bg-primary-600 dark:bg-primary-400"
               style={{ left: `${progressPercentage}%` }}
             />
-            {/* Hover time tooltip would go here */}
           </div>
 
           {/* Time display */}
@@ -443,7 +445,7 @@ export const RecordingPlayer = ({
                 size="sm"
                 onClick={restart}
                 className="h-10 w-10 p-0"
-                title="Restart"
+                title={t('recordingPlayer.restart')}
               >
                 <RotateCcw className="w-5 h-5" />
               </Button>
@@ -452,7 +454,7 @@ export const RecordingPlayer = ({
                 size="sm"
                 onClick={skipBackward}
                 className="h-10 w-10 p-0"
-                title="Skip back 10s"
+                title={t('recordingPlayer.skipBack')}
               >
                 <SkipBack className="w-5 h-5" />
               </Button>
@@ -465,7 +467,7 @@ export const RecordingPlayer = ({
                 {isPlaying ? (
                   <Pause className="w-6 h-6" />
                 ) : (
-                  <Play className="w-6 h-6 ml-0.5" />
+                  <Play className="w-6 h-6 ms-0.5" />
                 )}
               </Button>
               <Button
@@ -473,7 +475,7 @@ export const RecordingPlayer = ({
                 size="sm"
                 onClick={skipForward}
                 className="h-10 w-10 p-0"
-                title="Skip forward 10s"
+                title={t('recordingPlayer.skipForward')}
               >
                 <SkipForward className="w-5 h-5" />
               </Button>
@@ -483,7 +485,7 @@ export const RecordingPlayer = ({
             <button
               onClick={cyclePlaybackSpeed}
               className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
-              title="Playback speed"
+              title={t('recordingPlayer.playbackSpeed')}
             >
               {playbackSpeed}x
             </button>
@@ -520,8 +522,8 @@ export const RecordingPlayer = ({
                 onClick={handleDownload}
                 className="hidden sm:flex"
               >
-                <Download className="w-4 h-4 mr-1" />
-                Download
+                <Download className="w-4 h-4 me-1" />
+                {t('recordingPlayer.download')}
               </Button>
             </div>
           </div>
@@ -529,16 +531,16 @@ export const RecordingPlayer = ({
           {/* Keyboard shortcuts hint */}
           <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
             <span>
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Space</kbd> Play/Pause
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Space</kbd> {t('recordingPlayer.kbPlayPause')}
             </span>
             <span>
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">←</kbd> -10s
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">&larr;</kbd> {t('recordingPlayer.kbBack')}
             </span>
             <span>
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">→</kbd> +10s
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">&rarr;</kbd> {t('recordingPlayer.kbForward')}
             </span>
             <span>
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">M</kbd> Mute
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">M</kbd> {t('recordingPlayer.kbMute')}
             </span>
           </div>
         </motion.div>

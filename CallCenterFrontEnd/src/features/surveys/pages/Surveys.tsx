@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -58,6 +59,7 @@ interface Survey {
 
 
 export const Surveys = () => {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'templates' | 'postCall'>('postCall');
   const [searchQuery, setSearchQuery] = useState('');
@@ -146,7 +148,7 @@ export const Surveys = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this survey?')) {
+    if (confirm(t('surveyPage.confirmDelete'))) {
       deleteMutation.mutate(id);
     }
     setActiveDropdown(null);
@@ -170,10 +172,10 @@ export const Surveys = () => {
 
   const getTriggerLabel = (trigger: SurveyTrigger) => {
     const labels: Record<SurveyTrigger, string> = {
-      afterCall: 'After Call',
-      afterChat: 'After Chat',
-      afterTicket: 'After Ticket',
-      manual: 'Manual',
+      afterCall: t('surveyPage.afterCall'),
+      afterChat: t('surveyPage.afterChat'),
+      afterTicket: t('surveyPage.afterTicket'),
+      manual: t('surveyPage.manual'),
     };
     return labels[trigger];
   };
@@ -184,22 +186,23 @@ export const Surveys = () => {
       initial="initial"
       animate="animate"
       className="space-y-5"
+      dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
     >
       {/* Header */}
       <motion.div variants={fadeUp}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Survey Management
+              {t('surveyPage.title')}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Create and manage customer satisfaction surveys
+              {t('surveyPage.subtitle')}
             </p>
           </div>
           {activeTab === 'templates' && (
             <Button onClick={() => setShowBuilder(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Create Survey
+              {t('surveyPage.createSurvey')}
             </Button>
           )}
         </div>
@@ -215,7 +218,7 @@ export const Surveys = () => {
             }`}
           >
             <Phone className="w-4 h-4" />
-            Post-Call Analytics
+            {t('surveyPage.postCallAnalytics')}
           </button>
           <button
             onClick={() => setActiveTab('templates')}
@@ -226,7 +229,7 @@ export const Surveys = () => {
             }`}
           >
             <FileText className="w-4 h-4" />
-            Survey Templates
+            {t('surveyPage.surveyTemplates')}
           </button>
         </div>
       </motion.div>
@@ -252,7 +255,7 @@ export const Surveys = () => {
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Surveys</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('surveyPage.totalSurveys')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
@@ -264,7 +267,7 @@ export const Surveys = () => {
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('surveyPage.active')}</p>
                 <p className="text-2xl font-bold text-green-600">{stats.active}</p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -276,7 +279,7 @@ export const Surveys = () => {
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Responses</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('surveyPage.totalResponses')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {stats.totalResponses}
                 </p>
@@ -290,7 +293,7 @@ export const Surveys = () => {
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Score</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('surveyPage.avgScore')}</p>
                 <div className="flex items-center gap-1">
                   <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.avgScore}</p>
@@ -313,7 +316,7 @@ export const Surveys = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search surveys..."
+                placeholder={t('surveyPage.searchSurveys')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
@@ -326,7 +329,7 @@ export const Surveys = () => {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             >
-              <option value="all">All Types</option>
+              <option value="all">{t('surveyPage.allTypes')}</option>
               <option value="CSAT">CSAT</option>
               <option value="NPS">NPS</option>
               <option value="Custom">Custom</option>
@@ -338,9 +341,9 @@ export const Surveys = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">{t('surveyPage.allStatus')}</option>
+              <option value="active">{t('surveyPage.active')}</option>
+              <option value="inactive">{t('surveyPage.inactive')}</option>
             </select>
           </div>
         </Card>
@@ -356,17 +359,17 @@ export const Surveys = () => {
           <Card className="p-12 text-center">
             <FileText className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No surveys found
+              {t('surveyPage.noSurveysFound')}
             </h3>
             <p className="text-gray-500 mb-4">
               {surveys.length === 0
-                ? "You haven't created any surveys yet."
-                : 'No surveys match your filters.'}
+                ? t('surveyPage.noSurveysCreated')
+                : t('surveyPage.noSurveysMatchFilter')}
             </p>
             {surveys.length === 0 && (
               <Button onClick={() => setShowBuilder(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Your First Survey
+                {t('surveyPage.createFirstSurvey')}
               </Button>
             )}
           </Card>
@@ -393,7 +396,7 @@ export const Surveys = () => {
                             variant={survey.isActive ? 'success' : 'default'}
                             size="sm"
                           >
-                            {survey.isActive ? 'Active' : 'Inactive'}
+                            {survey.isActive ? t('surveyPage.active') : t('surveyPage.inactive')}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
@@ -431,14 +434,14 @@ export const Surveys = () => {
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                                 >
                                   <Edit2 className="w-4 h-4" />
-                                  Edit
+                                  {t('surveyPage.edit')}
                                 </button>
                                 <button
                                   onClick={() => handleDuplicate(survey)}
                                   className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                                 >
                                   <Copy className="w-4 h-4" />
-                                  Duplicate
+                                  {t('surveyPage.duplicate')}
                                 </button>
                                 <button
                                   onClick={() => handleToggleActive(survey)}
@@ -447,12 +450,12 @@ export const Surveys = () => {
                                   {survey.isActive ? (
                                     <>
                                       <Pause className="w-4 h-4" />
-                                      Deactivate
+                                      {t('surveyPage.deactivate')}
                                     </>
                                   ) : (
                                     <>
                                       <Play className="w-4 h-4" />
-                                      Activate
+                                      {t('surveyPage.activate')}
                                     </>
                                   )}
                                 </button>
@@ -462,7 +465,7 @@ export const Surveys = () => {
                                   className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                                 >
                                   <Trash2 className="w-4 h-4" />
-                                  Delete
+                                  {t('surveyPage.deleteSurvey')}
                                 </button>
                               </div>
                             </motion.div>
@@ -484,13 +487,13 @@ export const Surveys = () => {
                         <p className="text-lg font-bold text-gray-900 dark:text-white">
                           {survey.questions.length}
                         </p>
-                        <p className="text-xs text-gray-500">Questions</p>
+                        <p className="text-xs text-gray-500">{t('surveyPage.questions')}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-lg font-bold text-gray-900 dark:text-white">
                           {survey.responseCount || 0}
                         </p>
-                        <p className="text-xs text-gray-500">Responses</p>
+                        <p className="text-xs text-gray-500">{t('surveyPage.responses')}</p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-0.5">
@@ -499,7 +502,7 @@ export const Surveys = () => {
                             {survey.averageScore?.toFixed(1) || '-'}
                           </p>
                         </div>
-                        <p className="text-xs text-gray-500">Avg Score</p>
+                        <p className="text-xs text-gray-500">{t('surveyPage.avgScore')}</p>
                       </div>
                     </div>
 
@@ -512,7 +515,7 @@ export const Surveys = () => {
                         onClick={() => handleEdit(survey)}
                       >
                         <Edit2 className="w-3 h-3 mr-1" />
-                        Edit
+                        {t('surveyPage.edit')}
                       </Button>
                       <Button
                         variant="outline"
@@ -521,7 +524,7 @@ export const Surveys = () => {
                         onClick={() => setViewingResults(survey)}
                       >
                         <BarChart2 className="w-3 h-3 mr-1" />
-                        Results
+                        {t('surveyPage.results')}
                       </Button>
                     </div>
                   </CardContent>

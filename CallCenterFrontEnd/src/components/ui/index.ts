@@ -16,7 +16,7 @@ export { Skeleton, SkeletonText, SkeletonCard, SkeletonTable, SkeletonAvatar } f
 export { EmptyState, EmptyStateNoData, EmptyStateNoResults, EmptyStateError } from './EmptyState';
 export { default as Tooltip } from './Tooltip';
 export { default as Switch } from './Switch';
-export { Timer, SLATimer, CallDurationTimer } from './Timer';
+export { Timer, SLATimer, CallDurationTimer, LiveClock } from './Timer';
 export { LiveIndicator, TypingIndicator, StatusDot } from './LiveIndicator';
 export { SoftphoneControls, IncomingCallControls } from './SoftphoneControls';
 export { MessageBubble, ConversationItem, DateSeparator, SystemMessage, groupMessagesByDate } from './MessageBubble';

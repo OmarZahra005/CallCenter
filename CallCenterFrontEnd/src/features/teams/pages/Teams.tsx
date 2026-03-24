@@ -69,7 +69,7 @@ const initialFormData: TeamFormData = {
 };
 
 const Teams = () => {
-  const { t: _t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -97,10 +97,10 @@ const Teams = () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Team created successfully', 'success');
+      showToast(t('teamsPage.teamCreated'), 'success');
     },
     onError: () => {
-      showToast('Failed to create team', 'error');
+      showToast(t('teamsPage.createFailed'), 'error');
     },
   });
 
@@ -111,10 +111,10 @@ const Teams = () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Team updated successfully', 'success');
+      showToast(t('teamsPage.teamUpdated'), 'success');
     },
     onError: () => {
-      showToast('Failed to update team', 'error');
+      showToast(t('teamsPage.updateFailed'), 'error');
     },
   });
 
@@ -124,10 +124,10 @@ const Teams = () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       setIsDeleteModalOpen(false);
       setSelectedTeam(null);
-      showToast('Team deleted successfully', 'success');
+      showToast(t('teamsPage.teamDeleted'), 'success');
     },
     onError: () => {
-      showToast('Failed to delete team', 'error');
+      showToast(t('teamsPage.deleteFailed'), 'error');
     },
   });
 
@@ -136,9 +136,9 @@ const Teams = () => {
   // Calculate stats
   const stats = useMemo(() => {
     const total = teams.length;
-    const active = teams.filter((t: Team) => t.isActive).length;
-    const inactive = teams.filter((t: Team) => !t.isActive).length;
-    const totalAgents = teams.reduce((sum: number, t: Team) => sum + (t.agentCount || 0), 0);
+    const active = teams.filter((tm: Team) => tm.isActive).length;
+    const inactive = teams.filter((tm: Team) => !tm.isActive).length;
+    const totalAgents = teams.reduce((sum: number, tm: Team) => sum + (tm.agentCount || 0), 0);
     return { total, active, inactive, totalAgents };
   }, [teams]);
 
@@ -224,26 +224,26 @@ const Teams = () => {
   const getStatusBadge = (isActive: boolean) => {
     return isActive ? (
       <Badge variant="success" className="flex items-center">
-        <UserCheck className="w-3 h-3 mr-1" />
-        Active
+        <UserCheck className="w-3 h-3 me-1" />
+        {t('teamsPage.active')}
       </Badge>
     ) : (
       <Badge variant="default" className="flex items-center">
-        <UserX className="w-3 h-3 mr-1" />
-        Inactive
+        <UserX className="w-3 h-3 me-1" />
+        {t('teamsPage.inactive')}
       </Badge>
     );
   };
 
   const getStatusColor = (isActive: boolean) => {
-    return isActive ? 'border-l-green-500' : 'border-l-gray-400';
+    return isActive ? 'border-s-green-500' : 'border-s-gray-400';
   };
 
   const formatDate = (dateString: string | undefined | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -296,15 +296,15 @@ const Teams = () => {
         transition={{ delay: 0.1 }}
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Teams</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.teams')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage agent teams and groups
+            {t('teamsPage.subtitle')}
           </p>
         </div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button onClick={handleOpenCreate} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Team
+            <Plus className="w-4 h-4 me-2" />
+            {t('teamsPage.addTeam')}
           </Button>
         </motion.div>
       </motion.div>
@@ -319,7 +319,7 @@ const Teams = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Teams</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('teamsPage.totalTeams')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -330,7 +330,7 @@ const Teams = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Teams</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('teamsPage.activeTeams')}</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.active}</p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
@@ -341,7 +341,7 @@ const Teams = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Inactive Teams</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('teamsPage.inactiveTeams')}</p>
               <p className="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{stats.inactive}</p>
             </div>
             <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl">
@@ -352,7 +352,7 @@ const Teams = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Agents</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('teamsPage.totalAgents')}</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{stats.totalAgents}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
@@ -367,13 +367,13 @@ const Teams = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search input */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name or description..."
+              placeholder={t('teamsPage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -385,30 +385,30 @@ const Teams = () => {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
+                <Filter className="w-4 h-4 me-2" />
+                {t('teamsPage.filters')}
                 {statusFilter !== 'all' && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">1</span>
+                  <span className="ms-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">1</span>
                 )}
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <ChevronDown className="w-4 h-4 ms-2" />
               </button>
 
               {isFilterOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
+                  className="absolute end-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
                 >
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('teamsPage.statusLabel')}</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => handleFilterChange(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="all">All Status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="all">{t('teamsPage.allStatus')}</option>
+                      <option value="active">{t('teamsPage.active')}</option>
+                      <option value="inactive">{t('teamsPage.inactive')}</option>
                     </select>
                   </div>
                   {statusFilter !== 'all' && (
@@ -416,7 +416,7 @@ const Teams = () => {
                       onClick={() => setStatusFilter('all')}
                       className="w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
                     >
-                      Clear all filters
+                      {t('teamsPage.clearAllFilters')}
                     </button>
                   )}
                 </motion.div>
@@ -441,8 +441,8 @@ const Teams = () => {
 
             {/* Export button */}
             <Button variant="outline" className="hidden sm:inline-flex">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 me-2" />
+              {t('teamsPage.exportBtn')}
             </Button>
           </div>
         </div>
@@ -451,8 +451,8 @@ const Teams = () => {
         {statusFilter !== 'all' && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-              Status: {statusFilter === 'active' ? 'Active' : 'Inactive'}
-              <button onClick={() => setStatusFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">×</button>
+              {t('teamsPage.statusLabel')}: {statusFilter === 'active' ? t('teamsPage.active') : t('teamsPage.inactive')}
+              <button onClick={() => setStatusFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">×</button>
             </span>
           </div>
         )}
@@ -461,8 +461,8 @@ const Teams = () => {
       {/* Results count */}
       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <span>
-          Showing {paginatedTeams.length} of {filteredTeams.length} teams
-          {filteredTeams.length !== teams.length && ` (filtered from ${teams.length})`}
+          {t('teamsPage.showing')} {paginatedTeams.length} {t('teamsPage.of')} {filteredTeams.length} {t('teamsPage.teamsLabel')}
+          {filteredTeams.length !== teams.length && ` (${t('teamsPage.filteredFrom')} ${teams.length})`}
         </span>
       </div>
 
@@ -476,9 +476,9 @@ const Teams = () => {
           ) : paginatedTeams.length === 0 ? (
             <CardContent>
               <EmptyStateNoData
-                title={filteredTeams.length === 0 && teams.length > 0 ? "No matching teams" : "No teams found"}
-                description={filteredTeams.length === 0 && teams.length > 0 ? "Try adjusting your search or filters" : "Get started by creating your first team"}
-                actionLabel="Add Team"
+                title={filteredTeams.length === 0 && teams.length > 0 ? t('teamsPage.noMatchingTeams') : t('teamsPage.noTeamsFound')}
+                description={filteredTeams.length === 0 && teams.length > 0 ? t('teamsPage.adjustFilters') : t('teamsPage.getStarted')}
+                actionLabel={t('teamsPage.addTeam')}
                 onAction={handleOpenCreate}
               />
             </CardContent>
@@ -488,12 +488,12 @@ const Teams = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Team</TableHead>
-                      <TableHead className="hidden lg:table-cell">Description</TableHead>
-                      <TableHead>Agents</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden sm:table-cell">Created</TableHead>
-                      <TableHead className="text-end w-[120px]">Actions</TableHead>
+                      <TableHead>{t('teamsPage.teamColumn')}</TableHead>
+                      <TableHead className="hidden lg:table-cell">{t('teamsPage.description')}</TableHead>
+                      <TableHead>{t('teamsPage.agentsColumn')}</TableHead>
+                      <TableHead>{t('teamsPage.status')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('teamsPage.created')}</TableHead>
+                      <TableHead className="text-end w-[120px]">{t('teamsPage.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -506,7 +506,7 @@ const Teams = () => {
                           animate="animate"
                           exit="exit"
                           transition={{ delay: index * 0.03 }}
-                          className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group border-l-4 ${getStatusColor(team.isActive)}`}
+                          className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group border-s-4 ${getStatusColor(team.isActive)}`}
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -518,7 +518,7 @@ const Teams = () => {
                                   {team.name}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate lg:hidden max-w-[150px]">
-                                  {team.description || 'No description'}
+                                  {team.description || t('teamsPage.noDescription')}
                                 </p>
                               </div>
                             </div>
@@ -547,7 +547,7 @@ const Teams = () => {
                                 size="sm"
                                 onClick={() => handleOpenView(team)}
                                 className="h-8 w-8 p-0"
-                                title="View Details"
+                                title={t('teamsPage.viewDetails')}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -556,7 +556,7 @@ const Teams = () => {
                                 size="sm"
                                 onClick={() => handleOpenEdit(team)}
                                 className="h-8 w-8 p-0"
-                                title="Edit"
+                                title={t('common.edit')}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -565,7 +565,7 @@ const Teams = () => {
                                 size="sm"
                                 onClick={() => handleOpenDelete(team)}
                                 className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                                title="Delete"
+                                title={t('common.delete')}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -615,9 +615,9 @@ const Teams = () => {
           ) : paginatedTeams.length === 0 ? (
             <Card className="p-8">
               <EmptyStateNoData
-                title={filteredTeams.length === 0 && teams.length > 0 ? "No matching teams" : "No teams found"}
-                description={filteredTeams.length === 0 && teams.length > 0 ? "Try adjusting your search or filters" : "Get started by creating your first team"}
-                actionLabel="Add Team"
+                title={filteredTeams.length === 0 && teams.length > 0 ? t('teamsPage.noMatchingTeams') : t('teamsPage.noTeamsFound')}
+                description={filteredTeams.length === 0 && teams.length > 0 ? t('teamsPage.adjustFilters') : t('teamsPage.getStarted')}
+                actionLabel={t('teamsPage.addTeam')}
                 onAction={handleOpenCreate}
               />
             </Card>
@@ -634,7 +634,7 @@ const Teams = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <Card className={`p-4 hover:shadow-lg transition-all duration-200 group border-l-4 ${getStatusColor(team.isActive)}`}>
+                      <Card className={`p-4 hover:shadow-lg transition-all duration-200 group border-s-4 ${getStatusColor(team.isActive)}`}>
                         {/* Header */}
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
@@ -661,7 +661,7 @@ const Teams = () => {
                         {/* Description */}
                         <div className="mb-4">
                           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                            {team.description || 'No description provided'}
+                            {team.description || t('teamsPage.noDescriptionProvided')}
                           </p>
                         </div>
 
@@ -670,7 +670,7 @@ const Teams = () => {
                           <div className="flex items-center gap-2 text-sm">
                             <Users className="w-4 h-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">{team.agentCount || 0}</span>
-                            <span className="text-gray-500">agents</span>
+                            <span className="text-gray-500">{t('teamsPage.agentsCount')}</span>
                           </div>
                         </div>
 
@@ -730,22 +730,21 @@ const Teams = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedTeam ? 'Edit Team' : 'Add New Team'}
+        title={selectedTeam ? t('teamsPage.editTeam') : t('teamsPage.addNewTeam')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Team Name"
+            label={t('teamsPage.teamName')}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="e.g., Customer Support Team"
             required
           />
           <Textarea
-            label="Description"
+            label={t('teamsPage.descriptionLabel')}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Describe the team's purpose and responsibilities..."
+            placeholder={t('teamsPage.descriptionPlaceholder')}
             rows={3}
           />
           <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -757,22 +756,22 @@ const Teams = () => {
               className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             />
             <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Active Team
+              {t('teamsPage.activeTeam')}
             </label>
             <span className="text-xs text-gray-500">
-              (Inactive teams won't receive new assignments)
+              ({t('teamsPage.inactiveTeamHint')})
             </span>
           </div>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               isLoading={createMutation.isPending || updateMutation.isPending}
               className="w-full sm:w-auto"
             >
-              {selectedTeam ? 'Update Team' : 'Create Team'}
+              {selectedTeam ? t('teamsPage.updateTeam') : t('teamsPage.createTeam')}
             </Button>
           </div>
         </form>
@@ -782,13 +781,13 @@ const Teams = () => {
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title="Team Details"
+        title={t('teamsPage.teamDetails')}
         size="lg"
       >
         {selectedTeam && (
           <div className="space-y-6">
             {/* Team Header */}
-            <div className={`p-4 rounded-lg border-l-4 ${getStatusColor(selectedTeam.isActive)} bg-gray-50 dark:bg-gray-800/50`}>
+            <div className={`p-4 rounded-lg border-s-4 ${getStatusColor(selectedTeam.isActive)} bg-gray-50 dark:bg-gray-800/50`}>
               <div className="flex items-center gap-4">
                 <div className={`w-16 h-16 rounded-full ${getAvatarColor(selectedTeam.name)} flex items-center justify-center text-white text-2xl font-medium`}>
                   {getInitials(selectedTeam.name)}
@@ -807,15 +806,15 @@ const Teams = () => {
             {/* Team Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Agents</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamsPage.agentsColumn')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   <Users className="w-4 h-4 text-gray-400" />
                   <span className="text-lg font-semibold text-gray-900 dark:text-white">{selectedTeam.agentCount || 0}</span>
-                  <span className="text-sm text-gray-500">members</span>
+                  <span className="text-sm text-gray-500">{t('teamsPage.members')}</span>
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamsPage.created')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-900 dark:text-white">{formatDate(selectedTeam.createdAt)}</span>
@@ -825,23 +824,23 @@ const Teams = () => {
 
             {/* Description */}
             <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamsPage.description')}</span>
               <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                {selectedTeam.description || 'No description provided'}
+                {selectedTeam.description || t('teamsPage.noDescriptionProvided')}
               </p>
             </div>
 
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto">
-                Close
+                {t('common.close')}
               </Button>
               <Button onClick={() => {
                 setIsViewModalOpen(false);
                 handleOpenEdit(selectedTeam);
               }} className="w-full sm:w-auto">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Team
+                <Edit className="w-4 h-4 me-2" />
+                {t('teamsPage.editTeam')}
               </Button>
             </div>
           </div>
@@ -852,23 +851,23 @@ const Teams = () => {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Team"
+        title={t('teamsPage.deleteTeam')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete <strong>{selectedTeam?.name}</strong>? This action cannot be undone.
+            {t('teamsPage.deleteConfirmation')} <strong>{selectedTeam?.name}</strong>{'? '}{t('teamsPage.deleteWarning')}
           </p>
           {selectedTeam && (selectedTeam.agentCount || 0) > 0 && (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                This team has {selectedTeam.agentCount} agent(s). They will need to be reassigned.
+                {t('teamsPage.agentsReassignWarning', { count: selectedTeam.agentCount })}
               </p>
             </div>
           )}
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -876,7 +875,7 @@ const Teams = () => {
               isLoading={deleteMutation.isPending}
               className="w-full sm:w-auto"
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -46,34 +47,6 @@ interface AiSuggestionsPanelProps {
   onUseSuggestion?: (suggestion: AiSuggestion) => void;
 }
 
-// Suggestion type icons and colors
-const suggestionTypeConfig: Record<AiSuggestionType, { icon: typeof Sparkles; color: string; bgColor: string; label: string }> = {
-  Response: {
-    icon: MessageSquare,
-    color: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-    label: 'Suggested Response',
-  },
-  Article: {
-    icon: BookOpen,
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-100 dark:bg-green-900/30',
-    label: 'Knowledge Article',
-  },
-  Escalation: {
-    icon: ArrowUpRight,
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-    label: 'Escalation Suggestion',
-  },
-  Closing: {
-    icon: Check,
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/30',
-    label: 'Closing Script',
-  },
-};
-
 // Format confidence as percentage
 const formatConfidence = (score: number): string => {
   return `${Math.round(score * 100)}%`;
@@ -92,7 +65,36 @@ export const AiSuggestionsPanel = ({
   defaultExpanded = true,
   onUseSuggestion,
 }: AiSuggestionsPanelProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  // Suggestion type icons and colors
+  const suggestionTypeConfig: Record<AiSuggestionType, { icon: typeof Sparkles; color: string; bgColor: string; label: string }> = {
+    Response: {
+      icon: MessageSquare,
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+      label: t('agentDesktop.suggestedResponse'),
+    },
+    Article: {
+      icon: BookOpen,
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      label: t('agentDesktop.knowledgeArticle'),
+    },
+    Escalation: {
+      icon: ArrowUpRight,
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+      label: t('agentDesktop.escalationSuggestion'),
+    },
+    Closing: {
+      icon: Check,
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+      label: t('agentDesktop.closingScript'),
+    },
+  };
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -202,7 +204,7 @@ export const AiSuggestionsPanel = ({
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
             )}
           </div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">AI Suggestions</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.aiSuggestions')}</h3>
           {activeSuggestions.length > 0 && (
             <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 text-xs rounded-full">
               {activeSuggestions.length}
@@ -219,7 +221,7 @@ export const AiSuggestionsPanel = ({
                 refetch();
               }}
               className="p-1"
-              title="Refresh suggestions"
+              title={t('agentDesktop.refreshSuggestions')}
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
@@ -256,20 +258,20 @@ export const AiSuggestionsPanel = ({
                 ) : error ? (
                   <div className="text-center py-8 text-gray-500">
                     <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>AI suggestions unavailable</p>
-                    <p className="text-xs mt-1">Feature coming soon</p>
+                    <p>{t('agentDesktop.aiUnavailable')}</p>
+                    <p className="text-xs mt-1">{t('agentDesktop.comingSoon')}</p>
                   </div>
                 ) : !conversationId ? (
                   <div className="text-center py-8 text-gray-500">
                     <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No active conversation</p>
-                    <p className="text-xs mt-1">Suggestions will appear during calls</p>
+                    <p>{t('agentDesktop.noActiveConversation')}</p>
+                    <p className="text-xs mt-1">{t('agentDesktop.suggestionsWillAppear')}</p>
                   </div>
                 ) : activeSuggestions.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No suggestions yet</p>
-                    <p className="text-xs mt-1">AI will analyze the conversation</p>
+                    <p>{t('agentDesktop.noSuggestions')}</p>
+                    <p className="text-xs mt-1">{t('agentDesktop.aiWillAnalyze')}</p>
                   </div>
                 ) : (
                   activeSuggestions.map((suggestion, index) => {
@@ -296,7 +298,7 @@ export const AiSuggestionsPanel = ({
                           </div>
                           <div className="flex items-center gap-1">
                             <span className={`text-xs ${getConfidenceColor(suggestion.confidenceScore)}`}>
-                              {formatConfidence(suggestion.confidenceScore)} confidence
+                              {formatConfidence(suggestion.confidenceScore)} {t('agentDesktop.confidence')}
                             </span>
                           </div>
                         </div>
@@ -315,7 +317,7 @@ export const AiSuggestionsPanel = ({
                             className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline mb-3"
                           >
                             <BookOpen className="w-3 h-3" />
-                            {suggestion.articleTitle || 'View Article'}
+                            {suggestion.articleTitle || t('agentDesktop.viewArticle')}
                           </a>
                         )}
 
@@ -331,19 +333,19 @@ export const AiSuggestionsPanel = ({
                               {copiedId === suggestion.id ? (
                                 <>
                                   <Check className="w-3 h-3 mr-1 text-green-500" />
-                                  Copied
+                                  {t('agentDesktop.copied')}
                                 </>
                               ) : (
                                 <>
                                   <Copy className="w-3 h-3 mr-1" />
-                                  Copy
+                                  {t('agentDesktop.copy')}
                                 </>
                               )}
                             </Button>
                             {suggestion.wasUsed && (
                               <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                                 <Check className="w-3 h-3" />
-                                Used
+                                {t('agentDesktop.used')}
                               </span>
                             )}
                           </div>
@@ -355,7 +357,7 @@ export const AiSuggestionsPanel = ({
                                 onClick={() => handleFeedback(suggestion.id, 'Helpful')}
                                 disabled={feedbackMutation.isPending}
                                 className="p-1.5 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-400 hover:text-green-600 transition-colors"
-                                title="Helpful"
+                                title={t('agentDesktop.helpful')}
                               >
                                 {feedbackMutation.isPending ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -367,7 +369,7 @@ export const AiSuggestionsPanel = ({
                                 onClick={() => handleFeedback(suggestion.id, 'NotHelpful')}
                                 disabled={feedbackMutation.isPending}
                                 className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 transition-colors"
-                                title="Not helpful"
+                                title={t('agentDesktop.notHelpful')}
                               >
                                 <ThumbsDown className="w-4 h-4" />
                               </button>
@@ -376,7 +378,7 @@ export const AiSuggestionsPanel = ({
                           {suggestion.feedback === 'Helpful' && (
                             <span className="text-xs text-green-600 flex items-center gap-1">
                               <ThumbsUp className="w-3 h-3" />
-                              Helpful
+                              {t('agentDesktop.helpful')}
                             </span>
                           )}
                         </div>

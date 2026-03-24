@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   Plus,
@@ -52,21 +53,6 @@ interface SurveyBuilderProps {
   onCancel: () => void;
 }
 
-const QUESTION_TYPES = [
-  { value: 'rating', label: 'Star Rating', icon: Star, description: '1-5 stars' },
-  { value: 'nps', label: 'NPS Score', icon: Hash, description: '0-10 scale' },
-  { value: 'text', label: 'Free Text', icon: MessageSquare, description: 'Open response' },
-  { value: 'multiChoice', label: 'Multiple Choice', icon: ToggleLeft, description: 'Select options' },
-  { value: 'yesNo', label: 'Yes/No', icon: ToggleLeft, description: 'Binary choice' },
-];
-
-const TRIGGERS = [
-  { value: 'afterCall', label: 'After Call', description: 'Send after call ends' },
-  { value: 'afterChat', label: 'After Chat', description: 'Send after chat session' },
-  { value: 'afterTicket', label: 'After Ticket', description: 'Send when ticket resolved' },
-  { value: 'manual', label: 'Manual', description: 'Send manually' },
-];
-
 const generateId = () => `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export const SurveyBuilder = ({
@@ -74,12 +60,29 @@ export const SurveyBuilder = ({
   onSave,
   onCancel,
 }: SurveyBuilderProps) => {
+  const { t, i18n } = useTranslation();
+
+  const QUESTION_TYPES = [
+    { value: 'rating', label: t('surveyPage.starRating'), icon: Star, description: t('surveyPage.oneToFiveStars') },
+    { value: 'nps', label: t('surveyPage.npsScore'), icon: Hash, description: t('surveyPage.zeroToTenScale') },
+    { value: 'text', label: t('surveyPage.freeText'), icon: MessageSquare, description: t('surveyPage.openResponse') },
+    { value: 'multiChoice', label: t('surveyPage.multipleChoice'), icon: ToggleLeft, description: t('surveyPage.selectOptions') },
+    { value: 'yesNo', label: t('surveyPage.yesNo'), icon: ToggleLeft, description: t('surveyPage.binaryChoice') },
+  ];
+
+  const TRIGGERS = [
+    { value: 'afterCall', label: t('surveyPage.afterCall'), description: t('surveyPage.sendAfterCall') },
+    { value: 'afterChat', label: t('surveyPage.afterChat'), description: t('surveyPage.sendAfterChat') },
+    { value: 'afterTicket', label: t('surveyPage.afterTicket'), description: t('surveyPage.sendAfterTicket') },
+    { value: 'manual', label: t('surveyPage.manual'), description: t('surveyPage.sendManually') },
+  ];
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<Survey['type']>('CSAT');
   const [trigger, setTrigger] = useState<SurveyTrigger>('afterCall');
   const [isActive, setIsActive] = useState(true);
-  const [thankYouMessage, setThankYouMessage] = useState('Thank you for your feedback!');
+  const [thankYouMessage, setThankYouMessage] = useState(t('surveyPage.defaultThankYou'));
   const [expirationDays, setExpirationDays] = useState(7);
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [expandedQuestions, setExpandedQuestions] = useState<string[]>([]);
@@ -96,7 +99,7 @@ export const SurveyBuilder = ({
       setType(survey.type);
       setTrigger(survey.trigger);
       setIsActive(survey.isActive);
-      setThankYouMessage(survey.thankYouMessage || 'Thank you for your feedback!');
+      setThankYouMessage(survey.thankYouMessage || t('surveyPage.defaultThankYou'));
       setExpirationDays(survey.expirationDays || 7);
       setQuestions(survey.questions);
     } else {
@@ -105,7 +108,7 @@ export const SurveyBuilder = ({
         {
           id: generateId(),
           type: 'rating',
-          question: 'How satisfied are you with our service?',
+          question: t('surveyPage.defaultQuestion'),
           required: true,
           minValue: 1,
           maxValue: 5,
@@ -177,16 +180,16 @@ export const SurveyBuilder = ({
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Survey name is required';
+      newErrors.name = t('surveyPage.surveyNameRequired');
     }
 
     if (questions.length === 0) {
-      newErrors.questions = 'At least one question is required';
+      newErrors.questions = t('surveyPage.atLeastOneQuestion');
     }
 
     questions.forEach((q, i) => {
       if (!q.question.trim()) {
-        newErrors[`question-${i}`] = 'Question text is required';
+        newErrors[`question-${i}`] = t('surveyPage.questionTextRequired');
       }
     });
 
@@ -221,7 +224,7 @@ export const SurveyBuilder = ({
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[80vh]">
+    <div className="flex flex-col h-full max-h-[80vh]" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex-shrink-0 pb-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
@@ -230,7 +233,7 @@ export const SurveyBuilder = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Survey Name"
+              placeholder={t('surveyPage.surveyName')}
               className={`text-xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400 ${
                 errors.name ? 'text-red-500' : ''
               }`}
@@ -246,7 +249,7 @@ export const SurveyBuilder = ({
               onClick={() => setShowPreview(!showPreview)}
             >
               <Eye className="w-4 h-4 mr-1" />
-              Preview
+              {t('surveyPage.preview')}
             </Button>
           </div>
         </div>
@@ -261,7 +264,7 @@ export const SurveyBuilder = ({
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Questions ({questions.length})
+            {t('surveyPage.questionsTab')} ({questions.length})
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -272,7 +275,7 @@ export const SurveyBuilder = ({
             }`}
           >
             <Settings className="w-4 h-4 inline mr-1" />
-            Settings
+            {t('surveyPage.settings')}
           </button>
         </div>
       </div>
@@ -324,7 +327,7 @@ export const SurveyBuilder = ({
                         <QuestionIcon className="w-4 h-4 text-gray-400" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {question.question || 'New Question'}
+                            {question.question || t('surveyPage.newQuestion')}
                           </p>
                           <p className="text-xs text-gray-500">
                             {QUESTION_TYPES.find((t) => t.value === question.type)?.label}
@@ -362,7 +365,7 @@ export const SurveyBuilder = ({
                               {/* Question Text */}
                               <div>
                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                  Question Text
+                                  {t('surveyPage.questionText')}
                                 </label>
                                 <input
                                   type="text"
@@ -370,7 +373,7 @@ export const SurveyBuilder = ({
                                   onChange={(e) =>
                                     updateQuestion(question.id, { question: e.target.value })
                                   }
-                                  placeholder="Enter your question..."
+                                  placeholder={t('surveyPage.enterQuestion')}
                                   className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 ${
                                     errors[`question-${index}`]
                                       ? 'border-red-500'
@@ -388,7 +391,7 @@ export const SurveyBuilder = ({
                               {question.type === 'multiChoice' && question.options && (
                                 <div>
                                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                                    Options
+                                    {t('surveyPage.options')}
                                   </label>
                                   <div className="space-y-2">
                                     {question.options.map((option, optIndex) => (
@@ -417,7 +420,7 @@ export const SurveyBuilder = ({
                                       className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
                                     >
                                       <Plus className="w-3 h-3" />
-                                      Add Option
+                                      {t('surveyPage.addOption')}
                                     </button>
                                   </div>
                                 </div>
@@ -434,7 +437,7 @@ export const SurveyBuilder = ({
                                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                                 />
                                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                                  Required question
+                                  {t('surveyPage.requiredQuestion')}
                                 </span>
                               </label>
                             </div>
@@ -448,7 +451,7 @@ export const SurveyBuilder = ({
 
               {/* Add Question Buttons */}
               <div className="mt-4">
-                <p className="text-xs font-medium text-gray-500 mb-2">Add Question</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">{t('surveyPage.addQuestion')}</p>
                 <div className="flex flex-wrap gap-2">
                   {QUESTION_TYPES.map((qType) => (
                     <button
@@ -477,12 +480,12 @@ export const SurveyBuilder = ({
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
+                  {t('surveyPage.description')}
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional description for this survey..."
+                  placeholder={t('surveyPage.optionalDescription')}
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
                 />
@@ -491,7 +494,7 @@ export const SurveyBuilder = ({
               {/* Survey Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Survey Type
+                  {t('surveyPage.surveyType')}
                 </label>
                 <div className="flex gap-2">
                   {(['CSAT', 'NPS', 'Custom'] as const).map((t) => (
@@ -513,7 +516,7 @@ export const SurveyBuilder = ({
               {/* Trigger */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  When to Send
+                  {t('surveyPage.whenToSend')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {TRIGGERS.map((t) => (
@@ -542,7 +545,7 @@ export const SurveyBuilder = ({
               {/* Expiration */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Link Expiration (days)
+                  {t('surveyPage.linkExpiration')}
                 </label>
                 <input
                   type="number"
@@ -557,7 +560,7 @@ export const SurveyBuilder = ({
               {/* Thank You Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Thank You Message
+                  {t('surveyPage.thankYouMessage')}
                 </label>
                 <textarea
                   value={thankYouMessage}
@@ -582,7 +585,7 @@ export const SurveyBuilder = ({
                   />
                 </div>
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Survey is active
+                  {t('surveyPage.surveyIsActive')}
                 </span>
               </label>
             </motion.div>
@@ -608,7 +611,7 @@ export const SurveyBuilder = ({
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {name || 'Survey Preview'}
+                {name || t('surveyPage.surveyPreview')}
               </h3>
               {description && (
                 <p className="text-sm text-gray-500 mb-6">{description}</p>
@@ -617,7 +620,7 @@ export const SurveyBuilder = ({
                 {questions.map((q, i) => (
                   <div key={q.id}>
                     <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                      {i + 1}. {q.question || 'Question text'}
+                      {i + 1}. {q.question || t('surveyPage.questionTextPlaceholder')}
                       {q.required && <span className="text-red-500 ml-1">*</span>}
                     </p>
                     {q.type === 'rating' && (
@@ -642,7 +645,7 @@ export const SurveyBuilder = ({
                     {q.type === 'text' && (
                       <textarea
                         disabled
-                        placeholder="Type your response..."
+                        placeholder={t('surveyPage.typeYourResponse')}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
                         rows={3}
                       />
@@ -671,7 +674,7 @@ export const SurveyBuilder = ({
                 ))}
               </div>
               <Button className="w-full mt-6" onClick={() => setShowPreview(false)}>
-                Close Preview
+                {t('surveyPage.closePreview')}
               </Button>
             </motion.div>
           </motion.div>
@@ -681,18 +684,18 @@ export const SurveyBuilder = ({
       {/* Footer */}
       <div className="flex-shrink-0 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
         <Button variant="outline" onClick={onCancel}>
-          Cancel
+          {t('surveyPage.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              {t('surveyPage.saving')}
             </>
           ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
-              {survey ? 'Update Survey' : 'Create Survey'}
+              {survey ? t('surveyPage.updateSurvey') : t('surveyPage.createSurveyBtn')}
             </>
           )}
         </Button>

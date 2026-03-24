@@ -49,6 +49,7 @@ const NotificationSettings = lazy(() => import('./features/settings/pages/Notifi
 const RolesPermissions = lazy(() => import('./features/admin/pages/RolesPermissions'));
 const PublicSurvey = lazy(() => import('./features/surveys/pages/PublicSurvey'));
 const OutCall = lazy(() => import('./features/outcall/pages/OutCall'));
+const Calls = lazy(() => import('./features/calls/pages/Calls'));
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -459,6 +460,16 @@ export const router = createBrowserRouter([
           <Suspense fallback={<PageLoader />}>
             <RolesPermissions />
           </Suspense>
+        ),
+      },
+      {
+        path: 'calls',
+        element: (
+          <CallCenterProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Calls />
+            </Suspense>
+          </CallCenterProvider>
         ),
       },
       {

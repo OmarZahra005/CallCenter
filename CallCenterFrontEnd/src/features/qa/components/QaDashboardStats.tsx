@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -46,6 +47,7 @@ interface AgentPerformance {
 
 export const QaDashboardStats = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   // Fetch scorecards
   const { data: scorecards = [], isLoading } = useQuery<QaScorecard[]>({
@@ -189,7 +191,7 @@ export const QaDashboardStats = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Average Score</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('qaDashboardStats.averageScore')}</span>
             <BarChart3 className="w-5 h-5 text-primary-600" />
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -198,13 +200,13 @@ export const QaDashboardStats = () => {
           <div className="flex items-center mt-2 text-sm">
             {stats.averageScore >= 80 ? (
               <>
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-green-600">Above target</span>
+                <TrendingUp className="w-4 h-4 text-green-500 me-1" />
+                <span className="text-green-600">{t('qaDashboardStats.aboveTarget')}</span>
               </>
             ) : (
               <>
-                <TrendingDown className="w-4 h-4 text-yellow-500 mr-1" />
-                <span className="text-yellow-600">Below target (80%)</span>
+                <TrendingDown className="w-4 h-4 text-yellow-500 me-1" />
+                <span className="text-yellow-600">{t('qaDashboardStats.belowTarget')}</span>
               </>
             )}
           </div>
@@ -212,7 +214,7 @@ export const QaDashboardStats = () => {
 
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Pass Rate</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('qaDashboardStats.passRate')}</span>
             <CheckCircle className="w-5 h-5 text-green-600" />
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -228,7 +230,7 @@ export const QaDashboardStats = () => {
 
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">This Week</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('qaDashboardStats.thisWeek')}</span>
             <Target className="w-5 h-5 text-blue-600" />
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -237,18 +239,18 @@ export const QaDashboardStats = () => {
           <div className="flex items-center mt-2 text-sm">
             {stats.weekOverWeekChange > 0 ? (
               <>
-                <ArrowUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-green-600">+{stats.weekOverWeekChange.toFixed(0)}% vs last week</span>
+                <ArrowUp className="w-4 h-4 text-green-500 me-1" />
+                <span className="text-green-600">+{stats.weekOverWeekChange.toFixed(0)}% {t('qaDashboardStats.vsLastWeek')}</span>
               </>
             ) : stats.weekOverWeekChange < 0 ? (
               <>
-                <ArrowDown className="w-4 h-4 text-red-500 mr-1" />
-                <span className="text-red-600">{stats.weekOverWeekChange.toFixed(0)}% vs last week</span>
+                <ArrowDown className="w-4 h-4 text-red-500 me-1" />
+                <span className="text-red-600">{stats.weekOverWeekChange.toFixed(0)}% {t('qaDashboardStats.vsLastWeek')}</span>
               </>
             ) : (
               <>
-                <Minus className="w-4 h-4 text-gray-500 mr-1" />
-                <span className="text-gray-500">Same as last week</span>
+                <Minus className="w-4 h-4 text-gray-500 me-1" />
+                <span className="text-gray-500">{t('qaDashboardStats.sameAsLastWeek')}</span>
               </>
             )}
           </div>
@@ -256,14 +258,14 @@ export const QaDashboardStats = () => {
 
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Total Evaluations</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('qaDashboardStats.totalEvaluations')}</span>
             <Users className="w-5 h-5 text-purple-600" />
           </div>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">
             {stats.totalEvaluations}
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            {agentPerformance.length} agents evaluated
+            {t('qaDashboardStats.agentsEvaluated', { count: agentPerformance.length })}
           </p>
         </Card>
       </div>
@@ -274,7 +276,7 @@ export const QaDashboardStats = () => {
         <Card className="p-4">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary-600" />
-            Score Distribution
+            {t('qaDashboardStats.scoreDistribution')}
           </h3>
           <div className="space-y-3">
             {scoreDistribution.map((range) => (
@@ -300,7 +302,7 @@ export const QaDashboardStats = () => {
         <Card className="p-4">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Award className="w-5 h-5 text-yellow-600" />
-            Top Performers
+            {t('qaDashboardStats.topPerformers')}
           </h3>
           <div className="space-y-3">
             {topPerformers.length > 0 ? (
@@ -322,18 +324,18 @@ export const QaDashboardStats = () => {
                     >
                       {index + 1}
                     </div>
-                    <div className="text-left">
+                    <div className="text-start">
                       <p className="font-medium text-sm text-gray-900 dark:text-white">
                         {agent.agentName}
                       </p>
-                      <p className="text-xs text-gray-500">{agent.evaluationCount} evals</p>
+                      <p className="text-xs text-gray-500">{t('qaDashboardStats.evals', { count: agent.evaluationCount })}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <p className="font-bold text-green-600">{agent.averageScore.toFixed(1)}%</p>
                     {agent.trend === 'up' && (
                       <span className="text-xs text-green-500 flex items-center justify-end">
-                        <TrendingUp className="w-3 h-3 mr-0.5" />
+                        <TrendingUp className="w-3 h-3 me-0.5" />
                         +{agent.trendValue.toFixed(1)}
                       </span>
                     )}
@@ -341,7 +343,7 @@ export const QaDashboardStats = () => {
                 </button>
               ))
             ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No data available</p>
+              <p className="text-sm text-gray-500 text-center py-4">{t('qaDashboardStats.noDataAvailable')}</p>
             )}
           </div>
         </Card>
@@ -350,7 +352,7 @@ export const QaDashboardStats = () => {
         <Card className="p-4">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
-            Needs Improvement
+            {t('qaDashboardStats.needsImprovement')}
           </h3>
           <div className="space-y-3">
             {needsImprovement.length > 0 && needsImprovement[0].averageScore < 80 ? (
@@ -366,18 +368,18 @@ export const QaDashboardStats = () => {
                       <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                         <User className="w-4 h-4 text-orange-600" />
                       </div>
-                      <div className="text-left">
+                      <div className="text-start">
                         <p className="font-medium text-sm text-gray-900 dark:text-white">
                           {agent.agentName}
                         </p>
-                        <p className="text-xs text-gray-500">{agent.evaluationCount} evals</p>
+                        <p className="text-xs text-gray-500">{t('qaDashboardStats.evals', { count: agent.evaluationCount })}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="font-bold text-orange-600">{agent.averageScore.toFixed(1)}%</p>
                       {agent.trend === 'down' && (
                         <span className="text-xs text-red-500 flex items-center justify-end">
-                          <TrendingDown className="w-3 h-3 mr-0.5" />
+                          <TrendingDown className="w-3 h-3 me-0.5" />
                           {agent.trendValue.toFixed(1)}
                         </span>
                       )}
@@ -387,7 +389,7 @@ export const QaDashboardStats = () => {
             ) : (
               <div className="text-center py-4">
                 <CheckCircle className="w-8 h-8 mx-auto text-green-500 mb-2" />
-                <p className="text-sm text-gray-500">All agents meeting targets</p>
+                <p className="text-sm text-gray-500">{t('qaDashboardStats.allMeetingTargets')}</p>
               </div>
             )}
           </div>

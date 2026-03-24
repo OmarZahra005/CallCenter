@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Avatar, Badge } from '../../../components/ui';
 import apiClient from '../../../api/client';
@@ -19,6 +20,7 @@ interface TransferDialogProps {
 }
 
 const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: TransferDialogProps) => {
+  const { t } = useTranslation();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -87,15 +89,15 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
       <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Transfer Call</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Select an agent to transfer the call to</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('agentDesktop.transferCall')}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('agentDesktop.transferDescription')}</p>
         </div>
 
         {/* Search */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <input
             type="text"
-            placeholder="Search agents..."
+            placeholder={t('agentDesktop.searchAgents')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -111,7 +113,7 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
             </div>
           ) : agents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm ? 'No agents match your search' : 'No agents available'}
+              {searchTerm ? t('agentDesktop.noAgentsMatch') : t('agentDesktop.noAgentsAvailable')}
             </div>
           ) : (
             <>
@@ -119,7 +121,7 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
               {availableAgents.length > 0 && (
                 <div className="mb-4">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 mb-2">
-                    AVAILABLE ({availableAgents.length})
+                    {t('agentDesktop.availableAgents')} ({availableAgents.length})
                   </p>
                   {availableAgents.map((agent) => (
                     <button
@@ -140,7 +142,7 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
                         <p className="text-xs text-gray-500 dark:text-gray-400">{agent.email}</p>
                       </div>
                       <Badge variant={getStateBadgeVariant(agent.currentState)} size="sm">
-                        {agent.currentState || 'Offline'}
+                        {agent.currentState || t('agentDesktop.offline')}
                       </Badge>
                     </button>
                   ))}
@@ -151,7 +153,7 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
               {otherAgents.length > 0 && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 mb-2">
-                    OTHER AGENTS ({otherAgents.length})
+                    {t('agentDesktop.otherAgents')} ({otherAgents.length})
                   </p>
                   {otherAgents.map((agent) => (
                     <button
@@ -172,7 +174,7 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
                         <p className="text-xs text-gray-500 dark:text-gray-400">{agent.email}</p>
                       </div>
                       <Badge variant={getStateBadgeVariant(agent.currentState)} size="sm">
-                        {agent.currentState || 'Offline'}
+                        {agent.currentState || t('agentDesktop.offline')}
                       </Badge>
                     </button>
                   ))}
@@ -185,14 +187,14 @@ const TransferDialog = ({ isOpen, onClose, onTransfer, currentAgentId }: Transfe
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
           <Button variant="outline" className="flex-1" onClick={onClose}>
-            Cancel
+            {t('agentDesktop.cancel')}
           </Button>
           <Button
             className="flex-1"
             onClick={handleTransfer}
             disabled={!selectedAgentId}
           >
-            Transfer
+            {t('agentDesktop.transfer')}
           </Button>
         </div>
       </div>

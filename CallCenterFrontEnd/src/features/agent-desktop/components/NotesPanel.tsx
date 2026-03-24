@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -32,28 +33,29 @@ interface NotesPanelProps {
   defaultExpanded?: boolean;
 }
 
-// Format time ago
-const formatTimeAgo = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
 export const NotesPanel = ({
   conversationId,
   isCollapsible = true,
   defaultExpanded = true,
 }: NotesPanelProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  // Format time ago
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return t('agentDesktop.justNow');
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
   const [noteContent, setNoteContent] = useState('');
   const [isAddingNote, setIsAddingNote] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -144,7 +146,7 @@ export const NotesPanel = ({
       >
         <div className="flex items-center gap-2">
           <MessageSquareText className="w-5 h-5 text-gray-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-white">Conversation Notes</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.conversationNotes')}</h3>
           {notes.length > 0 && (
             <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
               {notes.length}
@@ -199,7 +201,7 @@ export const NotesPanel = ({
                       value={noteContent}
                       onChange={(e) => setNoteContent(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Add a note... (Press Enter to send)"
+                      placeholder={t('agentDesktop.addNotePlaceholder')}
                       className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       rows={3}
                       disabled={addNoteMutation.isPending}
@@ -218,7 +220,7 @@ export const NotesPanel = ({
                   </div>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-xs text-gray-500">
-                      {noteContent.length} characters
+                      {noteContent.length} {t('agentDesktop.characters')}
                     </span>
                     <button
                       onClick={() => {
@@ -227,7 +229,7 @@ export const NotesPanel = ({
                       }}
                       className="text-xs text-gray-500 hover:text-gray-700"
                     >
-                      Cancel
+                      {t('agentDesktop.cancel')}
                     </button>
                   </div>
                 </div>
@@ -242,12 +244,12 @@ export const NotesPanel = ({
                 ) : error ? (
                   <div className="text-center py-8 text-red-500">
                     <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
-                    <p>Failed to load notes</p>
+                    <p>{t('agentDesktop.notesFailed')}</p>
                   </div>
                 ) : notes.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <MessageSquareText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="mb-2">No notes yet</p>
+                    <p className="mb-2">{t('agentDesktop.noNotes')}</p>
                     {conversationId && !isAddingNote && (
                       <Button
                         variant="secondary"
@@ -258,7 +260,7 @@ export const NotesPanel = ({
                         }}
                       >
                         <Plus className="w-4 h-4 mr-1" />
-                        Add First Note
+                        {t('agentDesktop.addFirstNote')}
                       </Button>
                     )}
                   </div>

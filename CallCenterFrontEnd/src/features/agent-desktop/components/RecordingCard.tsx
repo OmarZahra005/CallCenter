@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
@@ -43,6 +44,7 @@ export const RecordingCard = ({
   callId,
   onOpenInQA,
 }: RecordingCardProps) => {
+  const { t } = useTranslation();
   // Recording state
   const [recording, setRecording] = useState<RecordingInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,7 +86,7 @@ export const RecordingCard = ({
 
         if (!response.ok) {
           if (response.status === 404) {
-            setError('Recording not available yet');
+            setError(t('agentDesktop.recordingNotAvailable'));
           } else {
             throw new Error('Failed to fetch recording');
           }
@@ -95,7 +97,7 @@ export const RecordingCard = ({
         setRecording(data);
       } catch (err) {
         console.error('Error fetching recording:', err);
-        setError('Failed to load recording');
+        setError(t('agentDesktop.recordingFailed'));
       } finally {
         setIsLoading(false);
       }
@@ -122,7 +124,7 @@ export const RecordingCard = ({
       }
     } catch (err) {
       console.error('Error loading audio:', err);
-      setError('Failed to load audio');
+      setError(t('agentDesktop.audioFailed'));
     } finally {
       setIsAudioLoading(false);
     }
@@ -249,7 +251,7 @@ export const RecordingCard = ({
   // Retry loading recording
   const handleRetry = useCallback(async () => {
     if (retryCount >= maxRetries) {
-      setError('Maximum retry attempts reached. Please try again later.');
+      setError(t('agentDesktop.maxRetriesReached'));
       return;
     }
 
@@ -265,7 +267,7 @@ export const RecordingCard = ({
 
       if (!response.ok) {
         if (response.status === 404) {
-          setError('Recording not available yet. It may still be processing.');
+          setError(t('agentDesktop.recordingNotAvailable'));
         } else {
           throw new Error('Failed to fetch recording');
         }
@@ -278,7 +280,7 @@ export const RecordingCard = ({
       setRetryCount(0);
     } catch (err) {
       console.error('Error fetching recording:', err);
-      setError(`Failed to load recording (Attempt ${retryCount + 1}/${maxRetries})`);
+      setError(t('agentDesktop.recordingFailed'));
     } finally {
       setIsRetrying(false);
     }
@@ -337,7 +339,7 @@ export const RecordingCard = ({
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                      Call Recording
+                      {t('agentDesktop.callRecording')}
                     </h4>
                     {recording && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -355,7 +357,7 @@ export const RecordingCard = ({
                   >
                     <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
                     <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                      Available
+                      {t('agentDesktop.available')}
                     </span>
                   </motion.div>
                 )}
@@ -367,7 +369,7 @@ export const RecordingCard = ({
               {isLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
-                  <span className="ml-2 text-sm text-gray-500">Loading recording...</span>
+                  <span className="ml-2 text-sm text-gray-500">{t('agentDesktop.loadingRecording')}</span>
                 </div>
               )}
 
@@ -378,7 +380,7 @@ export const RecordingCard = ({
                     <AlertCircle className="w-8 h-8 text-amber-500" />
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
-                      <p className="text-xs text-gray-400 mt-1">Recording may still be processing</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('agentDesktop.recordingProcessing')}</p>
                     </div>
                     {retryCount < maxRetries && callSid && (
                       <Button
@@ -391,12 +393,12 @@ export const RecordingCard = ({
                         {isRetrying ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Retrying...
+                            {t('agentDesktop.retrying')}
                           </>
                         ) : (
                           <>
                             <RefreshCw className="w-4 h-4 mr-2" />
-                            Retry ({maxRetries - retryCount} left)
+                            {t('agentDesktop.retry')} ({maxRetries - retryCount} left)
                           </>
                         )}
                       </Button>
@@ -445,7 +447,7 @@ export const RecordingCard = ({
                       onClick={skipBackward}
                       disabled={!audioUrl}
                       className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Skip back 10s"
+                      title={t('agentDesktop.skipBack')}
                     >
                       <SkipBack className="w-5 h-5" />
                     </motion.button>
@@ -474,7 +476,7 @@ export const RecordingCard = ({
                       onClick={skipForward}
                       disabled={!audioUrl}
                       className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Skip forward 10s"
+                      title={t('agentDesktop.skipForward')}
                     >
                       <SkipForward className="w-5 h-5" />
                     </motion.button>
@@ -487,7 +489,7 @@ export const RecordingCard = ({
                       <button
                         onClick={toggleMute}
                         className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        title={isMuted ? 'Unmute' : 'Mute'}
+                        title={isMuted ? t('agentDesktop.unmute') : t('agentDesktop.mute')}
                       >
                         {isMuted ? (
                           <VolumeX className="w-4 h-4" />
@@ -513,7 +515,7 @@ export const RecordingCard = ({
                       onClick={cyclePlaybackSpeed}
                       disabled={!audioUrl}
                       className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      title="Change playback speed"
+                      title={t('agentDesktop.changeSpeed')}
                     >
                       <Gauge className="w-3 h-3" />
                       <span>{playbackSpeed}x</span>
@@ -530,7 +532,7 @@ export const RecordingCard = ({
                         className="w-full"
                       >
                         <Download className="w-4 h-4 mr-2" />
-                        Download
+                        {t('agentDesktop.download')}
                       </Button>
                     </motion.div>
 
@@ -543,7 +545,7 @@ export const RecordingCard = ({
                           className="w-full"
                         >
                           <ExternalLink className="w-4 h-4 mr-2" />
-                          Open in QA
+                          {t('agentDesktop.openInQa')}
                         </Button>
                       </motion.div>
                     )}
@@ -557,7 +559,7 @@ export const RecordingCard = ({
                   <div className="flex flex-col items-center gap-2">
                     <Mic className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      No recording available
+                      {t('agentDesktop.noRecording')}
                     </p>
                   </div>
                 </div>

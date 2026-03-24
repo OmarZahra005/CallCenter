@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -86,34 +87,37 @@ const formatFileSize = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-// Format date
-const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-// Format relative time
-const formatRelativeTime = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return formatDate(dateStr);
-};
-
 const Recordings = () => {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
+
+  // Format date
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Format relative time
+  const formatRelativeTime = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return t('recordingsPage.mAgo', { count: diffMins });
+    if (diffHours < 24) return t('recordingsPage.hAgo', { count: diffHours });
+    if (diffDays < 7) return t('recordingsPage.dAgo', { count: diffDays });
+    return formatDate(dateStr);
+  };
+
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -236,10 +240,10 @@ const Recordings = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Mic className="w-7 h-7 text-primary-600" />
-            Recordings
+            {t('recordingsPage.title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Browse and manage call recordings
+            {t('recordingsPage.subtitle')}
           </p>
         </div>
         <Button
@@ -249,7 +253,7 @@ const Recordings = () => {
           className="flex items-center gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('recordingsPage.refresh')}
         </Button>
       </motion.div>
 
@@ -258,7 +262,7 @@ const Recordings = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Recordings</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('recordingsPage.totalRecordings')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCount}</p>
             </div>
             <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
@@ -269,9 +273,9 @@ const Recordings = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Duration</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('recordingsPage.totalDuration')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.floor(stats.totalDuration / 3600)}h {Math.floor((stats.totalDuration % 3600) / 60)}m
+                {t('recordingsPage.hoursMinutes', { hours: Math.floor(stats.totalDuration / 3600), minutes: Math.floor((stats.totalDuration % 3600) / 60) })}
               </p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -282,7 +286,7 @@ const Recordings = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Storage Used</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('recordingsPage.storageUsed')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {formatFileSize(stats.totalSize)}
               </p>
@@ -295,7 +299,7 @@ const Recordings = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Transcribed</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('recordingsPage.transcribed')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.withTranscription}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
@@ -310,16 +314,16 @@ const Recordings = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by call ID, agent, customer..."
+              placeholder={t('recordingsPage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
 
@@ -330,14 +334,14 @@ const Recordings = () => {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
+                <Filter className="w-4 h-4 me-2" />
+                {t('recordingsPage.filters')}
                 {hasActiveFilters && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">
+                  <span className="ms-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">
                     {(dateFilter !== 'all' ? 1 : 0) + (durationFilter !== 'all' ? 1 : 0)}
                   </span>
                 )}
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <ChevronDown className="w-4 h-4 ms-2" />
               </button>
 
               <AnimatePresence>
@@ -346,11 +350,11 @@ const Recordings = () => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
+                    className="absolute end-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
                   >
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Date Range
+                        {t('recordingsPage.dateRange')}
                       </label>
                       <select
                         value={dateFilter}
@@ -360,15 +364,15 @@ const Recordings = () => {
                         }}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                       >
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
+                        <option value="all">{t('recordingsPage.allTime')}</option>
+                        <option value="today">{t('recordingsPage.today')}</option>
+                        <option value="week">{t('recordingsPage.thisWeek')}</option>
+                        <option value="month">{t('recordingsPage.thisMonth')}</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Duration
+                        {t('recordingsPage.durationLabel')}
                       </label>
                       <select
                         value={durationFilter}
@@ -378,10 +382,10 @@ const Recordings = () => {
                         }}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                       >
-                        <option value="all">Any Duration</option>
-                        <option value="short">Short (&lt; 1 min)</option>
-                        <option value="medium">Medium (1-5 min)</option>
-                        <option value="long">Long (&gt; 5 min)</option>
+                        <option value="all">{t('recordingsPage.anyDuration')}</option>
+                        <option value="short">{t('recordingsPage.short')}</option>
+                        <option value="medium">{t('recordingsPage.medium')}</option>
+                        <option value="long">{t('recordingsPage.long')}</option>
                       </select>
                     </div>
                     {hasActiveFilters && (
@@ -389,7 +393,7 @@ const Recordings = () => {
                         onClick={resetFilters}
                         className="w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
                       >
-                        Clear all filters
+                        {t('recordingsPage.clearAllFilters')}
                       </button>
                     )}
                   </motion.div>
@@ -404,24 +408,24 @@ const Recordings = () => {
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             {searchTerm && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Search: {searchTerm}
-                <button onClick={() => setSearchTerm('')} className="ml-2 text-gray-500 hover:text-gray-700">
+                {t('recordingsPage.searchChip', { term: searchTerm })}
+                <button onClick={() => setSearchTerm('')} className="ms-2 text-gray-500 hover:text-gray-700">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {dateFilter !== 'all' && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Date: {dateFilter}
-                <button onClick={() => setDateFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">
+                {t('recordingsPage.dateChip', { value: dateFilter })}
+                <button onClick={() => setDateFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {durationFilter !== 'all' && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Duration: {durationFilter}
-                <button onClick={() => setDurationFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">
+                {t('recordingsPage.durationChip', { value: durationFilter })}
+                <button onClick={() => setDurationFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -432,7 +436,7 @@ const Recordings = () => {
 
       {/* Results count */}
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        Showing {filteredRecordings.length} of {totalCount} recordings
+        {t('recordingsPage.showing', { count: filteredRecordings.length, total: totalCount })}
       </div>
 
       {/* Recordings Table */}
@@ -445,14 +449,14 @@ const Recordings = () => {
           <CardContent>
             <div className="text-center py-12">
               <FileAudio className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Failed to load recordings</p>
+              <p className="text-gray-500">{t('recordingsPage.failedToLoad')}</p>
             </div>
           </CardContent>
         ) : filteredRecordings.length === 0 ? (
           <CardContent>
             <EmptyStateNoData
-              title={hasActiveFilters ? 'No matching recordings' : 'No recordings found'}
-              description={hasActiveFilters ? 'Try adjusting your filters' : 'Recordings will appear here after calls are completed'}
+              title={hasActiveFilters ? t('recordingsPage.noMatchingRecordings') : t('recordingsPage.noRecordingsFound')}
+              description={hasActiveFilters ? t('recordingsPage.tryAdjusting') : t('recordingsPage.willAppear')}
             />
           </CardContent>
         ) : (
@@ -461,13 +465,13 @@ const Recordings = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[100px]">Duration</TableHead>
-                    <TableHead>Call ID</TableHead>
-                    <TableHead className="hidden md:table-cell">Agent</TableHead>
-                    <TableHead className="hidden lg:table-cell">Customer</TableHead>
-                    <TableHead className="hidden sm:table-cell">Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-end w-[150px]">Actions</TableHead>
+                    <TableHead className="w-[100px]">{t('recordingsPage.durationHeader')}</TableHead>
+                    <TableHead>{t('recordingsPage.callId')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('recordingsPage.agent')}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t('recordingsPage.customer')}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t('recordingsPage.date')}</TableHead>
+                    <TableHead>{t('recordingsPage.status')}</TableHead>
+                    <TableHead className="text-end w-[150px]">{t('recordingsPage.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -517,7 +521,7 @@ const Recordings = () => {
                           {recording.customerName || recording.customerPhone ? (
                             <div>
                               <p className="text-sm text-gray-700 dark:text-gray-300">
-                                {recording.customerName || 'Unknown'}
+                                {recording.customerName || t('recordingsPage.unknown')}
                               </p>
                               {recording.customerPhone && (
                                 <p className="text-xs text-gray-500">{recording.customerPhone}</p>
@@ -535,9 +539,9 @@ const Recordings = () => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {recording.hasTranscription ? (
-                              <Badge variant="success" size="sm">Transcribed</Badge>
+                              <Badge variant="success" size="sm">{t('recordingsPage.transcribedBadge')}</Badge>
                             ) : (
-                              <Badge variant="default" size="sm">No transcript</Badge>
+                              <Badge variant="default" size="sm">{t('recordingsPage.noTranscript')}</Badge>
                             )}
                           </div>
                         </TableCell>
@@ -548,7 +552,7 @@ const Recordings = () => {
                               size="sm"
                               onClick={() => handlePlayRecording(recording)}
                               className="h-8 w-8 p-0"
-                              title="Play"
+                              title={t('recordingsPage.play')}
                             >
                               <Play className="w-4 h-4" />
                             </Button>
@@ -557,7 +561,7 @@ const Recordings = () => {
                               size="sm"
                               onClick={() => handleDownload(recording)}
                               className="h-8 w-8 p-0"
-                              title="Download"
+                              title={t('recordingsPage.download')}
                             >
                               <Download className="w-4 h-4" />
                             </Button>
@@ -566,7 +570,7 @@ const Recordings = () => {
                               size="sm"
                               onClick={() => handlePlayRecording(recording)}
                               className="h-8 w-8 p-0"
-                              title="View Details"
+                              title={t('recordingsPage.viewDetails')}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -600,7 +604,7 @@ const Recordings = () => {
           setIsPlayerOpen(false);
           setSelectedRecording(null);
         }}
-        title="Recording Player"
+        title={t('recordingsPage.recordingPlayer')}
         size="xl"
       >
         {selectedRecording && (
@@ -608,25 +612,25 @@ const Recordings = () => {
             {/* Recording Info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase">Duration</p>
+                <p className="text-xs text-gray-500 uppercase">{t('recordingsPage.durationInfo')}</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {formatDuration(selectedRecording.durationSeconds)}
                 </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase">Size</p>
+                <p className="text-xs text-gray-500 uppercase">{t('recordingsPage.size')}</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {formatFileSize(selectedRecording.sizeBytes)}
                 </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase">Date</p>
+                <p className="text-xs text-gray-500 uppercase">{t('recordingsPage.dateInfo')}</p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {formatDate(selectedRecording.createdAt)}
                 </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase">Format</p>
+                <p className="text-xs text-gray-500 uppercase">{t('recordingsPage.format')}</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white uppercase">
                   {selectedRecording.format || 'WAV'}
                 </p>
@@ -651,8 +655,8 @@ const Recordings = () => {
                 variant="outline"
                 onClick={() => handleDownload(selectedRecording)}
               >
-                <Download className="w-4 h-4 mr-2" />
-                Download
+                <Download className="w-4 h-4 me-2" />
+                {t('recordingsPage.download')}
               </Button>
               <Button
                 variant="outline"
@@ -661,7 +665,7 @@ const Recordings = () => {
                   setSelectedRecording(null);
                 }}
               >
-                Close
+                {t('recordingsPage.close')}
               </Button>
             </div>
           </div>

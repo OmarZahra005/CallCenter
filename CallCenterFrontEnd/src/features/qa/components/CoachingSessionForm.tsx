@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Calendar,
@@ -50,30 +51,32 @@ interface CoachingSessionFormProps {
   onCancel: () => void;
 }
 
-// Session type options
-const SESSION_TYPES = [
-  { value: 'OneOnOne', label: 'One-on-One', description: 'Individual coaching session' },
-  { value: 'Group', label: 'Group', description: 'Team or group coaching' },
-  { value: 'Remedial', label: 'Remedial', description: 'Performance improvement focused' },
-  { value: 'Development', label: 'Development', description: 'Skill development and growth' },
-];
-
 // Duration options
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
-
-// Status options
-const STATUS_OPTIONS = [
-  { value: 'Scheduled', label: 'Scheduled' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Cancelled', label: 'Cancelled' },
-  { value: 'NoShow', label: 'No Show' },
-];
 
 export const CoachingSessionForm = ({
   session,
   onSave,
   onCancel,
 }: CoachingSessionFormProps) => {
+  const { t } = useTranslation();
+
+  // Session type options
+  const SESSION_TYPES = [
+    { value: 'OneOnOne', label: t('coachingSessionForm.oneOnOne'), description: t('coachingSessionForm.oneOnOneDesc') },
+    { value: 'Group', label: t('coachingSessionForm.groupLabel'), description: t('coachingSessionForm.groupDesc') },
+    { value: 'Remedial', label: t('coachingSessionForm.remedialLabel'), description: t('coachingSessionForm.remedialDesc') },
+    { value: 'Development', label: t('coachingSessionForm.developmentLabel'), description: t('coachingSessionForm.developmentDesc') },
+  ];
+
+  // Status options
+  const STATUS_OPTIONS = [
+    { value: 'Scheduled', label: t('coachingSessionForm.scheduledStatus') },
+    { value: 'Completed', label: t('coachingSessionForm.completedStatus') },
+    { value: 'Cancelled', label: t('coachingSessionForm.cancelledStatus') },
+    { value: 'NoShow', label: t('coachingSessionForm.noShowStatus') },
+  ];
+
   // Form state
   const [agentId, setAgentId] = useState('');
   const [coachId, setCoachId] = useState('');
@@ -142,16 +145,16 @@ export const CoachingSessionForm = ({
     const newErrors: Record<string, string> = {};
 
     if (!agentId) {
-      newErrors.agentId = 'Please select an agent';
+      newErrors.agentId = t('coachingSessionForm.agentRequired');
     }
     if (!coachId) {
-      newErrors.coachId = 'Please select a coach';
+      newErrors.coachId = t('coachingSessionForm.coachRequired');
     }
     if (!sessionDate) {
-      newErrors.sessionDate = 'Please select a date';
+      newErrors.sessionDate = t('coachingSessionForm.dateRequired');
     }
     if (!sessionTime) {
-      newErrors.sessionTime = 'Please select a time';
+      newErrors.sessionTime = t('coachingSessionForm.timeRequired');
     }
 
     setErrors(newErrors);
@@ -200,8 +203,8 @@ export const CoachingSessionForm = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            <User className="w-4 h-4 inline mr-1" />
-            Agent <span className="text-red-500">*</span>
+            <User className="w-4 h-4 inline me-1" />
+            {t('coachingSessionForm.agentLabel')} <span className="text-red-500">*</span>
           </label>
           <select
             value={agentId}
@@ -210,7 +213,7 @@ export const CoachingSessionForm = ({
               errors.agentId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
             }`}
           >
-            <option value="">Select an agent</option>
+            <option value="">{t('coachingSessionForm.selectAgent')}</option>
             {agentsList.map((agent) => (
               <option key={agent.id} value={agent.id}>
                 {agent.name}
@@ -224,8 +227,8 @@ export const CoachingSessionForm = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            <UserCheck className="w-4 h-4 inline mr-1" />
-            Coach <span className="text-red-500">*</span>
+            <UserCheck className="w-4 h-4 inline me-1" />
+            {t('coachingSessionForm.coachLabel')} <span className="text-red-500">*</span>
           </label>
           <select
             value={coachId}
@@ -234,7 +237,7 @@ export const CoachingSessionForm = ({
               errors.coachId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
             }`}
           >
-            <option value="">Select a coach</option>
+            <option value="">{t('coachingSessionForm.selectCoach')}</option>
             {coachesList.map((coach) => (
               <option key={coach.id} value={coach.id}>
                 {coach.name}
@@ -250,7 +253,7 @@ export const CoachingSessionForm = ({
       {/* Session Type */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Session Type
+          {t('coachingSessionForm.sessionType')}
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {SESSION_TYPES.map((type) => (
@@ -258,7 +261,7 @@ export const CoachingSessionForm = ({
               key={type.value}
               type="button"
               onClick={() => setSessionType(type.value as SessionType)}
-              className={`p-3 border rounded-lg text-left transition-colors ${
+              className={`p-3 border rounded-lg text-start transition-colors ${
                 sessionType === type.value
                   ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
                   : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -281,8 +284,8 @@ export const CoachingSessionForm = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            <Calendar className="w-4 h-4 inline mr-1" />
-            Date <span className="text-red-500">*</span>
+            <Calendar className="w-4 h-4 inline me-1" />
+            {t('coachingSessionForm.date')} <span className="text-red-500">*</span>
           </label>
           <input
             type="date"
@@ -299,8 +302,8 @@ export const CoachingSessionForm = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            <Clock className="w-4 h-4 inline mr-1" />
-            Time <span className="text-red-500">*</span>
+            <Clock className="w-4 h-4 inline me-1" />
+            {t('coachingSessionForm.time')} <span className="text-red-500">*</span>
           </label>
           <input
             type="time"
@@ -317,7 +320,7 @@ export const CoachingSessionForm = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Duration
+            {t('coachingSessionForm.duration')}
           </label>
           <select
             value={durationMinutes}
@@ -326,7 +329,7 @@ export const CoachingSessionForm = ({
           >
             {DURATION_OPTIONS.map((mins) => (
               <option key={mins} value={mins}>
-                {mins} minutes
+                {t('coachingSessionForm.minutesOption', { count: mins })}
               </option>
             ))}
           </select>
@@ -337,7 +340,7 @@ export const CoachingSessionForm = ({
       {session && (
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Status
+            {t('coachingSessionForm.status')}
           </label>
           <select
             value={status}
@@ -356,29 +359,29 @@ export const CoachingSessionForm = ({
       {/* Topics */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          <Target className="w-4 h-4 inline mr-1" />
-          Topics to Cover
+          <Target className="w-4 h-4 inline me-1" />
+          {t('coachingSessionForm.topicsToCover')}
         </label>
         <input
           type="text"
           value={topicsCovered}
           onChange={(e) => setTopicsCovered(e.target.value)}
-          placeholder="e.g., Call handling, Customer satisfaction, Script adherence"
+          placeholder={t('coachingSessionForm.topicsPlaceholder')}
           className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
-        <p className="mt-1 text-xs text-gray-500">Separate topics with commas</p>
+        <p className="mt-1 text-xs text-gray-500">{t('coachingSessionForm.separateTopics')}</p>
       </div>
 
       {/* Action Items */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          <ListChecks className="w-4 h-4 inline mr-1" />
-          Action Items
+          <ListChecks className="w-4 h-4 inline me-1" />
+          {t('coachingSessionForm.actionItemsLabel')}
         </label>
         <textarea
           value={actionItems}
           onChange={(e) => setActionItems(e.target.value)}
-          placeholder="List follow-up tasks and action items..."
+          placeholder={t('coachingSessionForm.actionItemsPlaceholder')}
           rows={3}
           className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
@@ -387,13 +390,13 @@ export const CoachingSessionForm = ({
       {/* Notes */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          <FileText className="w-4 h-4 inline mr-1" />
-          Notes
+          <FileText className="w-4 h-4 inline me-1" />
+          {t('coachingSessionForm.notesLabel')}
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Additional notes about the session..."
+          placeholder={t('coachingSessionForm.notesPlaceholder')}
           rows={3}
           className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
@@ -403,25 +406,25 @@ export const CoachingSessionForm = ({
       {saveMutation.isError && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
-          Failed to save session. Please try again.
+          {t('coachingSessionForm.saveFailed')}
         </div>
       )}
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
         <Button variant="outline" type="button" onClick={onCancel}>
-          Cancel
+          {t('coachingSessionForm.cancel')}
         </Button>
         <Button type="submit" disabled={saveMutation.isPending}>
           {saveMutation.isPending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              <Loader2 className="w-4 h-4 me-2 animate-spin" />
+              {t('coachingSessionForm.saving')}
             </>
           ) : (
             <>
-              <Save className="w-4 h-4 mr-2" />
-              {session ? 'Update Session' : 'Schedule Session'}
+              <Save className="w-4 h-4 me-2" />
+              {session ? t('coachingSessionForm.updateSession') : t('coachingSessionForm.scheduleSession')}
             </>
           )}
         </Button>

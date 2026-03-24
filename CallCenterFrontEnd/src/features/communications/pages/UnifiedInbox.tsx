@@ -693,7 +693,7 @@ const UnifiedInbox = () => {
 
   if (conversationsLoading) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex flex-col gap-4">
+      <div className="h-[calc(100vh-6.5rem)] flex flex-col gap-4">
         {/* Header skeleton */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -725,7 +725,7 @@ const UnifiedInbox = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col gap-4">
+    <div className="h-[calc(100vh-6.5rem)] flex flex-col gap-4">
       {/* Page header - Enhanced */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

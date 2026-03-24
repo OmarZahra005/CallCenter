@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -46,47 +47,30 @@ interface TicketAttachmentsProps {
 const getFileIcon = (mimeType: string, filename: string) => {
   const ext = filename.split('.').pop()?.toLowerCase() || '';
 
-  // Images
   if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico'].includes(ext)) {
     return { icon: FileImage, color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' };
   }
-
-  // PDFs and documents
   if (mimeType === 'application/pdf' || ext === 'pdf') {
     return { icon: FileText, color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' };
   }
-
-  // Word documents
   if (mimeType.includes('word') || ['doc', 'docx'].includes(ext)) {
     return { icon: FileText, color: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' };
   }
-
-  // Spreadsheets
   if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || ['xls', 'xlsx', 'csv'].includes(ext)) {
     return { icon: FileSpreadsheet, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' };
   }
-
-  // Audio
   if (mimeType.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
     return { icon: FileAudio, color: 'text-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-900/30' };
   }
-
-  // Video
   if (mimeType.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi'].includes(ext)) {
     return { icon: FileVideo, color: 'text-pink-500', bgColor: 'bg-pink-100 dark:bg-pink-900/30' };
   }
-
-  // Archives
   if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
     return { icon: FileArchive, color: 'text-yellow-600', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' };
   }
-
-  // Code files
   if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml', 'py', 'java', 'cs'].includes(ext)) {
     return { icon: FileCode, color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' };
   }
-
-  // Default
   return { icon: File, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-900/30' };
 };
 
@@ -99,18 +83,6 @@ const formatFileSize = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-// Format date
-const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
 export const TicketAttachments = ({
   ticketId,
   readOnly = false,
@@ -118,11 +90,26 @@ export const TicketAttachments = ({
   maxFileSizeMb = 10,
   onAttachmentChange,
 }: TicketAttachmentsProps) => {
+  const { t, i18n } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  const isArabic = i18n.language === 'ar';
+
+  // Format date
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   // Fetch attachments
   const { data: attachments = [], isLoading, error: _error } = useQuery<TicketAttachment[]>({
@@ -190,10 +177,10 @@ export const TicketAttachments = ({
   // Validate file
   const validateFile = (file: File): string | null => {
     if (file.size > maxFileSizeMb * 1024 * 1024) {
-      return `File "${file.name}" exceeds ${maxFileSizeMb}MB limit`;
+      return t('ticketAttachments.fileTooLarge', { name: file.name, size: maxFileSizeMb });
     }
     if (attachments.length >= maxFiles) {
-      return `Maximum ${maxFiles} attachments allowed`;
+      return t('ticketAttachments.maxAttachments', { count: maxFiles });
     }
     return null;
   };
@@ -250,7 +237,6 @@ export const TicketAttachments = ({
     if (files && files.length > 0) {
       handleFiles(files);
     }
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -280,9 +266,9 @@ export const TicketAttachments = ({
         <div className="flex items-center gap-2">
           <Paperclip className="w-5 h-5 text-gray-500" />
           <h4 className="font-medium text-gray-900 dark:text-white">
-            Attachments
+            {t('ticketAttachments.title')}
             {attachments.length > 0 && (
-              <span className="ml-2 text-sm text-gray-500">({attachments.length})</span>
+              <span className="ms-2 text-sm text-gray-500">({attachments.length})</span>
             )}
           </h4>
         </div>
@@ -293,8 +279,8 @@ export const TicketAttachments = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >
-            <Upload className="w-4 h-4 mr-1" />
-            Upload
+            <Upload className="w-4 h-4 me-1" />
+            {t('ticketAttachments.upload')}
           </Button>
         )}
       </div>
@@ -325,22 +311,22 @@ export const TicketAttachments = ({
           <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragging ? 'text-primary-500' : 'text-gray-400'}`} />
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {isDragging ? (
-              'Drop files here...'
+              t('ticketAttachments.dropFilesHere')
             ) : (
               <>
-                Drag and drop files here, or{' '}
+                {t('ticketAttachments.dragAndDrop')}{' '}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="text-primary-600 dark:text-primary-400 hover:underline"
                 >
-                  browse
+                  {t('ticketAttachments.browse')}
                 </button>
               </>
             )}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            Max {maxFileSizeMb}MB per file, up to {maxFiles} files
+            {t('ticketAttachments.maxFileSize', { size: maxFileSizeMb, count: maxFiles })}
           </p>
         </div>
       )}
@@ -441,7 +427,7 @@ export const TicketAttachments = ({
                       {attachment.uploadedByAgentName && (
                         <>
                           <span>•</span>
-                          <span>by {attachment.uploadedByAgentName}</span>
+                          <span>{t('ticketAttachments.by', { name: attachment.uploadedByAgentName })}</span>
                         </>
                       )}
                     </div>
@@ -455,7 +441,7 @@ export const TicketAttachments = ({
                         size="sm"
                         onClick={() => handlePreview(attachment)}
                         className="h-8 w-8 p-0"
-                        title="Preview"
+                        title={t('ticketAttachments.preview')}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -465,7 +451,7 @@ export const TicketAttachments = ({
                       size="sm"
                       onClick={() => handleDownload(attachment)}
                       className="h-8 w-8 p-0"
-                      title="Download"
+                      title={t('ticketAttachments.download')}
                     >
                       <Download className="w-4 h-4" />
                     </Button>
@@ -476,7 +462,7 @@ export const TicketAttachments = ({
                         onClick={() => deleteMutation.mutate(attachment.id)}
                         disabled={deleteMutation.isPending}
                         className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        title="Delete"
+                        title={t('common.delete')}
                       >
                         {deleteMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -497,7 +483,7 @@ export const TicketAttachments = ({
       {!isLoading && attachments.length === 0 && readOnly && (
         <div className="text-center py-4 text-gray-500 dark:text-gray-400">
           <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No attachments</p>
+          <p className="text-sm">{t('ticketAttachments.noAttachments')}</p>
         </div>
       )}
 
@@ -514,7 +500,7 @@ export const TicketAttachments = ({
             <div className="absolute inset-0 bg-primary-50 dark:bg-primary-900/20 border-2 border-dashed border-primary-500 rounded-lg flex items-center justify-center z-10">
               <div className="text-center">
                 <Upload className="w-8 h-8 mx-auto mb-2 text-primary-500" />
-                <p className="text-sm text-primary-600 dark:text-primary-400">Drop files here...</p>
+                <p className="text-sm text-primary-600 dark:text-primary-400">{t('ticketAttachments.dropFilesHere')}</p>
               </div>
             </div>
           )}

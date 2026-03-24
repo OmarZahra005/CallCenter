@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone,
@@ -58,47 +59,6 @@ interface CallInfoPanelProps {
   linkedTickets?: LinkedTicket[];
 }
 
-// Call script suggestions based on call type
-const getCallScriptSuggestions = (_direction: string, customerType: string) => {
-  const suggestions = [
-    {
-      id: '1',
-      title: 'Greeting',
-      script: `Thank you for calling. My name is [Agent Name]. How may I assist you today?`,
-      icon: MessageSquare,
-    },
-    {
-      id: '2',
-      title: 'Verify Identity',
-      script: 'For security purposes, may I verify your account with your registered email or phone number?',
-      icon: AlertCircle,
-    },
-    {
-      id: '3',
-      title: 'Issue Resolution',
-      script: 'I understand your concern. Let me look into this for you right away.',
-      icon: Lightbulb,
-    },
-    {
-      id: '4',
-      title: 'Closing',
-      script: 'Is there anything else I can help you with today? Thank you for choosing us.',
-      icon: Phone,
-    },
-  ];
-
-  if (customerType === 'VIP' || customerType === 'Premium') {
-    suggestions.unshift({
-      id: '0',
-      title: 'VIP Greeting',
-      script: `Thank you for being a valued ${customerType} customer. How may I provide you with exceptional service today?`,
-      icon: MessageSquare,
-    });
-  }
-
-  return suggestions;
-};
-
 // Get priority badge color
 const getPriorityColor = (priority: string) => {
   switch (priority?.toLowerCase()) {
@@ -146,19 +106,61 @@ export const CallInfoPanel = ({
   recentInteractions = [],
   linkedTickets = [],
 }: CallInfoPanelProps) => {
+  const { t } = useTranslation();
   const [isScriptExpanded, setIsScriptExpanded] = useState(false);
   const [isInteractionsExpanded, setIsInteractionsExpanded] = useState(true);
   const [isTicketsExpanded, setIsTicketsExpanded] = useState(true);
 
   // Derived values
-  const customerName = customer?.name || callInfo.callerName || 'Unknown Caller';
+  const customerName = customer?.name || callInfo.callerName || t('agentDesktop.unknownCaller');
   const customerPhone = customer?.phone || callInfo.callerNumber;
   const customerType = customer?.type || 'Standard';
 
+  // Call script suggestions based on call type
+  const getCallScriptSuggestions = (_direction: string, _customerType: string) => {
+    const suggestions = [
+      {
+        id: '1',
+        title: t('agentDesktop.scriptGreeting'),
+        script: t('agentDesktop.scriptGreetingText'),
+        icon: MessageSquare,
+      },
+      {
+        id: '2',
+        title: t('agentDesktop.scriptVerifyIdentity'),
+        script: t('agentDesktop.scriptVerifyIdentityText'),
+        icon: AlertCircle,
+      },
+      {
+        id: '3',
+        title: t('agentDesktop.scriptIssueResolution'),
+        script: t('agentDesktop.scriptIssueResolutionText'),
+        icon: Lightbulb,
+      },
+      {
+        id: '4',
+        title: t('agentDesktop.scriptClosing'),
+        script: t('agentDesktop.scriptClosingText'),
+        icon: Phone,
+      },
+    ];
+
+    if (_customerType === 'VIP' || _customerType === 'Premium') {
+      suggestions.unshift({
+        id: '0',
+        title: t('agentDesktop.scriptVipGreeting'),
+        script: t('agentDesktop.scriptVipGreetingText', { customerType: _customerType }),
+        icon: MessageSquare,
+      });
+    }
+
+    return suggestions;
+  };
+
   // Status configuration
   const statusConfig = {
-    active: { variant: 'live' as const, label: 'LIVE' },
-    onhold: { variant: 'paused' as const, label: 'ON HOLD' },
+    active: { variant: 'live' as const, label: t('agentDesktop.live') },
+    onhold: { variant: 'paused' as const, label: t('agentDesktop.onHold') },
   };
 
   const currentStatus = statusConfig[callState];
@@ -201,7 +203,7 @@ export const CallInfoPanel = ({
             <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
                 <Calendar className="w-4 h-4" />
-                <span className="text-xs font-medium">Started At</span>
+                <span className="text-xs font-medium">{t('agentDesktop.startedAt')}</span>
               </div>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {formatStartTime(callStartTime)}
@@ -212,7 +214,7 @@ export const CallInfoPanel = ({
             <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-xs font-medium">Duration</span>
+                <span className="text-xs font-medium">{t('agentDesktop.duration')}</span>
               </div>
               <CallDurationTimer
                 startTime={callStartTime}
@@ -227,7 +229,7 @@ export const CallInfoPanel = ({
             <Badge variant="info" size="sm">
               {callInfo.direction}
             </Badge>
-            {callInfo.queueName && <span>Queue: {callInfo.queueName}</span>}
+            {callInfo.queueName && <span>{t('agentDesktop.queueLabel')} {callInfo.queueName}</span>}
             {callInfo.callId && <span className="text-xs">ID: {callInfo.callId.slice(0, 8)}</span>}
             {/* Recording indicator */}
             <span className="flex items-center gap-1">
@@ -236,7 +238,7 @@ export const CallInfoPanel = ({
                 transition={{ duration: 1.5, repeat: Infinity }}
                 className="w-2 h-2 rounded-full bg-red-500"
               />
-              Recording
+              {t('agentDesktop.recording')}
             </span>
           </div>
 
@@ -251,16 +253,16 @@ export const CallInfoPanel = ({
                 className={`w-full flex flex-col items-center gap-1.5 h-auto py-3 ${
                   isMuted ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-800' : ''
                 }`}
-                title={isMuted ? 'Click to unmute' : 'Click to mute'}
+                title={isMuted ? t('agentDesktop.unmuteTooltip') : t('agentDesktop.muteTooltip')}
               >
                 {isMuted ? (
                   <MicOff className="w-5 h-5" />
                 ) : (
                   <Mic className="w-5 h-5" />
                 )}
-                <span className="text-xs font-medium">{isMuted ? 'Unmute' : 'Mute'}</span>
+                <span className="text-xs font-medium">{isMuted ? t('agentDesktop.unmute') : t('agentDesktop.mute')}</span>
                 {isMuted && (
-                  <span className="text-[10px] text-red-400 font-medium">MUTED</span>
+                  <span className="text-[10px] text-red-400 font-medium">{t('agentDesktop.muted')}</span>
                 )}
               </Button>
             </motion.div>
@@ -274,16 +276,16 @@ export const CallInfoPanel = ({
                 className={`w-full flex flex-col items-center gap-1.5 h-auto py-3 ${
                   isOnHold ? 'ring-2 ring-yellow-500 ring-offset-2 dark:ring-offset-gray-800' : ''
                 }`}
-                title={isOnHold ? 'Click to resume' : 'Click to hold'}
+                title={isOnHold ? t('agentDesktop.resumeTooltip') : t('agentDesktop.holdTooltip')}
               >
                 {isOnHold ? (
                   <Play className="w-5 h-5" />
                 ) : (
                   <Pause className="w-5 h-5" />
                 )}
-                <span className="text-xs font-medium">{isOnHold ? 'Resume' : 'Hold'}</span>
+                <span className="text-xs font-medium">{isOnHold ? t('agentDesktop.resume') : t('agentDesktop.hold')}</span>
                 {isOnHold && (
-                  <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">ON HOLD</span>
+                  <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">{t('agentDesktop.onHold')}</span>
                 )}
               </Button>
             </motion.div>
@@ -295,10 +297,10 @@ export const CallInfoPanel = ({
                 variant="secondary"
                 size="md"
                 className="w-full flex flex-col items-center gap-1.5 h-auto py-3"
-                title="Transfer call to another agent"
+                title={t('agentDesktop.transferTooltip')}
               >
                 <ArrowRightLeft className="w-5 h-5" />
-                <span className="text-xs font-medium">Transfer</span>
+                <span className="text-xs font-medium">{t('agentDesktop.transfer')}</span>
               </Button>
             </motion.div>
 
@@ -309,10 +311,10 @@ export const CallInfoPanel = ({
                 variant="danger"
                 size="md"
                 className="w-full flex flex-col items-center gap-1.5 h-auto py-3"
-                title="End the call"
+                title={t('agentDesktop.endCallTooltip')}
               >
                 <PhoneOff className="w-5 h-5" />
-                <span className="text-xs font-medium">End Call</span>
+                <span className="text-xs font-medium">{t('agentDesktop.endCall')}</span>
               </Button>
             </motion.div>
           </div>
@@ -329,7 +331,7 @@ export const CallInfoPanel = ({
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-4 h-4 text-amber-500" />
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  Call Script & Suggestions
+                  {t('agentDesktop.callScripts')}
                 </span>
               </div>
               {isScriptExpanded ? (
@@ -382,7 +384,7 @@ export const CallInfoPanel = ({
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  Recent Interactions
+                  {t('agentDesktop.recentInteractions')}
                 </span>
                 {recentInteractions.length > 0 && (
                   <Badge variant="info" size="sm">{recentInteractions.length}</Badge>
@@ -406,7 +408,7 @@ export const CallInfoPanel = ({
                   <div className="px-6 pb-4">
                     {recentInteractions.length === 0 ? (
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
-                        No recent interactions found
+                        {t('agentDesktop.noInteractionsFound')}
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -463,7 +465,7 @@ export const CallInfoPanel = ({
               <div className="flex items-center gap-2">
                 <Ticket className="w-4 h-4 text-orange-500" />
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  Linked Tickets
+                  {t('agentDesktop.linkedTickets')}
                 </span>
                 {linkedTickets.length > 0 && (
                   <Badge variant="warning" size="sm">{linkedTickets.length}</Badge>
@@ -487,7 +489,7 @@ export const CallInfoPanel = ({
                   <div className="px-6 pb-4">
                     {linkedTickets.length === 0 ? (
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
-                        No linked tickets
+                        {t('agentDesktop.noLinkedTickets')}
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -502,7 +504,7 @@ export const CallInfoPanel = ({
                                   {ticket.subject}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  Created: {ticket.createdAt}
+                                  {t('agentDesktop.created')} {ticket.createdAt}
                                 </p>
                               </div>
                               <div className="flex flex-col items-end gap-1">

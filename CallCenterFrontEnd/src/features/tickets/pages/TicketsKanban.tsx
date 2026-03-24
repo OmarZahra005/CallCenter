@@ -51,8 +51,7 @@ interface Agent {
 }
 
 const TicketsKanban = () => {
-  const { t: _t } = useTranslation();
-  void _t; // Translation hook available for future use
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [filter, setFilter] = useState<'all' | 'my'>('all');
@@ -67,6 +66,8 @@ const TicketsKanban = () => {
     customerId: '',
     assignedAgentId: '',
   });
+
+  const isArabic = i18n.language === 'ar';
 
   // Fetch tickets
   const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
@@ -102,7 +103,7 @@ const TicketsKanban = () => {
   // Update ticket status mutation
   const updateTicketStatus = useMutation({
     mutationFn: async ({ ticketId, status }: { ticketId: string; status: string }) => {
-      const ticket = tickets.find(t => t.id === ticketId);
+      const ticket = tickets.find(tk => tk.id === ticketId);
       if (!ticket) return;
 
       const response = await apiClient.put(`/tickets/${ticketId}`, {
@@ -123,10 +124,10 @@ const TicketsKanban = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setIsEditModalOpen(false);
-      showToast('Ticket updated successfully', 'success');
+      showToast(t('ticketsPage.updatedSuccess'), 'success');
     },
     onError: () => {
-      showToast('Failed to update ticket', 'error');
+      showToast(t('ticketsPage.updatedError'), 'error');
     },
   });
 
@@ -159,12 +160,12 @@ const TicketsKanban = () => {
   // Build Kanban columns
   const kanbanColumns = useMemo(() => {
     const columns = [
-      { id: 'new', title: 'New', color: 'bg-blue-500', items: [] as any[] },
-      { id: 'open', title: 'Open', color: 'bg-yellow-500', items: [] as any[] },
-      { id: 'in-progress', title: 'In Progress', color: 'bg-purple-500', items: [] as any[] },
-      { id: 'pending', title: 'Pending', color: 'bg-orange-500', items: [] as any[] },
-      { id: 'resolved', title: 'Resolved', color: 'bg-green-500', items: [] as any[] },
-      { id: 'closed', title: 'Closed', color: 'bg-gray-500', items: [] as any[] },
+      { id: 'new', title: t('ticketsPage.statusNew'), color: 'bg-blue-500', items: [] as any[] },
+      { id: 'open', title: t('ticketsPage.statusOpen'), color: 'bg-yellow-500', items: [] as any[] },
+      { id: 'in-progress', title: t('ticketsPage.statusInProgress'), color: 'bg-purple-500', items: [] as any[] },
+      { id: 'pending', title: t('ticketsPage.statusPending'), color: 'bg-orange-500', items: [] as any[] },
+      { id: 'resolved', title: t('ticketsPage.statusResolved'), color: 'bg-green-500', items: [] as any[] },
+      { id: 'closed', title: t('ticketsPage.statusClosed'), color: 'bg-gray-500', items: [] as any[] },
     ];
 
     tickets.forEach((ticket) => {
@@ -183,7 +184,7 @@ const TicketsKanban = () => {
     });
 
     return columns;
-  }, [tickets, agents]);
+  }, [tickets, agents, t]);
 
   // Handle item move between columns
   const handleItemMove = (itemId: string, _sourceColumn: string, targetColumn: string) => {
@@ -195,7 +196,7 @@ const TicketsKanban = () => {
 
   // Handle item click - open ticket detail modal
   const handleItemClick = (item: any) => {
-    const ticket = tickets.find(t => t.id === item.id);
+    const ticket = tickets.find(tk => tk.id === item.id);
     if (ticket) {
       setSelectedTicket(ticket);
       setIsViewModalOpen(true);
@@ -231,6 +232,28 @@ const TicketsKanban = () => {
     return customer?.name;
   };
 
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      New: t('ticketsPage.statusNew'),
+      Open: t('ticketsPage.statusOpen'),
+      InProgress: t('ticketsPage.statusInProgress'),
+      Pending: t('ticketsPage.statusPending'),
+      Resolved: t('ticketsPage.statusResolved'),
+      Closed: t('ticketsPage.statusClosed'),
+    };
+    return labels[status] || status;
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    const labels: Record<string, string> = {
+      Critical: t('ticketsPage.priorityCritical'),
+      High: t('ticketsPage.priorityHigh'),
+      Medium: t('ticketsPage.priorityMedium'),
+      Low: t('ticketsPage.priorityLow'),
+    };
+    return labels[priority] || priority;
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'default'> = {
       New: 'info',
@@ -240,15 +263,7 @@ const TicketsKanban = () => {
       Resolved: 'success',
       Closed: 'default',
     };
-    const labels: Record<string, string> = {
-      New: 'New',
-      Open: 'Open',
-      InProgress: 'In Progress',
-      Pending: 'Pending',
-      Resolved: 'Resolved',
-      Closed: 'Closed',
-    };
-    return <Badge variant={variants[status] || 'default'}>{labels[status] || status}</Badge>;
+    return <Badge variant={variants[status] || 'default'}>{getStatusLabel(status)}</Badge>;
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -258,17 +273,17 @@ const TicketsKanban = () => {
       Medium: 'warning',
       Low: 'info',
     };
-    return <Badge variant={variants[priority] || 'default'} size="sm">{priority}</Badge>;
+    return <Badge variant={variants[priority] || 'default'} size="sm">{getPriorityLabel(priority)}</Badge>;
   };
 
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
-      Critical: 'border-l-red-500',
-      High: 'border-l-orange-500',
-      Medium: 'border-l-yellow-500',
-      Low: 'border-l-blue-500',
+      Critical: 'border-s-red-500',
+      High: 'border-s-orange-500',
+      Medium: 'border-s-yellow-500',
+      Low: 'border-s-blue-500',
     };
-    return colors[priority] || 'border-l-gray-300';
+    return colors[priority] || 'border-s-gray-300';
   };
 
   const getStatusIcon = (status: string) => {
@@ -287,7 +302,7 @@ const TicketsKanban = () => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -311,19 +326,19 @@ const TicketsKanban = () => {
   };
 
   const priorityOptions = [
-    { value: 'Low', label: 'Low' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'High', label: 'High' },
-    { value: 'Critical', label: 'Critical' },
+    { value: 'Low', label: t('ticketsPage.priorityLow') },
+    { value: 'Medium', label: t('ticketsPage.priorityMedium') },
+    { value: 'High', label: t('ticketsPage.priorityHigh') },
+    { value: 'Critical', label: t('ticketsPage.priorityCritical') },
   ];
 
   const statusOptions = [
-    { value: 'New', label: 'New' },
-    { value: 'Open', label: 'Open' },
-    { value: 'InProgress', label: 'In Progress' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Resolved', label: 'Resolved' },
-    { value: 'Closed', label: 'Closed' },
+    { value: 'New', label: t('ticketsPage.statusNew') },
+    { value: 'Open', label: t('ticketsPage.statusOpen') },
+    { value: 'InProgress', label: t('ticketsPage.statusInProgress') },
+    { value: 'Pending', label: t('ticketsPage.statusPending') },
+    { value: 'Resolved', label: t('ticketsPage.statusResolved') },
+    { value: 'Closed', label: t('ticketsPage.statusClosed') },
   ];
 
   const customerOptions = customers.map((customer: Customer) => ({
@@ -340,9 +355,9 @@ const TicketsKanban = () => {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tickets Kanban</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('ticketsPage.kanbanTitle')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Drag and drop tickets between columns to update status
+            {t('ticketsPage.kanbanSubtitle')}
           </p>
         </div>
         <div className="flex gap-4">
@@ -359,9 +374,9 @@ const TicketsKanban = () => {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tickets Kanban</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('ticketsPage.kanbanTitle')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Drag and drop tickets between columns to update status
+            {t('ticketsPage.kanbanSubtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -370,14 +385,14 @@ const TicketsKanban = () => {
             size="sm"
             onClick={() => setFilter('all')}
           >
-            All Tickets
+            {t('ticketsPage.allTickets')}
           </Button>
           <Button
             variant={filter === 'my' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('my')}
           >
-            My Tickets
+            {t('ticketsPage.myTickets')}
           </Button>
         </div>
       </div>
@@ -404,13 +419,13 @@ const TicketsKanban = () => {
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title={`Ticket ${selectedTicket?.ticketNumber}`}
+        title={`${t('ticketsPage.ticketNumber')} ${selectedTicket?.ticketNumber || ''}`}
         size="lg"
       >
         {selectedTicket && (
           <div className="space-y-6">
             {/* Ticket Header */}
-            <div className={`p-4 rounded-lg border-l-4 ${getPriorityColor(selectedTicket.priority)} bg-gray-50 dark:bg-gray-800/50`}>
+            <div className={`p-4 rounded-lg border-s-4 ${getPriorityColor(selectedTicket.priority)} bg-gray-50 dark:bg-gray-800/50`}>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {selectedTicket.subject}
@@ -420,27 +435,27 @@ const TicketsKanban = () => {
                 </div>
               </div>
               <p className="text-gray-600 dark:text-gray-400">
-                {selectedTicket.description || 'No description provided'}
+                {selectedTicket.description || t('ticketsPage.noDescription')}
               </p>
             </div>
 
             {/* Ticket Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.status')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   {getStatusIcon(selectedTicket.status)}
                   {getStatusBadge(selectedTicket.status)}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Priority</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.priority')}</span>
                 <div className="mt-2">
                   {getPriorityBadge(selectedTicket.priority)}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.customer')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   {(selectedTicket.customerName || getCustomerName(selectedTicket.customerId)) ? (
                     <>
@@ -450,12 +465,12 @@ const TicketsKanban = () => {
                       <span className="text-sm text-gray-900 dark:text-white">{selectedTicket.customerName || getCustomerName(selectedTicket.customerId)}</span>
                     </>
                   ) : (
-                    <span className="text-sm text-gray-400">Not specified</span>
+                    <span className="text-sm text-gray-400">{t('ticketsPage.notSpecified')}</span>
                   )}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assigned To</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.assignedTo')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   {(selectedTicket.assignedAgentName || getAgentName(selectedTicket.assignedAgentId)) ? (
                     <>
@@ -465,18 +480,18 @@ const TicketsKanban = () => {
                       <span className="text-sm text-gray-900 dark:text-white">{selectedTicket.assignedAgentName || getAgentName(selectedTicket.assignedAgentId)}</span>
                     </>
                   ) : (
-                    <span className="text-sm text-gray-400 italic">Unassigned</span>
+                    <span className="text-sm text-gray-400 italic">{t('ticketsPage.unassigned')}</span>
                   )}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.created')}</span>
                 <p className="mt-2 text-sm text-gray-900 dark:text-white">
                   {formatDate(selectedTicket.createdAt)}
                 </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Updated</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.lastUpdated')}</span>
                 <p className="mt-2 text-sm text-gray-900 dark:text-white">
                   {formatDate(selectedTicket.updatedAt)}
                 </p>
@@ -504,14 +519,14 @@ const TicketsKanban = () => {
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto">
-                Close
+                {t('common.close')}
               </Button>
               <Button onClick={() => {
                 setIsViewModalOpen(false);
                 handleEditClick(selectedTicket);
               }} className="w-full sm:w-auto">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Ticket
+                <Edit className="w-4 h-4 me-2" />
+                {t('ticketsPage.editTicket')}
               </Button>
             </div>
           </div>
@@ -522,33 +537,33 @@ const TicketsKanban = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Edit Ticket"
+        title={t('ticketsPage.editTicket')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Subject"
+            label={t('ticketsPage.subject')}
             value={formData.subject}
             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-            placeholder="Brief description of the issue"
+            placeholder={t('ticketsPage.subjectPlaceholder')}
             required
           />
           <Textarea
-            label="Description"
+            label={t('ticketsPage.description')}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Detailed description of the issue..."
+            placeholder={t('ticketsPage.descriptionPlaceholder')}
             rows={4}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Priority"
+              label={t('ticketsPage.priority')}
               options={priorityOptions}
               value={formData.priority}
               onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
             />
             <Select
-              label="Status"
+              label={t('common.status')}
               options={statusOptions}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -556,29 +571,29 @@ const TicketsKanban = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Customer"
-              options={[{ value: '', label: 'Select Customer' }, ...customerOptions]}
+              label={t('ticketsPage.customer')}
+              options={[{ value: '', label: t('ticketsPage.selectCustomer') }, ...customerOptions]}
               value={formData.customerId}
               onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
               required
             />
             <Select
-              label="Assigned Agent"
-              options={[{ value: '', label: 'Unassigned' }, ...agentOptions]}
+              label={t('ticketsPage.assignedAgent')}
+              options={[{ value: '', label: t('ticketsPage.unassigned') }, ...agentOptions]}
               value={formData.assignedAgentId || ''}
               onChange={(e) => setFormData({ ...formData, assignedAgentId: e.target.value })}
             />
           </div>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               isLoading={updateTicketMutation.isPending}
               className="w-full sm:w-auto"
             >
-              Update Ticket
+              {t('ticketsPage.updateTicket')}
             </Button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList,
@@ -56,6 +57,7 @@ interface EvaluationForm {
 
 const EvaluationForms = () => {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,15 +207,15 @@ const EvaluationForms = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <ClipboardList className="w-7 h-7 text-primary-600" />
-              Evaluation Forms
+              {t('evaluationForms.title')}
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Create and manage QA evaluation forms and scoring criteria
+              {t('evaluationForms.subtitle')}
             </p>
           </div>
           <Button onClick={handleCreateNew}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Form
+            <Plus className="w-4 h-4 me-2" />
+            {t('evaluationForms.createForm')}
           </Button>
         </div>
       </motion.div>
@@ -223,7 +225,7 @@ const EvaluationForms = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Forms</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('evaluationForms.totalForms')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalForms}</p>
             </div>
             <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
@@ -234,7 +236,7 @@ const EvaluationForms = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Active Forms</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('evaluationForms.activeForms')}</p>
               <p className="text-2xl font-bold text-green-600">{stats.activeForms}</p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
@@ -245,7 +247,7 @@ const EvaluationForms = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Criteria</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('evaluationForms.totalCriteria')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCriteria}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -256,7 +258,7 @@ const EvaluationForms = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Avg Criteria/Form</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('evaluationForms.avgCriteriaPerForm')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.avgCriteria}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
@@ -271,13 +273,13 @@ const EvaluationForms = () => {
         <Card className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search forms..."
+                placeholder={t('evaluationForms.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
             <button
@@ -293,7 +295,7 @@ const EvaluationForms = () => {
               ) : (
                 <ToggleLeft className="w-5 h-5" />
               )}
-              Active Only
+              {t('evaluationForms.activeOnly')}
             </button>
           </div>
         </Card>
@@ -308,23 +310,23 @@ const EvaluationForms = () => {
         ) : error ? (
           <Card className="p-8 text-center">
             <XCircle className="w-12 h-12 mx-auto text-red-500 mb-4" />
-            <p className="text-gray-500">Failed to load evaluation forms</p>
+            <p className="text-gray-500">{t('evaluationForms.failedToLoad')}</p>
           </Card>
         ) : filteredForms.length === 0 ? (
           <Card className="p-8 text-center">
             <ClipboardList className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-              {searchTerm || showActiveOnly ? 'No matching forms found' : 'No evaluation forms yet'}
+              {searchTerm || showActiveOnly ? t('evaluationForms.noMatchingForms') : t('evaluationForms.noFormsYet')}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
               {searchTerm || showActiveOnly
-                ? 'Try adjusting your filters'
-                : 'Create your first evaluation form to start scoring agent interactions'}
+                ? t('evaluationForms.tryAdjusting')
+                : t('evaluationForms.getStarted')}
             </p>
             {!searchTerm && !showActiveOnly && (
               <Button onClick={handleCreateNew}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Form
+                <Plus className="w-4 h-4 me-2" />
+                {t('evaluationForms.createForm')}
               </Button>
             )}
           </Card>
@@ -357,7 +359,7 @@ const EvaluationForms = () => {
                                 variant={form.isActive ? 'success' : 'default'}
                                 size="sm"
                               >
-                                {form.isActive ? 'Active' : 'Inactive'}
+                                {form.isActive ? t('evaluationForms.active') : t('evaluationForms.inactive')}
                               </Badge>
                             </div>
                             {form.description && (
@@ -370,20 +372,20 @@ const EvaluationForms = () => {
                             <div className="flex flex-wrap gap-4 text-sm">
                               <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
                                 <Target className="w-4 h-4" />
-                                <span>{form.criteria.length} criteria</span>
+                                <span>{t('evaluationForms.criteria', { count: form.criteria.length })}</span>
                               </div>
                               <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
                                 <Star className="w-4 h-4" />
-                                <span>Max: {form.maxScore} pts</span>
+                                <span>{t('evaluationForms.maxPts', { count: form.maxScore })}</span>
                               </div>
                               <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
                                 <Scale className="w-4 h-4" />
-                                <span>Pass: {form.passingScore}%</span>
+                                <span>{t('evaluationForms.passScore', { score: form.passingScore })}</span>
                               </div>
                               {criticalCount > 0 && (
                                 <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
                                   <AlertTriangle className="w-4 h-4" />
-                                  <span>{criticalCount} critical</span>
+                                  <span>{t('evaluationForms.critical', { count: criticalCount })}</span>
                                 </div>
                               )}
                             </div>
@@ -392,7 +394,7 @@ const EvaluationForms = () => {
                             {totalWeight !== 100 && totalWeight > 0 && (
                               <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3" />
-                                Total weight: {totalWeight.toFixed(0)}% (should be 100%)
+                                {t('evaluationForms.totalWeight', { weight: totalWeight.toFixed(0) })}
                               </div>
                             )}
                           </div>
@@ -403,7 +405,7 @@ const EvaluationForms = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handlePreview(form)}
-                              title="Preview"
+                              title={t('evaluationForms.preview')}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -411,7 +413,7 @@ const EvaluationForms = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(form)}
-                              title="Edit"
+                              title={t('evaluationForms.edit')}
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
@@ -420,7 +422,7 @@ const EvaluationForms = () => {
                               size="sm"
                               onClick={() => duplicateMutation.mutate(form)}
                               disabled={duplicateMutation.isPending}
-                              title="Duplicate"
+                              title={t('evaluationForms.duplicate')}
                             >
                               <Copy className="w-4 h-4" />
                             </Button>
@@ -434,7 +436,7 @@ const EvaluationForms = () => {
                                 })
                               }
                               disabled={toggleActiveMutation.isPending}
-                              title={form.isActive ? 'Deactivate' : 'Activate'}
+                              title={form.isActive ? t('evaluationForms.deactivate') : t('evaluationForms.activate')}
                             >
                               {form.isActive ? (
                                 <ToggleRight className="w-4 h-4 text-green-600" />
@@ -447,7 +449,7 @@ const EvaluationForms = () => {
                               size="sm"
                               onClick={() => setDeleteConfirmForm(form)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete"
+                              title={t('evaluationForms.deleteBtn')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -470,7 +472,7 @@ const EvaluationForms = () => {
           setIsBuilderOpen(false);
           setEditingForm(null);
         }}
-        title={editingForm ? 'Edit Evaluation Form' : 'Create Evaluation Form'}
+        title={editingForm ? t('evaluationForms.editForm') : t('evaluationForms.createNewForm')}
         size="xl"
       >
         <FormBuilder
@@ -490,7 +492,7 @@ const EvaluationForms = () => {
           setIsPreviewOpen(false);
           setSelectedForm(null);
         }}
-        title="Form Preview"
+        title={t('evaluationForms.formPreview')}
         size="lg"
       >
         {selectedForm && (
@@ -505,13 +507,13 @@ const EvaluationForms = () => {
                 </p>
               )}
               <div className="flex gap-4 text-sm">
-                <span className="text-gray-500">Max Score: {selectedForm.maxScore}</span>
-                <span className="text-gray-500">Passing: {selectedForm.passingScore}%</span>
+                <span className="text-gray-500">{t('evaluationForms.maxScore', { score: selectedForm.maxScore })}</span>
+                <span className="text-gray-500">{t('evaluationForms.passingScore', { score: selectedForm.passingScore })}</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-white">Evaluation Criteria</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white">{t('evaluationForms.evaluationCriteria')}</h4>
               {selectedForm.criteria
                 .sort((a, b) => a.displayOrder - b.displayOrder)
                 .map((criterion, index) => (
@@ -530,7 +532,7 @@ const EvaluationForms = () => {
                           </h5>
                           {criterion.isCritical && (
                             <Badge variant="danger" size="sm">
-                              Critical
+                              {t('evaluationForms.criticalBadge')}
                             </Badge>
                           )}
                         </div>
@@ -540,12 +542,12 @@ const EvaluationForms = () => {
                           </p>
                         )}
                       </div>
-                      <div className="text-right text-sm">
+                      <div className="text-end text-sm">
                         <p className="font-medium text-gray-900 dark:text-white">
-                          {criterion.maxPoints} pts
+                          {t('evaluationForms.pts', { count: criterion.maxPoints })}
                         </p>
                         <p className="text-gray-500">
-                          Weight: {(criterion.weight * 100).toFixed(0)}%
+                          {t('evaluationForms.weight', { weight: (criterion.weight * 100).toFixed(0) })}
                         </p>
                       </div>
                     </div>
@@ -573,8 +575,8 @@ const EvaluationForms = () => {
                   handleEdit(selectedForm);
                 }}
               >
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Form
+                <Edit2 className="w-4 h-4 me-2" />
+                {t('evaluationForms.editFormBtn')}
               </Button>
               <Button
                 onClick={() => {
@@ -582,7 +584,7 @@ const EvaluationForms = () => {
                   setSelectedForm(null);
                 }}
               >
-                Close
+                {t('evaluationForms.close')}
               </Button>
             </div>
           </div>
@@ -593,7 +595,7 @@ const EvaluationForms = () => {
       <Modal
         isOpen={!!deleteConfirmForm}
         onClose={() => setDeleteConfirmForm(null)}
-        title="Delete Evaluation Form"
+        title={t('evaluationForms.deleteForm')}
         size="sm"
       >
         {deleteConfirmForm && (
@@ -602,17 +604,16 @@ const EvaluationForms = () => {
               <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-red-800 dark:text-red-300">
-                  Are you sure you want to delete this form?
+                  {t('evaluationForms.deleteConfirm')}
                 </p>
                 <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                  "{deleteConfirmForm.name}" will be permanently deleted. This action cannot be
-                  undone.
+                  {t('evaluationForms.deleteDesc', { name: deleteConfirmForm.name })}
                 </p>
               </div>
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setDeleteConfirmForm(null)}>
-                Cancel
+                {t('evaluationForms.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -621,13 +622,13 @@ const EvaluationForms = () => {
               >
                 {deleteMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
+                    <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                    {t('evaluationForms.deleting')}
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Form
+                    <Trash2 className="w-4 h-4 me-2" />
+                    {t('evaluationForms.deleteFormBtn')}
                   </>
                 )}
               </Button>

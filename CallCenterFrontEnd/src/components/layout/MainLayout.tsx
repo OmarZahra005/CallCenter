@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,7 @@ import { useThemeStore } from '../../hooks/useTheme';
 import { useSignalR } from '../../hooks/useSignalR';
 import { useCallCenterShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { usePermissions } from '../../hooks/usePermissions';
-import { NotificationDropdown, Toast, SkipLink, KeyboardShortcutsDialog } from '../ui';
+import { NotificationDropdown, Toast, SkipLink, KeyboardShortcutsDialog, Tooltip } from '../ui';
 import { cn } from '../../utils/cn';
 import { pageVariants, pageTransition } from '../../utils/animations';
 import {
@@ -15,7 +15,6 @@ import {
   Headphones,
   Phone,
   PhoneOutgoing,
-  Inbox,
   Users,
   UsersRound,
   Calendar,
@@ -24,7 +23,6 @@ import {
   Mic,
   ClipboardCheck,
   FileQuestion,
-  BookOpen,
   BarChart3,
   Download,
   MessageCircle,
@@ -39,7 +37,8 @@ import {
   LogOut,
   Menu,
   X,
-  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 interface NavChild {
@@ -58,6 +57,8 @@ interface NavItem {
   permission?: string;
 }
 
+const SIDEBAR_KEY = 'sidebar-collapsed';
+
 const MainLayout = () => {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
@@ -68,7 +69,17 @@ const MainLayout = () => {
   const location = useLocation();
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedMobileMenus, setExpandedMobileMenus] = useState<string[]>(['operations', 'workforce']);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_KEY) === 'true'; } catch { return false; }
+  });
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['operations', 'workforce']);
+
+  const { i18n } = useTranslation();
+
+  // Persist collapsed state
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_KEY, String(collapsed)); } catch { /* noop */ }
+  }, [collapsed]);
 
   // Keyboard shortcuts
   const shortcuts = useCallCenterShortcuts({
@@ -89,21 +100,19 @@ const MainLayout = () => {
     i18n.changeLanguage(newLang);
   };
 
-  const { i18n } = useTranslation();
-
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  const toggleMobileMenu = (menuId: string) => {
-    setExpandedMobileMenus(prev =>
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev =>
       prev.includes(menuId)
         ? prev.filter(id => id !== menuId)
         : [...prev, menuId]
     );
   };
 
-  // Navigation structure with parent/child hierarchy
+  // Navigation structure
   const navItems: NavItem[] = [
     {
       id: 'dashboard',
@@ -119,8 +128,7 @@ const MainLayout = () => {
       children: [
         { path: '/agent-desktop', label: t('nav.agentDesktop'), icon: <Headphones className="w-4 h-4" />, permission: 'calls.view' },
         { path: '/outcall', label: t('nav.outboundCall'), icon: <PhoneOutgoing className="w-4 h-4" />, permission: 'calls.view' },
-        { path: '/call-center', label: t('nav.calls'), icon: <Phone className="w-4 h-4" />, permission: 'calls.view' },
-        { path: '/communications', label: t('nav.inbox'), icon: <Inbox className="w-4 h-4" />, permission: 'calls.view' },
+        { path: '/calls', label: t('nav.calls'), icon: <Phone className="w-4 h-4" />, permission: 'calls.view' },
       ],
     },
     {
@@ -162,14 +170,6 @@ const MainLayout = () => {
       ],
     },
     {
-      id: 'knowledge',
-      label: t('nav.knowledge'),
-      icon: <BookOpen className="w-5 h-5" />,
-      children: [
-        { path: '/knowledge-base', label: t('nav.knowledgeBase'), icon: <BookOpen className="w-4 h-4" />, permission: 'knowledge.view' },
-      ],
-    },
-    {
       id: 'integrations',
       label: t('nav.integrations'),
       icon: <Zap className="w-5 h-5" />,
@@ -183,7 +183,7 @@ const MainLayout = () => {
       label: t('nav.notifications'),
       icon: <Bell className="w-5 h-5" />,
       children: [
-        { path: '/settings/notifications', label: t('nav.notifications'), icon: <Bell className="w-4 h-4" /> },
+        { path: '/settings/notifications', label: t('nav.notificationSettings'), icon: <Bell className="w-4 h-4" /> },
         { path: '/admin/alerts', label: t('nav.alertRules'), icon: <AlertTriangle className="w-4 h-4" />, permission: 'admin.alerts' },
       ],
     },
@@ -200,11 +200,6 @@ const MainLayout = () => {
     },
   ];
 
-  // Primary nav items (always visible in desktop)
-  const primaryNavIds = ['dashboard', 'operations', 'workforce', 'customers', 'quality', 'reports'];
-  // Secondary nav items (in "More" dropdown)
-  const secondaryNavIds = ['knowledge', 'integrations', 'notifications', 'settings'];
-
   // Check if a parent menu has an active child
   const isParentActive = (children: NavChild[] | undefined) => {
     if (!children) return false;
@@ -214,110 +209,190 @@ const MainLayout = () => {
   // Filter visible children based on permissions
   const getVisibleChildren = useCallback((children: NavChild[] | undefined) => {
     if (!children) return [];
-    // Super admin sees everything
     if (isSuperAdmin) return children;
-    // Filter children based on permission
     return children.filter(child => !child.permission || hasPermission(child.permission));
   }, [isSuperAdmin, hasPermission]);
 
   // Filter nav items to hide parents with no visible children
   const visibleNavItems = useMemo(() => {
     return navItems.filter(item => {
-      // Super admin sees everything
       if (isSuperAdmin) {
         if (item.path) return true;
         return (item.children?.length ?? 0) > 0;
       }
-      // Standalone items check their own permission
       if (item.path) {
         return !item.permission || hasPermission(item.permission);
       }
-      // Parent items check if any children are visible
       const visibleChildren = getVisibleChildren(item.children);
       return visibleChildren.length > 0;
     });
   }, [navItems, isSuperAdmin, hasPermission, getVisibleChildren]);
 
-  const primaryNavItems = visibleNavItems.filter(item => primaryNavIds.includes(item.id));
-  const secondaryNavItems = visibleNavItems.filter(item => secondaryNavIds.includes(item.id));
+  // Auto-expand parent of active route
+  useEffect(() => {
+    for (const item of navItems) {
+      if (item.children && isParentActive(item.children)) {
+        setExpandedMenus(prev =>
+          prev.includes(item.id) ? prev : [...prev, item.id]
+        );
+      }
+    }
+  }, [location.pathname]);
 
-  // Check if any secondary item is active
-  const isSecondaryActive = secondaryNavItems.some(item =>
-    item.path ? location.pathname === item.path : isParentActive(item.children)
-  );
-
-  // Render a single nav item (for desktop horizontal menu)
-  const renderDesktopNavItem = (item: NavItem) => {
+  // ── Sidebar nav item renderer ──
+  const renderSidebarItem = (item: NavItem) => {
     if (item.path) {
-      // Standalone item
-      return (
+      // Standalone item (e.g. Dashboard)
+      const navContent = (
         <NavLink
-          key={item.id}
           to={item.path}
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+              'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
               isActive
                 ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
             )
           }
         >
-          {item.icon}
-          <span>{item.label}</span>
+          {({ isActive }) => (
+            <>
+              {/* Active indicator bar */}
+              {isActive && (
+                <span
+                  className="absolute inset-inline-start-0 top-1.5 bottom-1.5 w-1 rounded-full bg-primary-500"
+                />
+              )}
+              <span className="flex-shrink-0">{item.icon}</span>
+              {!collapsed && <span className="truncate">{item.label}</span>}
+            </>
+          )}
         </NavLink>
+      );
+
+      return collapsed ? (
+        <Tooltip key={item.id} content={item.label} position="right" delay={100}>
+          {navContent}
+        </Tooltip>
+      ) : (
+        <div key={item.id}>{navContent}</div>
       );
     }
 
-    // Parent item with dropdown
+    // Parent item with children
     const visibleChildren = getVisibleChildren(item.children);
     const active = isParentActive(item.children);
+    const expanded = expandedMenus.includes(item.id);
 
+    if (collapsed) {
+      // Collapsed: show icon-only with tooltip flyout
+      return (
+        <div key={item.id} className="relative group/flyout">
+          <Tooltip content={item.label} position="right" delay={100}>
+            <button
+              className={cn(
+                'w-full flex items-center justify-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                active
+                  ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
+              )}
+            >
+              <span className="flex-shrink-0">{item.icon}</span>
+            </button>
+          </Tooltip>
+
+          {/* Flyout submenu on hover when collapsed */}
+          <div className={cn(
+            'absolute top-0 z-50 py-2 min-w-[200px] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700',
+            'opacity-0 invisible group-hover/flyout:opacity-100 group-hover/flyout:visible transition-all duration-200',
+            'start-full ms-2'
+          )}>
+            <div className="px-3 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+              {item.label}
+            </div>
+            {visibleChildren.map(child => (
+              <NavLink
+                key={child.path}
+                to={child.path}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors',
+                    isActive
+                      ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                  )
+                }
+              >
+                {child.icon}
+                <span>{child.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Expanded sidebar: collapsible section
     return (
-      <div key={item.id} className="relative group">
+      <div key={item.id}>
         <button
+          onClick={() => toggleMenu(item.id)}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+            'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
             active
-              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
+              ? 'bg-primary-500/5 text-primary-600 dark:text-primary-400'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
           )}
         >
-          {item.icon}
-          <span>{item.label}</span>
-          <ChevronDown className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-3">
+            <span className="flex-shrink-0">{item.icon}</span>
+            <span className="truncate">{item.label}</span>
+          </div>
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex-shrink-0"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </motion.span>
         </button>
 
-        {/* Dropdown */}
-        <div className="absolute start-0 top-full mt-1 py-2 min-w-[200px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-          {visibleChildren.map(child => (
-            <NavLink
-              key={child.path}
-              to={child.path}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
-                )
-              }
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="overflow-hidden"
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary-500 absolute start-2" />}
-                  <span className="ms-2">{child.icon}</span>
-                  <span>{child.label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
-        </div>
+              <div className="mt-1 ms-4 ps-3 border-s-2 border-gray-200 dark:border-gray-700 space-y-0.5">
+                {visibleChildren.map(child => (
+                  <NavLink
+                    key={child.path}
+                    to={child.path}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200',
+                        isActive
+                          ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium border-s-2 border-primary-500 -ms-[2px]'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
+                      )
+                    }
+                  >
+                    {child.icon}
+                    <span className="truncate">{child.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
 
-  // Render mobile nav item
+  // ── Mobile nav item renderer ──
   const renderMobileNavItem = (item: NavItem) => {
     if (item.path) {
       return (
@@ -330,7 +405,7 @@ const MainLayout = () => {
               'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
               isActive
                 ? 'bg-primary-500/10 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400 shadow-sm'
-                : 'text-gray-700 hover:bg-primary-500/5 dark:text-gray-300 dark:hover:bg-white/10'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5'
             )
           }
         >
@@ -346,12 +421,12 @@ const MainLayout = () => {
     return (
       <div key={item.id}>
         <button
-          onClick={() => toggleMobileMenu(item.id)}
+          onClick={() => toggleMenu(item.id)}
           className={cn(
             'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
             active
               ? 'bg-primary-500/5 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400'
-              : 'text-gray-700 hover:bg-primary-500/5 dark:text-gray-300 dark:hover:bg-white/10'
+              : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5'
           )}
         >
           <div className="flex items-center gap-3">
@@ -359,7 +434,7 @@ const MainLayout = () => {
             <span>{item.label}</span>
           </div>
           <motion.span
-            animate={{ rotate: expandedMobileMenus.includes(item.id) ? 180 : 0 }}
+            animate={{ rotate: expandedMenus.includes(item.id) ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
             <ChevronDown className="w-4 h-4" />
@@ -367,7 +442,7 @@ const MainLayout = () => {
         </button>
 
         <AnimatePresence>
-          {expandedMobileMenus.includes(item.id) && (
+          {expandedMenus.includes(item.id) && (
             <motion.ul
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -390,7 +465,7 @@ const MainLayout = () => {
                         'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200',
                         isActive
                           ? 'bg-primary-500/10 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400 font-medium'
-                          : 'text-gray-600 hover:bg-primary-500/5 dark:text-gray-400 dark:hover:bg-white/10'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5'
                       )
                     }
                   >
@@ -408,146 +483,176 @@ const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Skip links for accessibility */}
+      {/* Skip links */}
       <SkipLink href="#main-content">Skip to main content</SkipLink>
       <SkipLink href="#navigation">Skip to navigation</SkipLink>
 
-      {/* Horizontal Header */}
-      <header className="fixed top-0 inset-x-0 z-50 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="flex items-center justify-between h-full px-4 lg:px-6">
+      {/* ══════════════════════════════════════════════
+          Desktop Sidebar
+          ══════════════════════════════════════════════ */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 start-0 z-40 hidden lg:flex flex-col',
+          'bg-white dark:bg-gray-900 border-e border-gray-200 dark:border-gray-800',
+          'transition-all duration-300 ease-in-out',
+          collapsed ? 'w-[72px]' : 'w-64'
+        )}
+      >
+        {/* Sidebar header — Logo */}
+        <div className={cn(
+          'h-14 flex items-center border-b border-gray-200 dark:border-gray-800 flex-shrink-0',
+          collapsed ? 'justify-center px-2' : 'justify-between px-4'
+        )}>
+          <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0">
+            <motion.div
+              whileHover={{ scale: 1.05, rotate: 3 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25 flex-shrink-0"
+            >
+              <Headphones className="w-5 h-5 text-white" />
+            </motion.div>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-lg font-bold text-gray-900 dark:text-white truncate"
+              >
+                CallCenter
+              </motion.span>
+            )}
+          </NavLink>
 
-          {/* Left: Mobile Menu Button + Logo */}
+          {!collapsed && (
+            <button
+              onClick={() => setCollapsed(true)}
+              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav
+          id="navigation"
+          className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1 scrollbar-thin"
+          role="navigation"
+          aria-label="Main navigation"
+        >
+          {visibleNavItems.map(item => renderSidebarItem(item))}
+        </nav>
+
+        {/* Sidebar footer */}
+        <div className={cn(
+          'border-t border-gray-200 dark:border-gray-800 flex-shrink-0',
+          collapsed ? 'p-2' : 'p-3'
+        )}>
+          {/* Collapse toggle (when collapsed) */}
+          {collapsed && (
+            <Tooltip content="Expand sidebar" position="right" delay={100}>
+              <button
+                onClick={() => setCollapsed(false)}
+                className="w-full p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors flex items-center justify-center mb-2"
+              >
+                <PanelLeftOpen className="w-5 h-5" />
+              </button>
+            </Tooltip>
+          )}
+
+          {/* Connection status */}
+          {!collapsed ? (
+            <div className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-2',
+              isConnected
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+            )}>
+              <motion.span
+                className={cn(
+                  'w-2 h-2 rounded-full flex-shrink-0',
+                  isConnected ? 'bg-green-500' : 'bg-yellow-500'
+                )}
+                animate={isConnected ? { scale: [1, 1.3, 1], opacity: [1, 0.7, 1] } : undefined}
+                transition={isConnected ? { duration: 2, repeat: Infinity } : undefined}
+              />
+              {isConnected ? 'Connected' : 'Connecting...'}
+            </div>
+          ) : (
+            <Tooltip content={isConnected ? 'Connected' : 'Connecting...'} position="right" delay={100}>
+              <div className="flex items-center justify-center mb-2">
+                <motion.span
+                  className={cn(
+                    'w-2.5 h-2.5 rounded-full',
+                    isConnected ? 'bg-green-500' : 'bg-yellow-500'
+                  )}
+                  animate={isConnected ? { scale: [1, 1.3, 1], opacity: [1, 0.7, 1] } : undefined}
+                  transition={isConnected ? { duration: 2, repeat: Infinity } : undefined}
+                />
+              </div>
+            </Tooltip>
+          )}
+
+          {/* User section */}
+          {!collapsed ? (
+            <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/25 flex-shrink-0">
+                <span className="text-sm font-semibold text-white">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.role}</p>
+              </div>
+            </div>
+          ) : (
+            <Tooltip content={user?.name || 'User'} position="right" delay={100}>
+              <div className="flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
+                  <span className="text-sm font-semibold text-white">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              </div>
+            </Tooltip>
+          )}
+        </div>
+      </aside>
+
+      {/* ══════════════════════════════════════════════
+          Top Header Bar
+          ══════════════════════════════════════════════ */}
+      <header
+        className={cn(
+          'fixed top-0 end-0 z-30 h-14 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800',
+          'transition-all duration-300 ease-in-out',
+          // On desktop, offset by sidebar width
+          collapsed ? 'lg:start-[72px]' : 'lg:start-64',
+          // On mobile, full width
+          'start-0'
+        )}
+      >
+        <div className="flex items-center justify-between h-full px-4">
+          {/* Left: Mobile menu + breadcrumb area */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-3">
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25"
-              >
-                <Headphones className="w-5 h-5 text-white" />
-              </motion.div>
-              <span className="text-lg font-semibold text-primary-900 dark:text-white hidden sm:block">CallCenter</span>
+            {/* Mobile logo */}
+            <div className="lg:hidden flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center">
+                <Headphones className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-base font-semibold text-gray-900 dark:text-white">CallCenter</span>
             </div>
           </div>
 
-          {/* Center: Horizontal Navigation (desktop only) */}
-          <nav id="navigation" className="hidden lg:flex items-center gap-1" role="navigation" aria-label="Main navigation">
-            {primaryNavItems.map(item => renderDesktopNavItem(item))}
-
-            {/* "More" dropdown for secondary items */}
-            {secondaryNavItems.length > 0 && (
-              <div className="relative group">
-                <button
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-                    isSecondaryActive
-                      ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
-                  )}
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                  <span>{t('nav.more')}</span>
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-
-                {/* More dropdown */}
-                <div className="absolute end-0 top-full mt-1 py-2 min-w-[220px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  {secondaryNavItems.map(item => {
-                    if (item.path) {
-                      return (
-                        <NavLink
-                          key={item.id}
-                          to={item.path}
-                          className={({ isActive }) =>
-                            cn(
-                              'flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors',
-                              isActive
-                                ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
-                            )
-                          }
-                        >
-                          {item.icon}
-                          <span>{item.label}</span>
-                        </NavLink>
-                      );
-                    }
-
-                    // Nested submenu for parent items in More dropdown
-                    const visibleChildren = getVisibleChildren(item.children);
-                    const active = isParentActive(item.children);
-
-                    return (
-                      <div key={item.id} className="relative group/sub">
-                        <div
-                          className={cn(
-                            'flex items-center justify-between gap-2.5 px-4 py-2.5 text-sm cursor-pointer transition-colors',
-                            active
-                              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
-                          )}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            {item.icon}
-                            <span>{item.label}</span>
-                          </div>
-                          <ChevronDown className="w-3.5 h-3.5 -rotate-90 rtl:rotate-90" />
-                        </div>
-
-                        {/* Sub-dropdown */}
-                        <div className="absolute start-full top-0 ms-1 py-2 min-w-[180px] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible transition-all duration-200 z-50">
-                          {visibleChildren.map(child => (
-                            <NavLink
-                              key={child.path}
-                              to={child.path}
-                              className={({ isActive }) =>
-                                cn(
-                                  'flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors',
-                                  isActive
-                                    ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-primary-500/5 dark:hover:bg-white/10'
-                                )
-                              }
-                            >
-                              {child.icon}
-                              <span>{child.label}</span>
-                            </NavLink>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </nav>
-
-          {/* Right: User Controls */}
+          {/* Right: Controls */}
           <div className="flex items-center gap-2">
-            {/* Connection status */}
-            <motion.div
-              className={cn(
-                'w-2 h-2 rounded-full',
-                isConnected ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'
-              )}
-              title={isConnected ? 'Connected' : 'Disconnected'}
-              animate={isConnected ? {
-                scale: [1, 1.2, 1],
-                opacity: [1, 0.8, 1],
-              } : undefined}
-              transition={isConnected ? {
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              } : undefined}
-            />
-
             {/* Notifications */}
             <NotificationDropdown
               notifications={notifications}
@@ -560,7 +665,7 @@ const MainLayout = () => {
             {/* Theme toggle */}
             <motion.button
               onClick={toggleTheme}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-white hover:bg-primary-500/10 dark:hover:bg-white/10 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
               title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -601,25 +706,24 @@ const MainLayout = () => {
             {/* Language toggle */}
             <motion.button
               onClick={toggleLanguage}
-              className="hidden sm:block px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-white hover:bg-primary-500/10 dark:hover:bg-white/10 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
+              className="hidden sm:block px-3 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               {i18n.language === 'en' ? 'العربية' : 'English'}
             </motion.button>
 
-            {/* User Menu */}
+            {/* User avatar + dropdown */}
             <div className="relative group">
-              <button className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-primary-500/10 dark:hover:bg-white/10 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+              <button className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium shadow-lg shadow-primary-500/30">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
               </button>
-              {/* Dropdown */}
-              <div className="absolute end-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-primary-50 dark:bg-primary-900/30">
+              <div className="absolute end-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{user?.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -631,15 +735,15 @@ const MainLayout = () => {
               </div>
             </div>
           </div>
-
         </div>
       </header>
 
-      {/* Mobile Navigation Drawer */}
+      {/* ══════════════════════════════════════════════
+          Mobile Navigation Drawer
+          ══════════════════════════════════════════════ */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -648,7 +752,6 @@ const MainLayout = () => {
               onClick={() => setMobileMenuOpen(false)}
             />
 
-            {/* Drawer */}
             <motion.aside
               initial={{ x: i18n.dir() === 'rtl' ? '100%' : '-100%' }}
               animate={{ x: 0 }}
@@ -660,23 +763,23 @@ const MainLayout = () => {
               )}
             >
               <div className="flex flex-col h-full">
-                {/* Header */}
+                {/* Mobile header */}
                 <div className="h-16 flex items-center justify-between px-5 border-b border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25">
                       <Headphones className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-lg font-semibold text-primary-900 dark:text-white">CallCenter</span>
+                    <span className="text-lg font-semibold text-gray-900 dark:text-white">CallCenter</span>
                   </div>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Navigation */}
+                {/* Mobile nav */}
                 <nav className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin">
                   <ul className="space-y-1">
                     {visibleNavItems.map(item => (
@@ -687,7 +790,7 @@ const MainLayout = () => {
                   </ul>
                 </nav>
 
-                {/* User section */}
+                {/* Mobile footer */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
@@ -702,7 +805,7 @@ const MainLayout = () => {
                   </div>
                   <button
                     onClick={toggleLanguage}
-                    className="w-full mb-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 dark:hover:bg-white/10 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
+                    className="w-full mb-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
                   >
                     {i18n.language === 'en' ? 'العربية' : 'English'}
                   </button>
@@ -720,8 +823,17 @@ const MainLayout = () => {
         )}
       </AnimatePresence>
 
-      {/* Main content */}
-      <main id="main-content" className="pt-16 min-h-screen p-6" role="main">
+      {/* ══════════════════════════════════════════════
+          Main Content Area
+          ══════════════════════════════════════════════ */}
+      <main
+        id="main-content"
+        className={cn(
+          'min-h-screen pt-20 px-6 pb-6 transition-all duration-300 ease-in-out',
+          collapsed ? 'lg:ps-[calc(72px+1.5rem)]' : 'lg:ps-[calc(16rem+1.5rem)]'
+        )}
+        role="main"
+      >
         <motion.div
           key={location.pathname}
           variants={pageVariants}

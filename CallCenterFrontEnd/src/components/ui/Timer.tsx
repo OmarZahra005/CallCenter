@@ -178,4 +178,62 @@ export const CallDurationTimer = ({ startTime, className, size = 'md' }: CallDur
   );
 };
 
+// Live Clock - real-time clock display
+interface LiveClockProps {
+  variant?: 'full' | 'compact';
+  className?: string;
+  locale?: string;
+}
+
+export const LiveClock = ({ variant = 'compact', className, locale }: LiveClockProps) => {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Detect RTL from document direction
+  const isRTL = typeof document !== 'undefined' && document.documentElement.dir === 'rtl';
+  const effectiveLocale = locale || (isRTL ? 'ar-SA' : 'en-US');
+
+  const timeStr = now.toLocaleTimeString(effectiveLocale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: !isRTL,
+  });
+
+  const dateStr = now.toLocaleDateString(effectiveLocale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+
+  if (variant === 'full') {
+    return (
+      <div className={cn('glass-card px-5 py-3 text-center', className)}>
+        <p className="text-2xl font-mono tabular-nums font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent leading-tight">
+          {timeStr}
+        </p>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">
+          {dateStr}
+        </p>
+      </div>
+    );
+  }
+
+  // Compact variant
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      <span className="font-mono tabular-nums text-sm font-semibold text-gray-700 dark:text-gray-300">
+        {timeStr}
+      </span>
+      <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
+        {dateStr}
+      </span>
+    </div>
+  );
+};
+
 export default Timer;

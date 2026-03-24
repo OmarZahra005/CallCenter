@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import apiClient from '../../../api/client';
-import { Badge, SparklineArea, GlassDonutChart } from '../../../components/ui';
+import { Badge, SparklineArea, GlassDonutChart, LiveClock } from '../../../components/ui';
 import { QueueMonitor, AgentStatusGrid } from '../../../components/ui';
 import {
   Users,
@@ -48,14 +48,7 @@ const itemVariants = {
 
 const Dashboard = () => {
   const { t, i18n } = useTranslation();
-  const [currentTime, setCurrentTime] = useState(new Date());
   const isRTL = i18n.language === 'ar';
-
-  // Update time every minute
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Fetch dashboard summary from API
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
@@ -258,12 +251,12 @@ const Dashboard = () => {
 
   return (
     <motion.div
-      className="min-h-screen dashboard-glass-bg"
+      className="dashboard-glass-bg"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <div className="p-6 space-y-6">
+      <div className="space-y-5">
         {/* Page header */}
         <motion.div
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -291,30 +284,26 @@ const Dashboard = () => {
               <RefreshCw className="w-5 h-5" />
             </motion.button>
             <motion.div
-              className="glass-card px-4 py-3"
               initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.4 }}
             >
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('dashboard.currentTime')}</p>
-              <p className="text-xl font-mono font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-                {currentTime.toLocaleTimeString(isRTL ? 'ar-SA' : 'en-US')}
-              </p>
+              <LiveClock variant="full" />
             </motion.div>
           </div>
         </motion.div>
 
         {/* Bento Grid Layout */}
-        <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(140px,auto)]">
+        <div className="grid grid-cols-12 gap-5 auto-rows-[minmax(160px,auto)]">
           {/* KPI Cards Row - 4 cards */}
           {/* Active Agents - Blue */}
           <motion.div variants={itemVariants} className="col-span-12 sm:col-span-6 lg:col-span-3">
-            <div className="glass-card p-5 h-full hover:scale-[1.02] transition-all duration-300">
+            <div className="glass-card p-6 h-full hover:scale-[1.02] transition-all duration-300">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.activeAgents')}</p>
                   <motion.p
-                    className="mt-1 text-3xl font-bold text-gray-900 dark:text-white"
+                    className="mt-1 text-4xl font-bold text-gray-900 dark:text-white"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -331,18 +320,18 @@ const Dashboard = () => {
                   <Headphones className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
-              <SparklineArea data={sparklineData.agents} color="blue" height={48} />
+              <SparklineArea data={sparklineData.agents} color="blue" height={64} />
             </div>
           </motion.div>
 
           {/* Open Tickets - Amber */}
           <motion.div variants={itemVariants} className="col-span-12 sm:col-span-6 lg:col-span-3">
-            <div className="glass-card p-5 h-full hover:scale-[1.02] transition-all duration-300">
+            <div className="glass-card p-6 h-full hover:scale-[1.02] transition-all duration-300">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.openTickets')}</p>
                   <motion.p
-                    className="mt-1 text-3xl font-bold text-gray-900 dark:text-white"
+                    className="mt-1 text-4xl font-bold text-gray-900 dark:text-white"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -368,18 +357,18 @@ const Dashboard = () => {
                   <Ticket className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
-              <SparklineArea data={sparklineData.tickets} color="amber" height={48} />
+              <SparklineArea data={sparklineData.tickets} color="amber" height={64} />
             </div>
           </motion.div>
 
           {/* Total Customers - Purple */}
           <motion.div variants={itemVariants} className="col-span-12 sm:col-span-6 lg:col-span-3">
-            <div className="glass-card p-5 h-full hover:scale-[1.02] transition-all duration-300">
+            <div className="glass-card p-6 h-full hover:scale-[1.02] transition-all duration-300">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.totalCustomers')}</p>
                   <motion.p
-                    className="mt-1 text-3xl font-bold text-gray-900 dark:text-white"
+                    className="mt-1 text-4xl font-bold text-gray-900 dark:text-white"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -396,18 +385,18 @@ const Dashboard = () => {
                   <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
-              <SparklineArea data={sparklineData.customers} color="purple" height={48} />
+              <SparklineArea data={sparklineData.customers} color="purple" height={64} />
             </div>
           </motion.div>
 
           {/* Resolved Today - Emerald */}
           <motion.div variants={itemVariants} className="col-span-12 sm:col-span-6 lg:col-span-3">
-            <div className="glass-card p-5 h-full hover:scale-[1.02] transition-all duration-300">
+            <div className="glass-card p-6 h-full hover:scale-[1.02] transition-all duration-300">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('dashboard.resolvedToday')}</p>
                   <motion.p
-                    className="mt-1 text-3xl font-bold text-gray-900 dark:text-white"
+                    className="mt-1 text-4xl font-bold text-gray-900 dark:text-white"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -424,17 +413,17 @@ const Dashboard = () => {
                   <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
               </div>
-              <SparklineArea data={sparklineData.resolved} color="emerald" height={48} />
+              <SparklineArea data={sparklineData.resolved} color="emerald" height={64} />
             </div>
           </motion.div>
 
           {/* Queue Monitor - Large card spanning 2 rows */}
           <motion.div variants={itemVariants} className="col-span-12 lg:col-span-6 row-span-2">
-            <QueueMonitor queues={queues} className="h-full" />
+            <QueueMonitor queues={queues} className="h-full min-h-[360px]" />
           </motion.div>
 
           {/* Agent Status Grid - Large card spanning 2 rows */}
-          <motion.div variants={itemVariants} className="col-span-12 lg:col-span-6 row-span-2">
+          <motion.div variants={itemVariants} className="col-span-12 lg:col-span-6 row-span-2 min-h-[360px]">
             <div className="glass-card overflow-hidden h-full flex flex-col">
               <div className="p-4 border-b border-white/20 dark:border-gray-700/50">
                 <div className="flex items-center justify-between">
@@ -486,8 +475,8 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/* Agent Distribution - Medium card */}
-          <motion.div variants={itemVariants} className="col-span-12 md:col-span-6 lg:col-span-4">
+          {/* Agent Distribution - Half width */}
+          <motion.div variants={itemVariants} className="col-span-12 lg:col-span-6">
             <div className="glass-card h-full">
               <div className="p-4 border-b border-white/20 dark:border-gray-700/50">
                 <div className="flex items-center gap-2">
@@ -523,8 +512,8 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/* SLA Performance - Medium card */}
-          <motion.div variants={itemVariants} className="col-span-12 md:col-span-6 lg:col-span-4">
+          {/* SLA Performance - Half width */}
+          <motion.div variants={itemVariants} className="col-span-12 lg:col-span-6">
             <div className="glass-card h-full">
               <div className="p-4 border-b border-white/20 dark:border-gray-700/50">
                 <div className="flex items-center gap-2">
@@ -569,8 +558,8 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/* Recent Tickets - Large card */}
-          <motion.div variants={itemVariants} className="col-span-12 lg:col-span-4">
+          {/* Recent Tickets - Full width */}
+          <motion.div variants={itemVariants} className="col-span-12">
             <div className="glass-card h-full">
               <div className="p-4 border-b border-white/20 dark:border-gray-700/50">
                 <div className="flex items-center justify-between">
@@ -628,34 +617,34 @@ const Dashboard = () => {
 
           {/* SLA Metrics - Full width bottom row */}
           <motion.div variants={itemVariants} className="col-span-12">
-            <div className="glass-card p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="text-center p-4 rounded-xl glass-subtle">
+            <div className="glass-card p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="text-center p-5 rounded-xl glass-subtle">
                   <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
                     <Clock className="w-4 h-4" />
                     <span className="text-sm font-medium">{t('dashboard.avgResponseTime')}</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {Math.floor(slaPerformance.averageResponseTimeSeconds / 60)}:{String(slaPerformance.averageResponseTimeSeconds % 60).padStart(2, '0')}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">{t('dashboard.minutes')}</p>
                 </div>
-                <div className="text-center p-4 rounded-xl glass-subtle">
+                <div className="text-center p-5 rounded-xl glass-subtle">
                   <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
                     <Clock className="w-4 h-4" />
                     <span className="text-sm font-medium">{t('dashboard.avgResolutionTime')}</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {Math.floor(slaPerformance.averageResolutionTimeSeconds / 60)}:{String(slaPerformance.averageResolutionTimeSeconds % 60).padStart(2, '0')}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">{t('dashboard.minutes')}</p>
                 </div>
-                <div className="text-center p-4 rounded-xl glass-subtle">
+                <div className="text-center p-5 rounded-xl glass-subtle">
                   <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
                     <Target className="w-4 h-4" />
                     <span className="text-sm font-medium">{t('dashboard.firstContactResolution')}</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {Math.round(slaPerformance.firstContactResolutionRate)}%
                   </p>
                   <p className="text-xs text-gray-400 mt-1">{t('dashboard.fcrRate')}</p>

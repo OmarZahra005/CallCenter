@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -43,56 +44,6 @@ interface LinkedTicketsListProps {
   onViewTicket?: (ticketId: string) => void;
 }
 
-// Map status codes to display values
-const getStatusInfo = (status: number | string) => {
-  const statusMap: Record<string, { label: string; color: string; icon: typeof Circle }> = {
-    '0': { label: 'New', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: Circle },
-    'New': { label: 'New', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: Circle },
-    '1': { label: 'Open', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: AlertCircle },
-    'Open': { label: 'Open', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: AlertCircle },
-    '2': { label: 'In Progress', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: ArrowRight },
-    'InProgress': { label: 'In Progress', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: ArrowRight },
-    '3': { label: 'Pending', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock },
-    'Pending': { label: 'Pending', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock },
-    '4': { label: 'Resolved', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle2 },
-    'Resolved': { label: 'Resolved', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle2 },
-    '5': { label: 'Closed', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-400', icon: CheckCircle2 },
-    'Closed': { label: 'Closed', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-400', icon: CheckCircle2 },
-  };
-  return statusMap[String(status)] || { label: String(status), color: 'bg-gray-100 text-gray-800', icon: Circle };
-};
-
-// Map priority codes to display values
-const getPriorityInfo = (priority: number | string) => {
-  const priorityMap: Record<string, { label: string; color: string }> = {
-    '0': { label: 'Low', color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400' },
-    'Low': { label: 'Low', color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400' },
-    '1': { label: 'Normal', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
-    'Normal': { label: 'Normal', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
-    '2': { label: 'High', color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
-    'High': { label: 'High', color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
-    '3': { label: 'Urgent', color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
-    'Urgent': { label: 'Urgent', color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
-  };
-  return priorityMap[String(priority)] || { label: String(priority), color: 'bg-gray-100 text-gray-600' };
-};
-
-// Format time ago
-const formatTimeAgo = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-};
-
 export const LinkedTicketsList = ({
   conversationId,
   customerId: _customerId, // Reserved for future use (e.g., fetching all tickets for customer)
@@ -101,7 +52,58 @@ export const LinkedTicketsList = ({
   onCreateTicket,
   onViewTicket,
 }: LinkedTicketsListProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  // Map status codes to display values
+  const getStatusInfo = (status: number | string) => {
+    const statusMap: Record<string, { label: string; color: string; icon: typeof Circle }> = {
+      '0': { label: t('agentDesktop.new'), color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: Circle },
+      'New': { label: t('agentDesktop.new'), color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: Circle },
+      '1': { label: t('agentDesktop.open'), color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: AlertCircle },
+      'Open': { label: t('agentDesktop.open'), color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: AlertCircle },
+      '2': { label: t('agentDesktop.inProgress'), color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: ArrowRight },
+      'InProgress': { label: t('agentDesktop.inProgress'), color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: ArrowRight },
+      '3': { label: t('agentDesktop.pending'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock },
+      'Pending': { label: t('agentDesktop.pending'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock },
+      '4': { label: t('agentDesktop.resolved'), color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle2 },
+      'Resolved': { label: t('agentDesktop.resolved'), color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle2 },
+      '5': { label: t('agentDesktop.closed'), color: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-400', icon: CheckCircle2 },
+      'Closed': { label: t('agentDesktop.closed'), color: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-400', icon: CheckCircle2 },
+    };
+    return statusMap[String(status)] || { label: String(status), color: 'bg-gray-100 text-gray-800', icon: Circle };
+  };
+
+  // Map priority codes to display values
+  const getPriorityInfo = (priority: number | string) => {
+    const priorityMap: Record<string, { label: string; color: string }> = {
+      '0': { label: t('priority.low'), color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400' },
+      'Low': { label: t('priority.low'), color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400' },
+      '1': { label: t('agentDesktop.normal'), color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+      'Normal': { label: t('agentDesktop.normal'), color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+      '2': { label: t('priority.high'), color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
+      'High': { label: t('priority.high'), color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
+      '3': { label: t('agentDesktop.urgent'), color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+      'Urgent': { label: t('agentDesktop.urgent'), color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+    };
+    return priorityMap[String(priority)] || { label: String(priority), color: 'bg-gray-100 text-gray-600' };
+  };
+
+  // Format time ago
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return t('agentDesktop.justNow');
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
   const queryClient = useQueryClient();
 
   // Fetch tickets for the conversation
@@ -165,13 +167,13 @@ export const LinkedTicketsList = ({
       >
         <div className="flex items-center gap-2">
           <Ticket className="w-5 h-5 text-gray-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-white">Linked Tickets</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('agentDesktop.linkedTickets')}</h3>
           <Badge variant="default" size="sm">
-            {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
+            {tickets.length} {tickets.length !== 1 ? t('agentDesktop.ticketsPlural') : t('agentDesktop.ticket')}
           </Badge>
           {openTickets.length > 0 && (
             <Badge variant="warning" size="sm">
-              {openTickets.length} open
+              {openTickets.length} {t('agentDesktop.open')}
             </Badge>
           )}
         </div>
@@ -219,16 +221,16 @@ export const LinkedTicketsList = ({
               ) : error ? (
                 <div className="text-center py-8 text-red-500">
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
-                  <p>Failed to load tickets</p>
+                  <p>{t('agentDesktop.ticketsFailed')}</p>
                 </div>
               ) : tickets.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Ticket className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="mb-4">No tickets linked to this conversation</p>
+                  <p className="mb-4">{t('agentDesktop.noTicketsLinked')}</p>
                   {onCreateTicket && (
                     <Button variant="secondary" size="sm" onClick={onCreateTicket}>
                       <Plus className="w-4 h-4 mr-1" />
-                      Create Ticket
+                      {t('agentDesktop.createTicket')}
                     </Button>
                   )}
                 </div>
@@ -269,7 +271,7 @@ export const LinkedTicketsList = ({
                               <span>{ticket.category}</span>
                               <span>{formatTimeAgo(ticket.createdAt)}</span>
                               {ticket.agentName && (
-                                <span>Assigned: {ticket.agentName}</span>
+                                <span>{t('agentDesktop.assigned')} {ticket.agentName}</span>
                               )}
                             </div>
                           </div>

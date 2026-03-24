@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -63,55 +64,6 @@ interface AlertHistory {
   acknowledgedBy?: string;
 }
 
-const METRIC_OPTIONS = {
-  queue: [
-    { value: 'queue_wait_time', label: 'Queue Wait Time (seconds)', unit: 's' },
-    { value: 'queue_size', label: 'Queue Size', unit: '' },
-    { value: 'abandoned_calls', label: 'Abandoned Calls (per hour)', unit: '/hr' },
-    { value: 'service_level', label: 'Service Level (%)', unit: '%' },
-  ],
-  agent: [
-    { value: 'agent_utilization', label: 'Agent Utilization (%)', unit: '%' },
-    { value: 'agents_available', label: 'Available Agents', unit: '' },
-    { value: 'agents_on_break', label: 'Agents on Break', unit: '' },
-    { value: 'avg_handle_time', label: 'Avg Handle Time (seconds)', unit: 's' },
-  ],
-  system: [
-    { value: 'api_response_time', label: 'API Response Time (ms)', unit: 'ms' },
-    { value: 'error_rate', label: 'Error Rate (%)', unit: '%' },
-    { value: 'cpu_usage', label: 'CPU Usage (%)', unit: '%' },
-    { value: 'memory_usage', label: 'Memory Usage (%)', unit: '%' },
-  ],
-  quality: [
-    { value: 'qa_score', label: 'QA Score (%)', unit: '%' },
-    { value: 'csat_score', label: 'CSAT Score', unit: '' },
-    { value: 'nps_score', label: 'NPS Score', unit: '' },
-    { value: 'first_call_resolution', label: 'First Call Resolution (%)', unit: '%' },
-  ],
-  sla: [
-    { value: 'sla_breach_rate', label: 'SLA Breach Rate (%)', unit: '%' },
-    { value: 'tickets_nearing_sla', label: 'Tickets Nearing SLA', unit: '' },
-    { value: 'avg_resolution_time', label: 'Avg Resolution Time (hours)', unit: 'h' },
-  ],
-};
-
-const OPERATOR_OPTIONS = [
-  { value: 'gt', label: 'Greater than (>)' },
-  { value: 'gte', label: 'Greater than or equal (>=)' },
-  { value: 'lt', label: 'Less than (<)' },
-  { value: 'lte', label: 'Less than or equal (<=)' },
-  { value: 'eq', label: 'Equals (=)' },
-];
-
-const CATEGORY_INFO = {
-  queue: { label: 'Queue', icon: Phone, color: 'bg-blue-500' },
-  agent: { label: 'Agent', icon: Users, color: 'bg-green-500' },
-  system: { label: 'System', icon: Activity, color: 'bg-purple-500' },
-  quality: { label: 'Quality', icon: TrendingUp, color: 'bg-yellow-500' },
-  sla: { label: 'SLA', icon: Clock, color: 'bg-red-500' },
-};
-
-
 const initialFormData: Partial<AlertRule> = {
   name: '',
   description: '',
@@ -129,6 +81,70 @@ const initialFormData: Partial<AlertRule> = {
 
 export const AlertRules = () => {
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation();
+
+  const METRIC_OPTIONS = {
+    queue: [
+      { value: 'queue_wait_time', label: t('alertRulesPage.queueWaitTime'), unit: 's' },
+      { value: 'queue_size', label: t('alertRulesPage.queueSize'), unit: '' },
+      { value: 'abandoned_calls', label: t('alertRulesPage.abandonedCalls'), unit: '/hr' },
+      { value: 'service_level', label: t('alertRulesPage.serviceLevel'), unit: '%' },
+    ],
+    agent: [
+      { value: 'agent_utilization', label: t('alertRulesPage.agentUtilization'), unit: '%' },
+      { value: 'agents_available', label: t('alertRulesPage.availableAgents'), unit: '' },
+      { value: 'agents_on_break', label: t('alertRulesPage.agentsOnBreak'), unit: '' },
+      { value: 'avg_handle_time', label: t('alertRulesPage.avgHandleTime'), unit: 's' },
+    ],
+    system: [
+      { value: 'api_response_time', label: t('alertRulesPage.apiResponseTime'), unit: 'ms' },
+      { value: 'error_rate', label: t('alertRulesPage.errorRate'), unit: '%' },
+      { value: 'cpu_usage', label: t('alertRulesPage.cpuUsage'), unit: '%' },
+      { value: 'memory_usage', label: t('alertRulesPage.memoryUsage'), unit: '%' },
+    ],
+    quality: [
+      { value: 'qa_score', label: t('alertRulesPage.qaScore'), unit: '%' },
+      { value: 'csat_score', label: t('alertRulesPage.csatScore'), unit: '' },
+      { value: 'nps_score', label: t('alertRulesPage.npsScore'), unit: '' },
+      { value: 'first_call_resolution', label: t('alertRulesPage.firstCallResolution'), unit: '%' },
+    ],
+    sla: [
+      { value: 'sla_breach_rate', label: t('alertRulesPage.slaBreachRate'), unit: '%' },
+      { value: 'tickets_nearing_sla', label: t('alertRulesPage.ticketsNearingSla'), unit: '' },
+      { value: 'avg_resolution_time', label: t('alertRulesPage.avgResolutionTime'), unit: 'h' },
+    ],
+  };
+
+  const OPERATOR_OPTIONS = [
+    { value: 'gt', label: t('alertRulesPage.operatorGt') },
+    { value: 'gte', label: t('alertRulesPage.operatorGte') },
+    { value: 'lt', label: t('alertRulesPage.operatorLt') },
+    { value: 'lte', label: t('alertRulesPage.operatorLte') },
+    { value: 'eq', label: t('alertRulesPage.operatorEq') },
+  ];
+
+  const CATEGORY_INFO = {
+    queue: { label: t('alertRulesPage.categoryQueue'), icon: Phone, color: 'bg-blue-500' },
+    agent: { label: t('alertRulesPage.categoryAgent'), icon: Users, color: 'bg-green-500' },
+    system: { label: t('alertRulesPage.categorySystem'), icon: Activity, color: 'bg-purple-500' },
+    quality: { label: t('alertRulesPage.categoryQuality'), icon: TrendingUp, color: 'bg-yellow-500' },
+    sla: { label: t('alertRulesPage.categorySla'), icon: Clock, color: 'bg-red-500' },
+  };
+
+  const channelLabels: Record<string, string> = {
+    inApp: t('alertRulesPage.inApp'),
+    email: t('alertRulesPage.email'),
+    sms: t('alertRulesPage.sms'),
+    webhook: t('alertRulesPage.webhook'),
+    slack: t('alertRulesPage.slack'),
+  };
+
+  const severityLabels: Record<string, string> = {
+    info: t('alertRulesPage.info'),
+    warning: t('alertRulesPage.warning'),
+    critical: t('alertRulesPage.critical'),
+  };
+
   const [activeTab, setActiveTab] = useState<'rules' | 'history'>('rules');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -299,13 +315,13 @@ export const AlertRules = () => {
     };
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[severity as keyof typeof colors]}`}>
-        {severity.charAt(0).toUpperCase() + severity.slice(1)}
+        {severityLabels[severity] || severity}
       </span>
     );
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    return new Date(dateString).toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -332,18 +348,18 @@ export const AlertRules = () => {
   const currentMetrics = METRIC_OPTIONS[formData.category as keyof typeof METRIC_OPTIONS] || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Alert Rules</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('alertRulesPage.title')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Configure alerts for queue, agent, and system metrics
+            {t('alertRulesPage.subtitle')}
           </p>
         </div>
         <Button onClick={handleOpenCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          Create Alert Rule
+          {t('alertRulesPage.createAlertRule')}
         </Button>
       </div>
 
@@ -356,7 +372,7 @@ export const AlertRules = () => {
                 <Bell className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Rules</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('alertRulesPage.totalRules')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{rules.length}</p>
               </div>
             </div>
@@ -369,7 +385,7 @@ export const AlertRules = () => {
                 <Play className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Active Rules</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('alertRulesPage.activeRules')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {rules.filter((r) => r.isActive).length}
                 </p>
@@ -384,7 +400,7 @@ export const AlertRules = () => {
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Critical Alerts (24h)</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('alertRulesPage.criticalAlerts24h')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {history.filter((h) => h.severity === 'critical').length}
                 </p>
@@ -399,7 +415,7 @@ export const AlertRules = () => {
                 <Clock className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Unacknowledged</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('alertRulesPage.unacknowledged')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {history.filter((h) => !h.acknowledged).length}
                 </p>
@@ -420,7 +436,7 @@ export const AlertRules = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Alert Rules ({rules.length})
+            {t('alertRulesPage.alertRulesTab')} ({rules.length})
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -430,7 +446,7 @@ export const AlertRules = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Alert History ({history.length})
+            {t('alertRulesPage.alertHistoryTab')} ({history.length})
           </button>
         </nav>
       </div>
@@ -444,7 +460,7 @@ export const AlertRules = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder={activeTab === 'rules' ? 'Search rules...' : 'Search alerts...'}
+                  placeholder={activeTab === 'rules' ? t('alertRulesPage.searchRules') : t('alertRulesPage.searchAlerts')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -457,7 +473,7 @@ export const AlertRules = () => {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t('alertRulesPage.allCategories')}</option>
                 {Object.entries(CATEGORY_INFO).map(([key, info]) => (
                   <option key={key} value={key}>
                     {info.label}
@@ -470,10 +486,10 @@ export const AlertRules = () => {
               onChange={(e) => setSeverityFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
             >
-              <option value="all">All Severities</option>
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="critical">Critical</option>
+              <option value="all">{t('alertRulesPage.allSeverities')}</option>
+              <option value="info">{t('alertRulesPage.info')}</option>
+              <option value="warning">{t('alertRulesPage.warning')}</option>
+              <option value="critical">{t('alertRulesPage.critical')}</option>
             </select>
           </div>
         </CardContent>
@@ -490,9 +506,9 @@ export const AlertRules = () => {
             <Card variant="bordered">
               <CardContent className="py-12 text-center">
                 <Bell className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No alert rules found</p>
+                <p className="text-gray-500">{t('alertRulesPage.noRulesFound')}</p>
                 <Button className="mt-4" onClick={handleOpenCreate}>
-                  Create First Rule
+                  {t('alertRulesPage.createFirstRule')}
                 </Button>
               </CardContent>
             </Card>
@@ -520,7 +536,7 @@ export const AlertRules = () => {
                               {getSeverityBadge(rule.severity)}
                               {!rule.isActive && (
                                 <Badge variant="default" size="sm">
-                                  Paused
+                                  {t('alertRulesPage.paused')}
                                 </Badge>
                               )}
                             </div>
@@ -534,9 +550,9 @@ export const AlertRules = () => {
                                 {rule.unit}
                               </span>
                               <span className="text-gray-400">|</span>
-                              <span>Cooldown: {rule.cooldownMinutes}m</span>
+                              <span>{t('alertRulesPage.cooldown')}: {rule.cooldownMinutes}{t('alertRulesPage.cooldownMinSuffix')}</span>
                               <span className="text-gray-400">|</span>
-                              <span>Triggered: {rule.triggerCount} times</span>
+                              <span>{t('alertRulesPage.triggered')}: {rule.triggerCount} {t('alertRulesPage.timesSuffix')}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                               {rule.channels.map((channel) => {
@@ -554,7 +570,7 @@ export const AlertRules = () => {
                                     className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs"
                                   >
                                     <Icon className="w-3 h-3" />
-                                    <span className="capitalize">{channel}</span>
+                                    <span>{channelLabels[channel] || channel}</span>
                                   </div>
                                 );
                               })}
@@ -565,7 +581,7 @@ export const AlertRules = () => {
                           <button
                             onClick={() => toggleMutation.mutate({ id: rule.id, isActive: !rule.isActive })}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                            title={rule.isActive ? 'Pause rule' : 'Activate rule'}
+                            title={rule.isActive ? t('alertRulesPage.pauseRule') : t('alertRulesPage.activateRule')}
                           >
                             {rule.isActive ? (
                               <ToggleRight className="w-5 h-5 text-green-500" />
@@ -607,7 +623,7 @@ export const AlertRules = () => {
             <Card variant="bordered">
               <CardContent className="py-12 text-center">
                 <Activity className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No alert history found</p>
+                <p className="text-gray-500">{t('alertRulesPage.noHistoryFound')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -647,28 +663,28 @@ export const AlertRules = () => {
                             {alert.resolvedAt ? (
                               <Badge variant="success" size="sm">
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                Resolved
+                                {t('alertRulesPage.resolved')}
                               </Badge>
                             ) : (
                               <Badge variant="danger" size="sm">
                                 <XCircle className="w-3 h-3 mr-1" />
-                                Active
+                                {t('alertRulesPage.active')}
                               </Badge>
                             )}
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{alert.message}</p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span>Triggered: {formatDate(alert.triggeredAt)}</span>
-                            {alert.resolvedAt && <span>Resolved: {formatDate(alert.resolvedAt)}</span>}
+                            <span>{t('alertRulesPage.triggeredAt')}: {formatDate(alert.triggeredAt)}</span>
+                            {alert.resolvedAt && <span>{t('alertRulesPage.resolvedAt')}: {formatDate(alert.resolvedAt)}</span>}
                             {alert.acknowledged && alert.acknowledgedBy && (
-                              <span>Acknowledged by: {alert.acknowledgedBy}</span>
+                              <span>{t('alertRulesPage.acknowledgedBy')}: {alert.acknowledgedBy}</span>
                             )}
                           </div>
                         </div>
                       </div>
                       {!alert.acknowledged && (
                         <Button variant="outline" size="sm">
-                          Acknowledge
+                          {t('alertRulesPage.acknowledge')}
                         </Button>
                       )}
                     </div>
@@ -684,35 +700,35 @@ export const AlertRules = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={selectedRule ? 'Edit Alert Rule' : 'Create Alert Rule'}
+        title={selectedRule ? t('alertRulesPage.editAlertRule') : t('alertRulesPage.createAlertRule')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
             <Input
-              label="Rule Name"
+              label={t('alertRulesPage.ruleName')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., High Queue Wait Time"
+              placeholder={t('alertRulesPage.ruleNamePlaceholder')}
               required
             />
             <Textarea
-              label="Description"
+              label={t('alertRulesPage.description')}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe what this alert monitors..."
+              placeholder={t('alertRulesPage.descriptionPlaceholder')}
               rows={2}
             />
           </div>
 
           {/* Condition */}
           <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white">Alert Condition</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white">{t('alertRulesPage.alertCondition')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Category
+                  {t('alertRulesPage.category')}
                 </label>
                 <select
                   value={formData.category}
@@ -728,7 +744,7 @@ export const AlertRules = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Metric
+                  {t('alertRulesPage.metric')}
                 </label>
                 <select
                   value={formData.metric}
@@ -746,7 +762,7 @@ export const AlertRules = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Operator
+                  {t('alertRulesPage.operator')}
                 </label>
                 <select
                   value={formData.operator}
@@ -761,7 +777,7 @@ export const AlertRules = () => {
                 </select>
               </div>
               <Input
-                label="Threshold"
+                label={t('alertRulesPage.threshold')}
                 type="number"
                 value={formData.threshold}
                 onChange={(e) => setFormData({ ...formData, threshold: Number(e.target.value) })}
@@ -771,20 +787,20 @@ export const AlertRules = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Severity
+                  {t('alertRulesPage.severity')}
                 </label>
                 <select
                   value={formData.severity}
                   onChange={(e) => setFormData({ ...formData, severity: e.target.value as AlertRule['severity'] })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
                 >
-                  <option value="info">Info</option>
-                  <option value="warning">Warning</option>
-                  <option value="critical">Critical</option>
+                  <option value="info">{t('alertRulesPage.info')}</option>
+                  <option value="warning">{t('alertRulesPage.warning')}</option>
+                  <option value="critical">{t('alertRulesPage.critical')}</option>
                 </select>
               </div>
               <Input
-                label="Cooldown (minutes)"
+                label={t('alertRulesPage.cooldownMinutes')}
                 type="number"
                 value={formData.cooldownMinutes}
                 onChange={(e) => setFormData({ ...formData, cooldownMinutes: Number(e.target.value) })}
@@ -796,7 +812,7 @@ export const AlertRules = () => {
 
           {/* Notification Channels */}
           <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white">Notification Channels</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white">{t('alertRulesPage.notificationChannels')}</h4>
             <div className="flex flex-wrap gap-3">
               {(['inApp', 'email', 'sms', 'webhook', 'slack'] as const).map((channel) => {
                 const icons: Record<string, React.ElementType> = {
@@ -820,7 +836,7 @@ export const AlertRules = () => {
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    <span className="capitalize">{channel === 'inApp' ? 'In-App' : channel}</span>
+                    <span>{channelLabels[channel] || channel}</span>
                   </button>
                 );
               })}
@@ -829,7 +845,7 @@ export const AlertRules = () => {
             {/* Webhook URL */}
             {formData.channels?.includes('webhook') && (
               <Input
-                label="Webhook URL"
+                label={t('alertRulesPage.webhookUrl')}
                 value={formData.webhookUrl}
                 onChange={(e) => setFormData({ ...formData, webhookUrl: e.target.value })}
                 placeholder="https://hooks.slack.com/services/..."
@@ -840,7 +856,7 @@ export const AlertRules = () => {
             {formData.channels?.includes('email') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email Recipients
+                  {t('alertRulesPage.emailRecipients')}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -857,7 +873,7 @@ export const AlertRules = () => {
                     }}
                   />
                   <Button type="button" variant="outline" onClick={handleAddRecipient}>
-                    Add
+                    {t('alertRulesPage.add')}
                   </Button>
                 </div>
                 {formData.recipients && formData.recipients.length > 0 && (
@@ -886,8 +902,8 @@ export const AlertRules = () => {
           {/* Active toggle */}
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Enable Alert Rule</p>
-              <p className="text-sm text-gray-500">Start monitoring immediately after creation</p>
+              <p className="font-medium text-gray-900 dark:text-white">{t('alertRulesPage.enableAlertRule')}</p>
+              <p className="text-sm text-gray-500">{t('alertRulesPage.enableAlertRuleDesc')}</p>
             </div>
             <button
               type="button"
@@ -904,11 +920,11 @@ export const AlertRules = () => {
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={handleCloseModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" isLoading={createMutation.isPending || updateMutation.isPending}>
               <Save className="w-4 h-4 mr-2" />
-              {selectedRule ? 'Update Rule' : 'Create Rule'}
+              {selectedRule ? t('alertRulesPage.updateRule') : t('alertRulesPage.createRule')}
             </Button>
           </div>
         </form>
@@ -918,23 +934,21 @@ export const AlertRules = () => {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Alert Rule"
+        title={t('alertRulesPage.deleteAlertRule')}
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete <strong>{selectedRule?.name}</strong>? This action cannot be undone.
-          </p>
+          <p className="text-gray-600 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: t('alertRulesPage.deleteConfirm', { name: selectedRule?.name }) }} />
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
               onClick={() => selectedRule && deleteMutation.mutate(selectedRule.id)}
               isLoading={deleteMutation.isPending}
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </div>
         </div>

@@ -50,7 +50,7 @@ const tableRowVariants = {
 
 const ITEMS_PER_PAGE = 10;
 
-interface Ticket {
+interface TicketItem {
   id: string;
   ticketNumber: string;
   subject: string;
@@ -84,19 +84,21 @@ const initialFormData: TicketFormData = {
 };
 
 const Tickets = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketItem | null>(null);
   const [formData, setFormData] = useState<TicketFormData>(initialFormData);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const isArabic = i18n.language === 'ar';
 
   const { data: ticketsData, isLoading } = useQuery({
     queryKey: ['tickets'],
@@ -128,10 +130,10 @@ const Tickets = () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Ticket created successfully', 'success');
+      showToast(t('ticketsPage.createdSuccess'), 'success');
     },
     onError: () => {
-      showToast('Failed to create ticket', 'error');
+      showToast(t('ticketsPage.createdError'), 'error');
     },
   });
 
@@ -142,34 +144,34 @@ const Tickets = () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Ticket updated successfully', 'success');
+      showToast(t('ticketsPage.updatedSuccess'), 'success');
     },
     onError: () => {
-      showToast('Failed to update ticket', 'error');
+      showToast(t('ticketsPage.updatedError'), 'error');
     },
   });
 
-  const tickets: Ticket[] = Array.isArray(ticketsData) ? ticketsData : (ticketsData?.data || ticketsData?.items || []);
+  const tickets: TicketItem[] = Array.isArray(ticketsData) ? ticketsData : (ticketsData?.data || ticketsData?.items || []);
   const customers = Array.isArray(customersData) ? customersData : (customersData?.data || customersData?.items || []);
   const agents = Array.isArray(agentsData) ? agentsData : (agentsData?.data || agentsData?.items || []);
 
   // Calculate stats
   const stats = useMemo(() => {
     const total = tickets.length;
-    const newTickets = tickets.filter((t: Ticket) => t.status === 'New').length;
-    const open = tickets.filter((t: Ticket) => t.status === 'Open').length;
-    const inProgress = tickets.filter((t: Ticket) => t.status === 'InProgress').length;
-    const pending = tickets.filter((t: Ticket) => t.status === 'Pending').length;
-    const resolved = tickets.filter((t: Ticket) => t.status === 'Resolved').length;
-    const closed = tickets.filter((t: Ticket) => t.status === 'Closed').length;
-    const critical = tickets.filter((t: Ticket) => t.priority === 'Critical').length;
-    const high = tickets.filter((t: Ticket) => t.priority === 'High').length;
+    const newTickets = tickets.filter((tk: TicketItem) => tk.status === 'New').length;
+    const open = tickets.filter((tk: TicketItem) => tk.status === 'Open').length;
+    const inProgress = tickets.filter((tk: TicketItem) => tk.status === 'InProgress').length;
+    const pending = tickets.filter((tk: TicketItem) => tk.status === 'Pending').length;
+    const resolved = tickets.filter((tk: TicketItem) => tk.status === 'Resolved').length;
+    const closed = tickets.filter((tk: TicketItem) => tk.status === 'Closed').length;
+    const critical = tickets.filter((tk: TicketItem) => tk.priority === 'Critical').length;
+    const high = tickets.filter((tk: TicketItem) => tk.priority === 'High').length;
     return { total, newTickets, open, inProgress, pending, resolved, closed, critical, high };
   }, [tickets]);
 
   // Filter tickets
   const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket: Ticket) => {
+    return tickets.filter((ticket: TicketItem) => {
       const matchesSearch =
         ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,7 +191,6 @@ const Tickets = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Reset to first page when filters change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
@@ -211,7 +212,7 @@ const Tickets = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (ticket: Ticket) => {
+  const handleOpenEdit = (ticket: TicketItem) => {
     setSelectedTicket(ticket);
     setFormData({
       subject: ticket.subject,
@@ -224,7 +225,7 @@ const Tickets = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenView = (ticket: Ticket) => {
+  const handleOpenView = (ticket: TicketItem) => {
     setSelectedTicket(ticket);
     setIsViewModalOpen(true);
   };
@@ -238,6 +239,28 @@ const Tickets = () => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      New: t('ticketsPage.statusNew'),
+      Open: t('ticketsPage.statusOpen'),
+      InProgress: t('ticketsPage.statusInProgress'),
+      Pending: t('ticketsPage.statusPending'),
+      Resolved: t('ticketsPage.statusResolved'),
+      Closed: t('ticketsPage.statusClosed'),
+    };
+    return labels[status] || status;
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    const labels: Record<string, string> = {
+      Critical: t('ticketsPage.priorityCritical'),
+      High: t('ticketsPage.priorityHigh'),
+      Medium: t('ticketsPage.priorityMedium'),
+      Low: t('ticketsPage.priorityLow'),
+    };
+    return labels[priority] || priority;
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'default'> = {
       New: 'info',
@@ -247,15 +270,7 @@ const Tickets = () => {
       Resolved: 'success',
       Closed: 'default',
     };
-    const labels: Record<string, string> = {
-      New: 'New',
-      Open: 'Open',
-      InProgress: 'In Progress',
-      Pending: 'Pending',
-      Resolved: 'Resolved',
-      Closed: 'Closed',
-    };
-    return <Badge variant={variants[status] || 'default'}>{labels[status] || status}</Badge>;
+    return <Badge variant={variants[status] || 'default'}>{getStatusLabel(status)}</Badge>;
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -265,17 +280,17 @@ const Tickets = () => {
       Medium: 'warning',
       Low: 'info',
     };
-    return <Badge variant={variants[priority] || 'default'} size="sm">{priority}</Badge>;
+    return <Badge variant={variants[priority] || 'default'} size="sm">{getPriorityLabel(priority)}</Badge>;
   };
 
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
-      Critical: 'border-l-red-500',
-      High: 'border-l-orange-500',
-      Medium: 'border-l-yellow-500',
-      Low: 'border-l-blue-500',
+      Critical: 'border-s-red-500',
+      High: 'border-s-orange-500',
+      Medium: 'border-s-yellow-500',
+      Low: 'border-s-blue-500',
     };
-    return colors[priority] || 'border-l-gray-300';
+    return colors[priority] || 'border-s-gray-300';
   };
 
   const getStatusIcon = (status: string) => {
@@ -294,7 +309,7 @@ const Tickets = () => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -312,26 +327,26 @@ const Tickets = () => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 60) return t('ticketsPage.mAgo', { count: diffMins });
+    if (diffHours < 24) return t('ticketsPage.hAgo', { count: diffHours });
+    if (diffDays < 7) return t('ticketsPage.dAgo', { count: diffDays });
     return formatDate(dateString);
   };
 
   const priorityOptions = [
-    { value: 'Low', label: 'Low' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'High', label: 'High' },
-    { value: 'Critical', label: 'Critical' },
+    { value: 'Low', label: t('ticketsPage.priorityLow') },
+    { value: 'Medium', label: t('ticketsPage.priorityMedium') },
+    { value: 'High', label: t('ticketsPage.priorityHigh') },
+    { value: 'Critical', label: t('ticketsPage.priorityCritical') },
   ];
 
   const statusOptions = [
-    { value: 'New', label: 'New' },
-    { value: 'Open', label: 'Open' },
-    { value: 'InProgress', label: 'In Progress' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Resolved', label: 'Resolved' },
-    { value: 'Closed', label: 'Closed' },
+    { value: 'New', label: t('ticketsPage.statusNew') },
+    { value: 'Open', label: t('ticketsPage.statusOpen') },
+    { value: 'InProgress', label: t('ticketsPage.statusInProgress') },
+    { value: 'Pending', label: t('ticketsPage.statusPending') },
+    { value: 'Resolved', label: t('ticketsPage.statusResolved') },
+    { value: 'Closed', label: t('ticketsPage.statusClosed') },
   ];
 
   const customerOptions = customers.map((customer: { id: string; name: string }) => ({
@@ -376,13 +391,13 @@ const Tickets = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.tickets')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage support tickets and track issues
+            {t('ticketsPage.subtitle')}
           </p>
         </div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button onClick={handleOpenCreate} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Ticket
+            <Plus className="w-4 h-4 me-2" />
+            {t('ticketsPage.createTicket')}
           </Button>
         </motion.div>
       </motion.div>
@@ -397,7 +412,7 @@ const Tickets = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Tickets</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('ticketsPage.totalTickets')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -408,7 +423,7 @@ const Tickets = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Open</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('ticketsPage.open')}</p>
               <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{stats.open + stats.newTickets}</p>
             </div>
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl">
@@ -419,7 +434,7 @@ const Tickets = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">In Progress</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('ticketsPage.inProgress')}</p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats.inProgress}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -430,7 +445,7 @@ const Tickets = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Resolved</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('ticketsPage.resolved')}</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.resolved}</p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
@@ -441,7 +456,7 @@ const Tickets = () => {
         <Card className="p-4 hover:shadow-md transition-shadow col-span-2 md:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Critical/High</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('ticketsPage.criticalHigh')}</p>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats.critical + stats.high}</p>
             </div>
             <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
@@ -456,13 +471,13 @@ const Tickets = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search input */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by ticket number, subject, or customer..."
+              placeholder={t('ticketsPage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -474,50 +489,50 @@ const Tickets = () => {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
+                <Filter className="w-4 h-4 me-2" />
+                {t('ticketsPage.filters')}
                 {(statusFilter !== 'all' || priorityFilter !== 'all') && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">
+                  <span className="ms-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">
                     {(statusFilter !== 'all' ? 1 : 0) + (priorityFilter !== 'all' ? 1 : 0)}
                   </span>
                 )}
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <ChevronDown className="w-4 h-4 ms-2" />
               </button>
 
               {isFilterOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
+                  className="absolute end-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
                 >
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.status')}</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => handleFilterChange('status', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="all">All Statuses</option>
-                      <option value="New">New</option>
-                      <option value="Open">Open</option>
-                      <option value="InProgress">In Progress</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Resolved">Resolved</option>
-                      <option value="Closed">Closed</option>
+                      <option value="all">{t('ticketsPage.allStatuses')}</option>
+                      <option value="New">{t('ticketsPage.statusNew')}</option>
+                      <option value="Open">{t('ticketsPage.statusOpen')}</option>
+                      <option value="InProgress">{t('ticketsPage.statusInProgress')}</option>
+                      <option value="Pending">{t('ticketsPage.statusPending')}</option>
+                      <option value="Resolved">{t('ticketsPage.statusResolved')}</option>
+                      <option value="Closed">{t('ticketsPage.statusClosed')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('ticketsPage.priority')}</label>
                     <select
                       value={priorityFilter}
                       onChange={(e) => handleFilterChange('priority', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="all">All Priorities</option>
-                      <option value="Critical">Critical</option>
-                      <option value="High">High</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Low">Low</option>
+                      <option value="all">{t('ticketsPage.allPriorities')}</option>
+                      <option value="Critical">{t('ticketsPage.priorityCritical')}</option>
+                      <option value="High">{t('ticketsPage.priorityHigh')}</option>
+                      <option value="Medium">{t('ticketsPage.priorityMedium')}</option>
+                      <option value="Low">{t('ticketsPage.priorityLow')}</option>
                     </select>
                   </div>
                   {(statusFilter !== 'all' || priorityFilter !== 'all') && (
@@ -528,7 +543,7 @@ const Tickets = () => {
                       }}
                       className="w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
                     >
-                      Clear all filters
+                      {t('ticketsPage.clearAllFilters')}
                     </button>
                   )}
                 </motion.div>
@@ -553,8 +568,8 @@ const Tickets = () => {
 
             {/* Export button */}
             <Button variant="outline" className="hidden sm:inline-flex">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 me-2" />
+              {t('common.export')}
             </Button>
           </div>
         </div>
@@ -564,14 +579,14 @@ const Tickets = () => {
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             {statusFilter !== 'all' && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Status: {statusFilter === 'InProgress' ? 'In Progress' : statusFilter}
-                <button onClick={() => setStatusFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">×</button>
+                {t('common.status')}: {getStatusLabel(statusFilter)}
+                <button onClick={() => setStatusFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">×</button>
               </span>
             )}
             {priorityFilter !== 'all' && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Priority: {priorityFilter}
-                <button onClick={() => setPriorityFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">×</button>
+                {t('ticketsPage.priority')}: {getPriorityLabel(priorityFilter)}
+                <button onClick={() => setPriorityFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">×</button>
               </span>
             )}
           </div>
@@ -581,8 +596,8 @@ const Tickets = () => {
       {/* Results count */}
       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <span>
-          Showing {paginatedTickets.length} of {filteredTickets.length} tickets
-          {filteredTickets.length !== tickets.length && ` (filtered from ${tickets.length})`}
+          {t('ticketsPage.showing')} {paginatedTickets.length} {t('ticketsPage.of')} {filteredTickets.length} {t('ticketsPage.ticketsLabel')}
+          {filteredTickets.length !== tickets.length && ` (${t('ticketsPage.filteredFrom')} ${tickets.length})`}
         </span>
       </div>
 
@@ -596,9 +611,9 @@ const Tickets = () => {
           ) : paginatedTickets.length === 0 ? (
             <CardContent>
               <EmptyStateNoData
-                title={filteredTickets.length === 0 && tickets.length > 0 ? "No matching tickets" : "No tickets found"}
-                description={filteredTickets.length === 0 && tickets.length > 0 ? "Try adjusting your search or filters" : "Get started by creating your first ticket"}
-                actionLabel="Create Ticket"
+                title={filteredTickets.length === 0 && tickets.length > 0 ? t('ticketsPage.noMatchingTickets') : t('ticketsPage.noTicketsFound')}
+                description={filteredTickets.length === 0 && tickets.length > 0 ? t('ticketsPage.tryAdjusting') : t('ticketsPage.getStarted')}
+                actionLabel={t('ticketsPage.createTicket')}
                 onAction={handleOpenCreate}
               />
             </CardContent>
@@ -608,19 +623,19 @@ const Tickets = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[120px]">Ticket #</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead className="hidden lg:table-cell">Customer</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden md:table-cell">Assigned</TableHead>
-                      <TableHead className="hidden sm:table-cell">Created</TableHead>
-                      <TableHead className="text-end w-[100px]">Actions</TableHead>
+                      <TableHead className="w-[120px]">{t('ticketsPage.ticketNumber')}</TableHead>
+                      <TableHead>{t('ticketsPage.subject')}</TableHead>
+                      <TableHead className="hidden lg:table-cell">{t('ticketsPage.customer')}</TableHead>
+                      <TableHead>{t('ticketsPage.priority')}</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t('ticketsPage.assigned')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('ticketsPage.created')}</TableHead>
+                      <TableHead className="text-end w-[100px]">{t('common.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <AnimatePresence mode="popLayout">
-                      {paginatedTickets.map((ticket: Ticket, index: number) => (
+                      {paginatedTickets.map((ticket: TicketItem, index: number) => (
                         <motion.tr
                           key={ticket.id}
                           variants={tableRowVariants}
@@ -628,7 +643,7 @@ const Tickets = () => {
                           animate="animate"
                           exit="exit"
                           transition={{ delay: index * 0.03 }}
-                          className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group border-l-4 ${getPriorityColor(ticket.priority)}`}
+                          className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group border-s-4 ${getPriorityColor(ticket.priority)}`}
                         >
                           <TableCell>
                             <span className="font-mono text-sm font-medium text-primary-600 dark:text-primary-400">
@@ -641,7 +656,7 @@ const Tickets = () => {
                                 {ticket.subject}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[250px] lg:hidden">
-                                {ticket.customerName || 'No customer'}
+                                {ticket.customerName || t('ticketsPage.noCustomer')}
                               </p>
                             </div>
                           </TableCell>
@@ -673,7 +688,7 @@ const Tickets = () => {
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400 italic">Unassigned</span>
+                              <span className="text-sm text-gray-400 italic">{t('ticketsPage.unassigned')}</span>
                             )}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
@@ -688,6 +703,7 @@ const Tickets = () => {
                                 size="sm"
                                 onClick={() => handleOpenView(ticket)}
                                 className="h-8 w-8 p-0"
+                                title={t('common.view')}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -696,6 +712,7 @@ const Tickets = () => {
                                 size="sm"
                                 onClick={() => handleOpenEdit(ticket)}
                                 className="h-8 w-8 p-0"
+                                title={t('common.edit')}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -744,9 +761,9 @@ const Tickets = () => {
           ) : paginatedTickets.length === 0 ? (
             <Card className="p-8">
               <EmptyStateNoData
-                title={filteredTickets.length === 0 && tickets.length > 0 ? "No matching tickets" : "No tickets found"}
-                description={filteredTickets.length === 0 && tickets.length > 0 ? "Try adjusting your search or filters" : "Get started by creating your first ticket"}
-                actionLabel="Create Ticket"
+                title={filteredTickets.length === 0 && tickets.length > 0 ? t('ticketsPage.noMatchingTickets') : t('ticketsPage.noTicketsFound')}
+                description={filteredTickets.length === 0 && tickets.length > 0 ? t('ticketsPage.tryAdjusting') : t('ticketsPage.getStarted')}
+                actionLabel={t('ticketsPage.createTicket')}
                 onAction={handleOpenCreate}
               />
             </Card>
@@ -754,7 +771,7 @@ const Tickets = () => {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <AnimatePresence mode="popLayout">
-                  {paginatedTickets.map((ticket: Ticket, index: number) => (
+                  {paginatedTickets.map((ticket: TicketItem, index: number) => (
                     <motion.div
                       key={ticket.id}
                       variants={cardVariants}
@@ -763,7 +780,7 @@ const Tickets = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <Card className={`p-4 hover:shadow-lg transition-all duration-200 group border-l-4 ${getPriorityColor(ticket.priority)}`}>
+                      <Card className={`p-4 hover:shadow-lg transition-all duration-200 group border-s-4 ${getPriorityColor(ticket.priority)}`}>
                         {/* Header */}
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -805,7 +822,7 @@ const Tickets = () => {
                           {ticket.assignedAgentName && (
                             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                               <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate">Assigned to {ticket.assignedAgentName}</span>
+                              <span className="truncate">{t('ticketsPage.assignedToAgent', { name: ticket.assignedAgentName })}</span>
                             </div>
                           )}
                         </div>
@@ -864,33 +881,33 @@ const Tickets = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedTicket ? 'Edit Ticket' : 'Create New Ticket'}
+        title={selectedTicket ? t('ticketsPage.editTicket') : t('ticketsPage.createNewTicket')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Subject"
+            label={t('ticketsPage.subject')}
             value={formData.subject}
             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-            placeholder="Brief description of the issue"
+            placeholder={t('ticketsPage.subjectPlaceholder')}
             required
           />
           <Textarea
-            label="Description"
+            label={t('ticketsPage.description')}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Detailed description of the issue..."
+            placeholder={t('ticketsPage.descriptionPlaceholder')}
             rows={4}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Priority"
+              label={t('ticketsPage.priority')}
               options={priorityOptions}
               value={formData.priority}
               onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
             />
             <Select
-              label="Status"
+              label={t('common.status')}
               options={statusOptions}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -898,29 +915,29 @@ const Tickets = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Customer"
-              options={[{ value: '', label: 'Select Customer' }, ...customerOptions]}
+              label={t('ticketsPage.customer')}
+              options={[{ value: '', label: t('ticketsPage.selectCustomer') }, ...customerOptions]}
               value={formData.customerId}
               onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
               required
             />
             <Select
-              label="Assigned Agent"
-              options={[{ value: '', label: 'Unassigned' }, ...agentOptions]}
+              label={t('ticketsPage.assignedAgent')}
+              options={[{ value: '', label: t('ticketsPage.unassigned') }, ...agentOptions]}
               value={formData.assignedAgentId || ''}
               onChange={(e) => setFormData({ ...formData, assignedAgentId: e.target.value })}
             />
           </div>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               isLoading={createMutation.isPending || updateMutation.isPending}
               className="w-full sm:w-auto"
             >
-              {selectedTicket ? 'Update Ticket' : 'Create Ticket'}
+              {selectedTicket ? t('ticketsPage.updateTicket') : t('ticketsPage.createTicket')}
             </Button>
           </div>
         </form>
@@ -930,13 +947,13 @@ const Tickets = () => {
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title={`Ticket ${selectedTicket?.ticketNumber}`}
+        title={`${t('ticketsPage.ticketNumber')} ${selectedTicket?.ticketNumber || ''}`}
         size="lg"
       >
         {selectedTicket && (
           <div className="space-y-6">
             {/* Ticket Header */}
-            <div className={`p-4 rounded-lg border-l-4 ${getPriorityColor(selectedTicket.priority)} bg-gray-50 dark:bg-gray-800/50`}>
+            <div className={`p-4 rounded-lg border-s-4 ${getPriorityColor(selectedTicket.priority)} bg-gray-50 dark:bg-gray-800/50`}>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {selectedTicket.subject}
@@ -946,27 +963,27 @@ const Tickets = () => {
                 </div>
               </div>
               <p className="text-gray-600 dark:text-gray-400">
-                {selectedTicket.description || 'No description provided'}
+                {selectedTicket.description || t('ticketsPage.noDescription')}
               </p>
             </div>
 
             {/* Ticket Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.status')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   {getStatusIcon(selectedTicket.status)}
                   {getStatusBadge(selectedTicket.status)}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Priority</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.priority')}</span>
                 <div className="mt-2">
                   {getPriorityBadge(selectedTicket.priority)}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.customer')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   {selectedTicket.customerName && (
                     <>
@@ -976,11 +993,11 @@ const Tickets = () => {
                       <span className="text-sm text-gray-900 dark:text-white">{selectedTicket.customerName}</span>
                     </>
                   )}
-                  {!selectedTicket.customerName && <span className="text-sm text-gray-400">Not specified</span>}
+                  {!selectedTicket.customerName && <span className="text-sm text-gray-400">{t('ticketsPage.notSpecified')}</span>}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assigned To</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.assignedTo')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   {selectedTicket.assignedAgentName ? (
                     <>
@@ -990,18 +1007,18 @@ const Tickets = () => {
                       <span className="text-sm text-gray-900 dark:text-white">{selectedTicket.assignedAgentName}</span>
                     </>
                   ) : (
-                    <span className="text-sm text-gray-400 italic">Unassigned</span>
+                    <span className="text-sm text-gray-400 italic">{t('ticketsPage.unassigned')}</span>
                   )}
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.created')}</span>
                 <p className="mt-2 text-sm text-gray-900 dark:text-white">
                   {formatDate(selectedTicket.createdAt)}
                 </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Updated</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('ticketsPage.lastUpdated')}</span>
                 <p className="mt-2 text-sm text-gray-900 dark:text-white">
                   {formatDate(selectedTicket.updatedAt)}
                 </p>
@@ -1029,14 +1046,14 @@ const Tickets = () => {
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto">
-                Close
+                {t('common.close')}
               </Button>
               <Button onClick={() => {
                 setIsViewModalOpen(false);
                 handleOpenEdit(selectedTicket);
               }} className="w-full sm:w-auto">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Ticket
+                <Edit className="w-4 h-4 me-2" />
+                {t('ticketsPage.editTicket')}
               </Button>
             </div>
           </div>

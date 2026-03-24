@@ -89,7 +89,7 @@ const initialFormData: CustomerFormData = {
 };
 
 const Customers = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { twilioReady, activeCall, setAgentIdentity } = useCallCenter();
@@ -128,10 +128,10 @@ const Customers = () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Customer created successfully', 'success');
+      showToast(t('customersPage.createdSuccess'), 'success');
     },
     onError: () => {
-      showToast('Failed to create customer', 'error');
+      showToast(t('customersPage.createdError'), 'error');
     },
   });
 
@@ -142,10 +142,10 @@ const Customers = () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Customer updated successfully', 'success');
+      showToast(t('customersPage.updatedSuccess'), 'success');
     },
     onError: () => {
-      showToast('Failed to update customer', 'error');
+      showToast(t('customersPage.updatedError'), 'error');
     },
   });
 
@@ -155,10 +155,10 @@ const Customers = () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       setIsDeleteModalOpen(false);
       setSelectedCustomer(null);
-      showToast('Customer deleted successfully', 'success');
+      showToast(t('customersPage.deletedSuccess'), 'success');
     },
     onError: () => {
-      showToast('Failed to delete customer', 'error');
+      showToast(t('customersPage.deletedError'), 'error');
     },
   });
 
@@ -169,11 +169,11 @@ const Customers = () => {
         customerId: data.customerId,
       }),
     onSuccess: () => {
-      showToast('Call initiated successfully', 'success');
+      showToast(t('customersPage.callSuccess'), 'success');
       setCallingCustomerId(null);
     },
     onError: (error: Error) => {
-      showToast(error.message || 'Failed to initiate call', 'error');
+      showToast(error.message || t('customersPage.callError'), 'error');
       setCallingCustomerId(null);
     },
   });
@@ -280,35 +280,46 @@ const Customers = () => {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      Premium: t('customersPage.premium'),
+      Regular: t('customersPage.regular'),
+      New: t('customersPage.new'),
+    };
+    return labels[type] || type;
+  };
+
   const getTypeBadge = (type: string) => {
     const config: Record<string, { variant: 'success' | 'info' | 'default'; icon: React.ReactNode }> = {
-      Premium: { variant: 'success', icon: <Crown className="w-3 h-3 mr-1" /> },
-      Regular: { variant: 'info', icon: <UserCheck className="w-3 h-3 mr-1" /> },
-      New: { variant: 'default', icon: <UserPlus className="w-3 h-3 mr-1" /> },
+      Premium: { variant: 'success', icon: <Crown className="w-3 h-3 me-1" /> },
+      Regular: { variant: 'info', icon: <UserCheck className="w-3 h-3 me-1" /> },
+      New: { variant: 'default', icon: <UserPlus className="w-3 h-3 me-1" /> },
     };
     const { variant, icon } = config[type] || { variant: 'default' as const, icon: null };
     return (
       <Badge variant={variant} className="flex items-center">
         {icon}
-        {type}
+        {getTypeLabel(type)}
       </Badge>
     );
   };
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      Premium: 'border-l-yellow-500',
-      Regular: 'border-l-blue-500',
-      New: 'border-l-green-500',
+      Premium: 'border-s-yellow-500',
+      Regular: 'border-s-blue-500',
+      New: 'border-s-green-500',
     };
-    return colors[type] || 'border-l-gray-300';
+    return colors[type] || 'border-s-gray-300';
   };
+
+  const isArabic = i18n.language === 'ar';
 
   const formatDate = (dateString: string | undefined | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -325,16 +336,16 @@ const Customers = () => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 60) return t('customersPage.mAgo', { count: diffMins });
+    if (diffHours < 24) return t('customersPage.hAgo', { count: diffHours });
+    if (diffDays < 7) return t('customersPage.dAgo', { count: diffDays });
     return formatDate(dateString);
   };
 
   const typeOptions = [
-    { value: 'New', label: 'New' },
-    { value: 'Regular', label: 'Regular' },
-    { value: 'Premium', label: 'Premium' },
+    { value: 'New', label: t('customersPage.new') },
+    { value: 'Regular', label: t('customersPage.regular') },
+    { value: 'Premium', label: t('customersPage.premium') },
   ];
 
   const getInitials = (name: string) => {
@@ -373,13 +384,13 @@ const Customers = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.customers')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage customer profiles and information
+            {t('customersPage.subtitle')}
           </p>
         </div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button onClick={handleOpenCreate} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Customer
+            <Plus className="w-4 h-4 me-2" />
+            {t('customersPage.addCustomer')}
           </Button>
         </motion.div>
       </motion.div>
@@ -394,7 +405,7 @@ const Customers = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Customers</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customersPage.totalCustomers')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -405,7 +416,7 @@ const Customers = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Premium</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customersPage.premium')}</p>
               <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{stats.premium}</p>
             </div>
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl">
@@ -416,7 +427,7 @@ const Customers = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Regular</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customersPage.regular')}</p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats.regular}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -427,7 +438,7 @@ const Customers = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">New</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customersPage.new')}</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.newCustomers}</p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
@@ -438,7 +449,7 @@ const Customers = () => {
         <Card className="p-4 hover:shadow-md transition-shadow col-span-2 md:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Business</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customersPage.business')}</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{stats.withCompany}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
@@ -453,13 +464,13 @@ const Customers = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search input */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, phone, or company..."
+              placeholder={t('customersPage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -471,31 +482,31 @@ const Customers = () => {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
+                <Filter className="w-4 h-4 me-2" />
+                {t('customersPage.filters')}
                 {typeFilter !== 'all' && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">1</span>
+                  <span className="ms-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">1</span>
                 )}
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <ChevronDown className="w-4 h-4 ms-2" />
               </button>
 
               {isFilterOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
+                  className="absolute end-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
                 >
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Customer Type</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('customersPage.customerType')}</label>
                     <select
                       value={typeFilter}
                       onChange={(e) => handleFilterChange(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="all">All Types</option>
-                      <option value="Premium">Premium</option>
-                      <option value="Regular">Regular</option>
-                      <option value="New">New</option>
+                      <option value="all">{t('customersPage.allTypes')}</option>
+                      <option value="Premium">{t('customersPage.premium')}</option>
+                      <option value="Regular">{t('customersPage.regular')}</option>
+                      <option value="New">{t('customersPage.new')}</option>
                     </select>
                   </div>
                   {typeFilter !== 'all' && (
@@ -503,7 +514,7 @@ const Customers = () => {
                       onClick={() => setTypeFilter('all')}
                       className="w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
                     >
-                      Clear all filters
+                      {t('customersPage.clearAllFilters')}
                     </button>
                   )}
                 </motion.div>
@@ -528,8 +539,8 @@ const Customers = () => {
 
             {/* Export button */}
             <Button variant="outline" className="hidden sm:inline-flex">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 me-2" />
+              {t('customersPage.exportBtn')}
             </Button>
           </div>
         </div>
@@ -538,8 +549,8 @@ const Customers = () => {
         {typeFilter !== 'all' && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-              Type: {typeFilter}
-              <button onClick={() => setTypeFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">×</button>
+              {t('common.type')}: {getTypeLabel(typeFilter)}
+              <button onClick={() => setTypeFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">×</button>
             </span>
           </div>
         )}
@@ -548,8 +559,8 @@ const Customers = () => {
       {/* Results count */}
       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <span>
-          Showing {paginatedCustomers.length} of {filteredCustomers.length} customers
-          {filteredCustomers.length !== customers.length && ` (filtered from ${customers.length})`}
+          {t('customersPage.showing')} {paginatedCustomers.length} {t('customersPage.of')} {filteredCustomers.length} {t('customersPage.customers')}
+          {filteredCustomers.length !== customers.length && ` (${t('customersPage.filteredFrom')} ${customers.length})`}
         </span>
       </div>
 
@@ -563,9 +574,9 @@ const Customers = () => {
           ) : paginatedCustomers.length === 0 ? (
             <CardContent>
               <EmptyStateNoData
-                title={filteredCustomers.length === 0 && customers.length > 0 ? "No matching customers" : "No customers found"}
-                description={filteredCustomers.length === 0 && customers.length > 0 ? "Try adjusting your search or filters" : "Get started by adding your first customer"}
-                actionLabel="Add Customer"
+                title={filteredCustomers.length === 0 && customers.length > 0 ? t('customersPage.noMatchingCustomers') : t('customersPage.noCustomersFound')}
+                description={filteredCustomers.length === 0 && customers.length > 0 ? t('customersPage.tryAdjusting') : t('customersPage.getStarted')}
+                actionLabel={t('customersPage.addCustomer')}
                 onAction={handleOpenCreate}
               />
             </CardContent>
@@ -575,13 +586,13 @@ const Customers = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="hidden lg:table-cell">Email</TableHead>
-                      <TableHead className="hidden md:table-cell">Phone</TableHead>
-                      <TableHead className="hidden lg:table-cell">Company</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="hidden sm:table-cell">Created</TableHead>
-                      <TableHead className="text-end w-[120px]">Actions</TableHead>
+                      <TableHead>{t('customersPage.customer')}</TableHead>
+                      <TableHead className="hidden lg:table-cell">{t('customersPage.email')}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t('customersPage.phone')}</TableHead>
+                      <TableHead className="hidden lg:table-cell">{t('customersPage.company')}</TableHead>
+                      <TableHead>{t('common.type')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('customersPage.created')}</TableHead>
+                      <TableHead className="text-end w-[120px]">{t('common.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -594,7 +605,7 @@ const Customers = () => {
                           animate="animate"
                           exit="exit"
                           transition={{ delay: index * 0.03 }}
-                          className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group border-l-4 ${getTypeColor(customer.type)}`}
+                          className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group border-s-4 ${getTypeColor(customer.type)}`}
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -628,8 +639,8 @@ const Customers = () => {
                                     handleClickToCall(customer);
                                   }}
                                   disabled={callingCustomerId === customer.id}
-                                  className="p-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50 ml-1"
-                                  title="Call customer"
+                                  className="p-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50 ms-1"
+                                  title={t('customersPage.callCustomer')}
                                 >
                                   {callingCustomerId === customer.id ? (
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -663,7 +674,7 @@ const Customers = () => {
                                 size="sm"
                                 onClick={() => setViewingNotesCustomer(customer)}
                                 className="h-8 w-8 p-0"
-                                title="View Notes"
+                                title={t('customersPage.viewNotes')}
                               >
                                 <MessageSquare className="w-4 h-4" />
                               </Button>
@@ -672,7 +683,7 @@ const Customers = () => {
                                 size="sm"
                                 onClick={() => handleOpenView(customer)}
                                 className="h-8 w-8 p-0"
-                                title="View Details"
+                                title={t('customersPage.viewDetails')}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -681,7 +692,7 @@ const Customers = () => {
                                 size="sm"
                                 onClick={() => handleOpenEdit(customer)}
                                 className="h-8 w-8 p-0"
-                                title="Edit"
+                                title={t('common.edit')}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -690,7 +701,7 @@ const Customers = () => {
                                 size="sm"
                                 onClick={() => handleOpenDelete(customer)}
                                 className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                                title="Delete"
+                                title={t('common.delete')}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -740,9 +751,9 @@ const Customers = () => {
           ) : paginatedCustomers.length === 0 ? (
             <Card className="p-8">
               <EmptyStateNoData
-                title={filteredCustomers.length === 0 && customers.length > 0 ? "No matching customers" : "No customers found"}
-                description={filteredCustomers.length === 0 && customers.length > 0 ? "Try adjusting your search or filters" : "Get started by adding your first customer"}
-                actionLabel="Add Customer"
+                title={filteredCustomers.length === 0 && customers.length > 0 ? t('customersPage.noMatchingCustomers') : t('customersPage.noCustomersFound')}
+                description={filteredCustomers.length === 0 && customers.length > 0 ? t('customersPage.tryAdjusting') : t('customersPage.getStarted')}
+                actionLabel={t('customersPage.addCustomer')}
                 onAction={handleOpenCreate}
               />
             </Card>
@@ -759,7 +770,7 @@ const Customers = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <Card className={`p-4 hover:shadow-lg transition-all duration-200 group border-l-4 ${getTypeColor(customer.type)}`}>
+                      <Card className={`p-4 hover:shadow-lg transition-all duration-200 group border-s-4 ${getTypeColor(customer.type)}`}>
                         {/* Header */}
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
@@ -802,7 +813,7 @@ const Customers = () => {
                                 }}
                                 disabled={callingCustomerId === customer.id}
                                 className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50"
-                                title="Call customer"
+                                title={t('customersPage.callCustomer')}
                               >
                                 {callingCustomerId === customer.id ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -876,65 +887,65 @@ const Customers = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedCustomer ? 'Edit Customer' : 'Add New Customer'}
+        title={selectedCustomer ? t('customersPage.editCustomer') : t('customersPage.addNewCustomer')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Full Name"
+              label={t('customersPage.fullName')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="John Doe"
+              placeholder={t('customersPage.fullNamePlaceholder')}
               required
             />
             <Input
-              label="Email"
+              label={t('customersPage.email')}
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="john@example.com"
+              placeholder={t('customersPage.emailPlaceholder')}
               required
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Phone"
+              label={t('customersPage.phone')}
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+1 (555) 123-4567"
+              placeholder={t('customersPage.phonePlaceholder')}
               required
             />
             <Input
-              label="Company"
+              label={t('customersPage.company')}
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              placeholder="Company name (optional)"
+              placeholder={t('customersPage.companyPlaceholder')}
             />
           </div>
           <Select
-            label="Customer Type"
+            label={t('customersPage.customerType')}
             options={typeOptions}
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
           />
           <Textarea
-            label="Notes"
+            label={t('customersPage.notes')}
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Additional notes about the customer..."
+            placeholder={t('customersPage.notesPlaceholder')}
             rows={3}
           />
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               isLoading={createMutation.isPending || updateMutation.isPending}
               className="w-full sm:w-auto"
             >
-              {selectedCustomer ? 'Update Customer' : 'Create Customer'}
+              {selectedCustomer ? t('customersPage.updateCustomer') : t('customersPage.createCustomer')}
             </Button>
           </div>
         </form>
@@ -944,13 +955,13 @@ const Customers = () => {
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title="Customer Details"
+        title={t('customersPage.customerDetails')}
         size="lg"
       >
         {selectedCustomer && (
           <div className="space-y-6">
             {/* Customer Header */}
-            <div className={`p-4 rounded-lg border-l-4 ${getTypeColor(selectedCustomer.type)} bg-gray-50 dark:bg-gray-800/50`}>
+            <div className={`p-4 rounded-lg border-s-4 ${getTypeColor(selectedCustomer.type)} bg-gray-50 dark:bg-gray-800/50`}>
               <div className="flex items-center gap-4">
                 <div className={`w-16 h-16 rounded-full ${getAvatarColor(selectedCustomer.name)} flex items-center justify-center text-white text-2xl font-medium`}>
                   {getInitials(selectedCustomer.name)}
@@ -969,14 +980,14 @@ const Customers = () => {
             {/* Customer Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('customersPage.email')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-900 dark:text-white">{selectedCustomer.email}</span>
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('customersPage.phone')}</span>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-gray-400" />
@@ -987,7 +998,7 @@ const Customers = () => {
                       onClick={() => handleClickToCall(selectedCustomer)}
                       disabled={callingCustomerId === selectedCustomer.id}
                       className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-full transition-colors disabled:opacity-50"
-                      title="Call customer"
+                      title={t('customersPage.callCustomer')}
                     >
                       {callingCustomerId === selectedCustomer.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -999,14 +1010,14 @@ const Customers = () => {
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('customersPage.company')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-900 dark:text-white">{selectedCustomer.company || 'Not specified'}</span>
+                  <span className="text-sm text-gray-900 dark:text-white">{selectedCustomer.company || t('customersPage.notSpecified')}</span>
                 </div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer Since</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('customersPage.customerSince')}</span>
                 <div className="mt-2 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-900 dark:text-white">{formatDate(selectedCustomer.createdAt)}</span>
@@ -1017,7 +1028,7 @@ const Customers = () => {
             {/* Notes */}
             {selectedCustomer.notes && (
               <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notes</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('customersPage.notes')}</span>
                 <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                   {selectedCustomer.notes}
                 </p>
@@ -1027,7 +1038,7 @@ const Customers = () => {
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto">
-                Close
+                {t('common.close')}
               </Button>
               <Button
                 variant="outline"
@@ -1037,15 +1048,15 @@ const Customers = () => {
                 }}
                 className="w-full sm:w-auto"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                View Notes
+                <MessageSquare className="w-4 h-4 me-2" />
+                {t('customersPage.viewNotes')}
               </Button>
               <Button onClick={() => {
                 setIsViewModalOpen(false);
                 handleOpenEdit(selectedCustomer);
               }} className="w-full sm:w-auto">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Customer
+                <Edit className="w-4 h-4 me-2" />
+                {t('customersPage.editCustomer')}
               </Button>
             </div>
           </div>
@@ -1056,16 +1067,16 @@ const Customers = () => {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Customer"
+        title={t('customersPage.deleteCustomer')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete <strong>{selectedCustomer?.name}</strong>? This action cannot be undone.
+            {t('customersPage.deleteConfirm')} <strong>{selectedCustomer?.name}</strong>? {t('customersPage.deleteWarning')}
           </p>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -1073,7 +1084,7 @@ const Customers = () => {
               isLoading={deleteMutation.isPending}
               className="w-full sm:w-auto"
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </div>
         </div>
@@ -1093,11 +1104,11 @@ const Customers = () => {
             />
             {/* Panel */}
             <motion.div
-              initial={{ x: '100%' }}
+              initial={{ x: isArabic ? '-100%' : '100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              exit={{ x: isArabic ? '-100%' : '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50"
+              className="fixed inset-y-0 end-0 w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50"
             >
               <CustomerNotes
                 customerId={viewingNotesCustomer.id}

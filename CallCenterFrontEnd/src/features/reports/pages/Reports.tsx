@@ -14,7 +14,7 @@ interface AgentPerformance {
 }
 
 const Reports = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [dateRange, setDateRange] = useState('7d');
   const [_selectedReport, _setSelectedReport] = useState<string | null>(null);
   void _selectedReport; // Available for future use
@@ -40,37 +40,37 @@ const Reports = () => {
   const tickets = Array.isArray(ticketsData) ? ticketsData : (ticketsData?.data || ticketsData?.items || []);
   const agents = Array.isArray(agentsData) ? agentsData : (agentsData?.data || agentsData?.items || []);
 
-  // Mock data for charts
+  // Chart data with translations
   const callVolumeData = [
-    { label: 'Mon', value: 145 },
-    { label: 'Tue', value: 189 },
-    { label: 'Wed', value: 176 },
-    { label: 'Thu', value: 198 },
-    { label: 'Fri', value: 167 },
-    { label: 'Sat', value: 89 },
-    { label: 'Sun', value: 67 },
+    { label: t('reportsPage.mon'), value: 145 },
+    { label: t('reportsPage.tue'), value: 189 },
+    { label: t('reportsPage.wed'), value: 176 },
+    { label: t('reportsPage.thu'), value: 198 },
+    { label: t('reportsPage.fri'), value: 167 },
+    { label: t('reportsPage.sat'), value: 89 },
+    { label: t('reportsPage.sun'), value: 67 },
   ];
 
   const ticketsByStatus = [
-    { label: 'New', value: tickets.filter((t: { status: string }) => t.status === 'New').length, color: '#3b82f6' },
-    { label: 'Open', value: tickets.filter((t: { status: string }) => t.status === 'Open').length, color: '#f59e0b' },
-    { label: 'In Progress', value: tickets.filter((t: { status: string }) => t.status === 'InProgress').length, color: '#8b5cf6' },
-    { label: 'Resolved', value: tickets.filter((t: { status: string }) => t.status === 'Resolved').length, color: '#10b981' },
-    { label: 'Closed', value: tickets.filter((t: { status: string }) => t.status === 'Closed').length, color: '#6b7280' },
+    { label: t('reportsPage.new'), value: tickets.filter((t: { status: string }) => t.status === 'New').length, color: '#3b82f6' },
+    { label: t('reportsPage.open'), value: tickets.filter((t: { status: string }) => t.status === 'Open').length, color: '#f59e0b' },
+    { label: t('reportsPage.inProgress'), value: tickets.filter((t: { status: string }) => t.status === 'InProgress').length, color: '#8b5cf6' },
+    { label: t('reportsPage.resolved'), value: tickets.filter((t: { status: string }) => t.status === 'Resolved').length, color: '#10b981' },
+    { label: t('reportsPage.closed'), value: tickets.filter((t: { status: string }) => t.status === 'Closed').length, color: '#6b7280' },
   ];
 
   const ticketsByPriority = [
-    { label: 'Critical', value: tickets.filter((t: { priority: string }) => t.priority === 'Critical').length, color: 'bg-red-500' },
-    { label: 'High', value: tickets.filter((t: { priority: string }) => t.priority === 'High').length, color: 'bg-orange-500' },
-    { label: 'Medium', value: tickets.filter((t: { priority: string }) => t.priority === 'Medium').length, color: 'bg-yellow-500' },
-    { label: 'Low', value: tickets.filter((t: { priority: string }) => t.priority === 'Low').length, color: 'bg-green-500' },
+    { label: t('reportsPage.critical'), value: tickets.filter((t: { priority: string }) => t.priority === 'Critical').length, color: 'bg-red-500' },
+    { label: t('reportsPage.high'), value: tickets.filter((t: { priority: string }) => t.priority === 'High').length, color: 'bg-orange-500' },
+    { label: t('reportsPage.medium'), value: tickets.filter((t: { priority: string }) => t.priority === 'Medium').length, color: 'bg-yellow-500' },
+    { label: t('reportsPage.low'), value: tickets.filter((t: { priority: string }) => t.priority === 'Low').length, color: 'bg-green-500' },
   ];
 
   const serviceLevelTrend = [
-    { label: 'Week 1', value: 85 },
-    { label: 'Week 2', value: 88 },
-    { label: 'Week 3', value: 82 },
-    { label: 'Week 4', value: 91 },
+    { label: t('reportsPage.week', { number: 1 }), value: 85 },
+    { label: t('reportsPage.week', { number: 2 }), value: 88 },
+    { label: t('reportsPage.week', { number: 3 }), value: 82 },
+    { label: t('reportsPage.week', { number: 4 }), value: 91 },
   ];
 
   const agentPerformance = agents.slice(0, 5).map((agent: { id: string; name: string }) => ({
@@ -81,14 +81,21 @@ const Reports = () => {
     fcr: Math.floor(Math.random() * 20) + 70,
   }));
 
+  const reportCategories = [
+    { name: t('reportsPage.agentKpiSummary'), icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+    { name: t('reportsPage.queueAnalytics'), icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' },
+    { name: t('reportsPage.csatOverview'), icon: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { name: t('reportsPage.slaPerformance'), icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.reports')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('reportsPage.title')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Analytics and performance insights
+            {t('reportsPage.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -97,16 +104,16 @@ const Reports = () => {
             onChange={(e) => setDateRange(e.target.value)}
             className="w-40"
           >
-            <option value="1d">Today</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
+            <option value="1d">{t('reportsPage.today')}</option>
+            <option value="7d">{t('reportsPage.last7Days')}</option>
+            <option value="30d">{t('reportsPage.last30Days')}</option>
+            <option value="90d">{t('reportsPage.last90Days')}</option>
           </Select>
           <Button variant="outline">
             <svg className="w-4 h-4 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Export
+            {t('reportsPage.export')}
           </Button>
         </div>
       </div>
@@ -114,7 +121,7 @@ const Reports = () => {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          label="Total Calls"
+          label={t('reportsPage.totalCalls')}
           value="1,234"
           change={{ value: 12, type: 'increase' }}
           icon={
@@ -124,7 +131,7 @@ const Reports = () => {
           }
         />
         <MetricCard
-          label="Avg Handle Time"
+          label={t('reportsPage.avgHandleTime')}
           value="2:45"
           change={{ value: 8, type: 'decrease' }}
           icon={
@@ -134,7 +141,7 @@ const Reports = () => {
           }
         />
         <MetricCard
-          label="Service Level"
+          label={t('reportsPage.serviceLevel')}
           value="92%"
           change={{ value: 3, type: 'increase' }}
           icon={
@@ -144,7 +151,7 @@ const Reports = () => {
           }
         />
         <MetricCard
-          label="Avg CSAT"
+          label={t('reportsPage.avgCsat')}
           value="4.5"
           change={{ value: 5, type: 'increase' }}
           icon={
@@ -160,7 +167,7 @@ const Reports = () => {
         {/* Call Volume */}
         <Card variant="bordered">
           <CardHeader>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Call Volume</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('reportsPage.callVolume')}</h3>
           </CardHeader>
           <CardContent>
             <BarChart data={callVolumeData} height={220} />
@@ -170,7 +177,7 @@ const Reports = () => {
         {/* Tickets by Status */}
         <Card variant="bordered">
           <CardHeader>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Tickets by Status</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('reportsPage.ticketsByStatus')}</h3>
           </CardHeader>
           <CardContent className="flex justify-center">
             <DonutChart data={ticketsByStatus} size={180} />
@@ -183,7 +190,7 @@ const Reports = () => {
         {/* Service Level Trend */}
         <Card variant="bordered">
           <CardHeader>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Service Level Trend</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('reportsPage.serviceLevelTrend')}</h3>
           </CardHeader>
           <CardContent>
             <LineChart data={serviceLevelTrend} height={200} color="#10b981" />
@@ -193,7 +200,7 @@ const Reports = () => {
         {/* Tickets by Priority */}
         <Card variant="bordered">
           <CardHeader>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Tickets by Priority</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('reportsPage.ticketsByPriority')}</h3>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -216,23 +223,23 @@ const Reports = () => {
       <Card variant="bordered">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Agent Performance</h3>
-            <Button variant="outline" size="sm">View All</Button>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('reportsPage.agentPerformance')}</h3>
+            <Button variant="outline" size="sm">{t('reportsPage.viewAll')}</Button>
           </div>
         </CardHeader>
         <CardContent>
           {agentPerformance.length === 0 ? (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-4">No agents found</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 py-4">{t('reportsPage.noAgentsFound')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-start py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Agent</th>
-                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Calls</th>
-                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Avg Handle Time</th>
-                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">CSAT</th>
-                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">FCR</th>
+                    <th className="text-start py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">{t('reportsPage.agent')}</th>
+                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">{t('reportsPage.calls')}</th>
+                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">{t('reportsPage.avgHandleTime')}</th>
+                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">{t('reportsPage.csat')}</th>
+                    <th className="text-end py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">{t('reportsPage.fcr')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -267,16 +274,11 @@ const Reports = () => {
       {/* Report Categories */}
       <Card variant="bordered">
         <CardHeader>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Available Reports</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('reportsPage.availableReports')}</h3>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { name: 'Agent KPI Summary', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-              { name: 'Queue Analytics', icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' },
-              { name: 'CSAT Overview', icon: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-              { name: 'SLA Performance', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-            ].map((report) => (
+            {reportCategories.map((report) => (
               <button
                 key={report.name}
                 onClick={() => _setSelectedReport(report.name)}

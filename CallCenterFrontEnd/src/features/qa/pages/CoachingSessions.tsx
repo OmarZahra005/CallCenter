@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
@@ -54,45 +55,6 @@ interface CoachingSession {
   updatedAt: string;
 }
 
-// Session type config
-const SESSION_TYPE_CONFIG: Record<SessionType, { label: string; color: string; bgColor: string }> = {
-  OneOnOne: { label: 'One-on-One', color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-  Group: { label: 'Group', color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
-  Remedial: { label: 'Remedial', color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
-  Development: { label: 'Development', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-};
-
-// Session status config
-const SESSION_STATUS_CONFIG: Record<SessionStatus, { label: string; variant: 'success' | 'danger' | 'warning' | 'default'; icon: typeof CheckCircle }> = {
-  Scheduled: { label: 'Scheduled', variant: 'default', icon: Calendar },
-  Completed: { label: 'Completed', variant: 'success', icon: CheckCircle },
-  Cancelled: { label: 'Cancelled', variant: 'danger', icon: XCircle },
-  NoShow: { label: 'No Show', variant: 'warning', icon: AlertCircle },
-};
-
-// Format date helpers
-const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-const formatTime = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatDateTime = (dateStr: string): string => {
-  return `${formatDate(dateStr)} at ${formatTime(dateStr)}`;
-};
-
 const isToday = (dateStr: string): boolean => {
   const date = new Date(dateStr);
   const today = new Date();
@@ -105,6 +67,47 @@ const isUpcoming = (dateStr: string): boolean => {
 
 const CoachingSessions = () => {
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
+
+  // Session type config
+  const SESSION_TYPE_CONFIG: Record<SessionType, { label: string; color: string; bgColor: string }> = {
+    OneOnOne: { label: t('coachingSessions.oneOnOne'), color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+    Group: { label: t('coachingSessions.group'), color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+    Remedial: { label: t('coachingSessions.remedial'), color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+    Development: { label: t('coachingSessions.development'), color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  };
+
+  // Session status config
+  const SESSION_STATUS_CONFIG: Record<SessionStatus, { label: string; variant: 'success' | 'danger' | 'warning' | 'default'; icon: typeof CheckCircle }> = {
+    Scheduled: { label: t('coachingSessions.scheduled'), variant: 'default', icon: Calendar },
+    Completed: { label: t('coachingSessions.completed'), variant: 'success', icon: CheckCircle },
+    Cancelled: { label: t('coachingSessions.cancelled'), variant: 'danger', icon: XCircle },
+    NoShow: { label: t('coachingSessions.noShow'), variant: 'warning', icon: AlertCircle },
+  };
+
+  // Format date helpers
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatDateTime = (dateStr: string): string => {
+    return `${formatDate(dateStr)} ${formatTime(dateStr)}`;
+  };
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -244,15 +247,15 @@ const CoachingSessions = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Users className="w-7 h-7 text-primary-600" />
-              Coaching Sessions
+              {t('coachingSessions.title')}
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Schedule and manage agent coaching sessions
+              {t('coachingSessions.subtitle')}
             </p>
           </div>
           <Button onClick={handleCreateNew}>
-            <Plus className="w-4 h-4 mr-2" />
-            Schedule Session
+            <Plus className="w-4 h-4 me-2" />
+            {t('coachingSessions.scheduleSession')}
           </Button>
         </div>
       </motion.div>
@@ -262,7 +265,7 @@ const CoachingSessions = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Sessions</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('coachingSessions.totalSessions')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
             </div>
             <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
@@ -273,7 +276,7 @@ const CoachingSessions = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Today</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('coachingSessions.today')}</p>
               <p className="text-2xl font-bold text-blue-600">{stats.todaySessions}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -284,7 +287,7 @@ const CoachingSessions = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Upcoming</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('coachingSessions.upcoming')}</p>
               <p className="text-2xl font-bold text-yellow-600">{stats.upcoming}</p>
             </div>
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl">
@@ -295,7 +298,7 @@ const CoachingSessions = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('coachingSessions.completed')}</p>
               <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
@@ -306,7 +309,7 @@ const CoachingSessions = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Scheduled</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('coachingSessions.scheduled')}</p>
               <p className="text-2xl font-bold text-purple-600">{stats.scheduled}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
@@ -321,13 +324,13 @@ const CoachingSessions = () => {
         <Card className="p-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by agent, coach, or topic..."
+                placeholder={t('coachingSessions.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
 
@@ -337,11 +340,11 @@ const CoachingSessions = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
               >
-                <option value="all">All Status</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
-                <option value="NoShow">No Show</option>
+                <option value="all">{t('coachingSessions.allStatus')}</option>
+                <option value="Scheduled">{t('coachingSessions.scheduled')}</option>
+                <option value="Completed">{t('coachingSessions.completed')}</option>
+                <option value="Cancelled">{t('coachingSessions.cancelled')}</option>
+                <option value="NoShow">{t('coachingSessions.noShow')}</option>
               </select>
 
               <select
@@ -349,17 +352,17 @@ const CoachingSessions = () => {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
               >
-                <option value="all">All Types</option>
-                <option value="OneOnOne">One-on-One</option>
-                <option value="Group">Group</option>
-                <option value="Remedial">Remedial</option>
-                <option value="Development">Development</option>
+                <option value="all">{t('coachingSessions.allTypes')}</option>
+                <option value="OneOnOne">{t('coachingSessions.oneOnOne')}</option>
+                <option value="Group">{t('coachingSessions.group')}</option>
+                <option value="Remedial">{t('coachingSessions.remedial')}</option>
+                <option value="Development">{t('coachingSessions.development')}</option>
               </select>
 
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={resetFilters}>
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
+                  <X className="w-4 h-4 me-1" />
+                  {t('coachingSessions.clearBtn')}
                 </Button>
               )}
             </div>
@@ -377,17 +380,17 @@ const CoachingSessions = () => {
           <Card className="p-8 text-center">
             <Users className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-              {hasActiveFilters ? 'No matching sessions found' : 'No coaching sessions yet'}
+              {hasActiveFilters ? t('coachingSessions.noMatchingSessions') : t('coachingSessions.noSessionsYet')}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
               {hasActiveFilters
-                ? 'Try adjusting your filters'
-                : 'Schedule your first coaching session to get started'}
+                ? t('coachingSessions.tryAdjusting')
+                : t('coachingSessions.getStarted')}
             </p>
             {!hasActiveFilters && (
               <Button onClick={handleCreateNew}>
-                <Plus className="w-4 h-4 mr-2" />
-                Schedule Session
+                <Plus className="w-4 h-4 me-2" />
+                {t('coachingSessions.scheduleSession')}
               </Button>
             )}
           </Card>
@@ -411,7 +414,7 @@ const CoachingSessions = () => {
                   >
                     <Card
                       className={`overflow-hidden hover:shadow-md transition-shadow ${
-                        today ? 'border-l-4 border-l-primary-500' : ''
+                        today ? 'border-s-4 border-s-primary-500' : ''
                       }`}
                     >
                       <div className="p-4 sm:p-5">
@@ -420,13 +423,13 @@ const CoachingSessions = () => {
                           <div className="sm:w-32 flex-shrink-0">
                             <div className={`text-center p-3 rounded-lg ${today ? 'bg-primary-100 dark:bg-primary-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
                               <p className={`text-xs font-medium ${today ? 'text-primary-600' : 'text-gray-500'}`}>
-                                {today ? 'TODAY' : formatDate(session.sessionDate).split(',')[0]}
+                                {today ? t('coachingSessions.todayLabel') : formatDate(session.sessionDate).split(',')[0]}
                               </p>
                               <p className={`text-lg font-bold ${today ? 'text-primary-700 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>
                                 {formatTime(session.sessionDate)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {session.durationMinutes} min
+                                {t('coachingSessions.min', { count: session.durationMinutes })}
                               </p>
                             </div>
                           </div>
@@ -438,7 +441,7 @@ const CoachingSessions = () => {
                                 {typeConfig.label}
                               </span>
                               <Badge variant={statusConfig.variant} size="sm">
-                                <StatusIcon className="w-3 h-3 mr-1" />
+                                <StatusIcon className="w-3 h-3 me-1" />
                                 {statusConfig.label}
                               </Badge>
                             </div>
@@ -446,16 +449,16 @@ const CoachingSessions = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                               <div className="flex items-center gap-2 text-sm">
                                 <User className="w-4 h-4 text-gray-400" />
-                                <span className="text-gray-600 dark:text-gray-400">Agent:</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('coachingSessions.agentLabel')}</span>
                                 <span className="font-medium text-gray-900 dark:text-white">
-                                  {session.agentName || 'Unknown'}
+                                  {session.agentName || t('coachingSessions.unknown')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-sm">
                                 <UserCheck className="w-4 h-4 text-gray-400" />
-                                <span className="text-gray-600 dark:text-gray-400">Coach:</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('coachingSessions.coachLabel')}</span>
                                 <span className="font-medium text-gray-900 dark:text-white">
-                                  {session.coachName || 'Unknown'}
+                                  {session.coachName || t('coachingSessions.unknown')}
                                 </span>
                               </div>
                             </div>
@@ -474,7 +477,7 @@ const CoachingSessions = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleView(session)}
-                              title="View Details"
+                              title={t('coachingSessions.viewDetails')}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -482,7 +485,7 @@ const CoachingSessions = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(session)}
-                              title="Edit"
+                              title={t('coachingSessions.editBtn')}
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
@@ -491,7 +494,7 @@ const CoachingSessions = () => {
                               size="sm"
                               onClick={() => setDeleteConfirm(session)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete"
+                              title={t('coachingSessions.deleteBtn')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -514,7 +517,7 @@ const CoachingSessions = () => {
           setIsFormOpen(false);
           setEditingSession(null);
         }}
-        title={editingSession ? 'Edit Coaching Session' : 'Schedule Coaching Session'}
+        title={editingSession ? t('coachingSessions.editSession') : t('coachingSessions.scheduleNew')}
         size="lg"
       >
         <CoachingSessionForm
@@ -531,7 +534,7 @@ const CoachingSessions = () => {
       <Modal
         isOpen={!!viewingSession}
         onClose={() => setViewingSession(null)}
-        title="Session Details"
+        title={t('coachingSessions.sessionDetails')}
         size="lg"
       >
         {viewingSession && (
@@ -545,7 +548,7 @@ const CoachingSessions = () => {
                 <h3 className="font-semibold text-lg text-gray-900 dark:text-white mt-2">
                   {formatDateTime(viewingSession.sessionDate)}
                 </h3>
-                <p className="text-sm text-gray-500">{viewingSession.durationMinutes} minutes</p>
+                <p className="text-sm text-gray-500">{t('coachingSessions.minutes', { count: viewingSession.durationMinutes })}</p>
               </div>
               <Badge variant={SESSION_STATUS_CONFIG[viewingSession.status].variant} size="sm">
                 {SESSION_STATUS_CONFIG[viewingSession.status].label}
@@ -555,27 +558,27 @@ const CoachingSessions = () => {
             {/* Participants */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Agent</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">{t('coachingSessions.agentLabel')}</p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                     <User className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {viewingSession.agentName || 'Unknown'}
+                      {viewingSession.agentName || t('coachingSessions.unknown')}
                     </p>
                   </div>
                 </div>
               </div>
               <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Coach</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">{t('coachingSessions.coachLabel')}</p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                     <UserCheck className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {viewingSession.coachName || 'Unknown'}
+                      {viewingSession.coachName || t('coachingSessions.unknown')}
                     </p>
                   </div>
                 </div>
@@ -587,7 +590,7 @@ const CoachingSessions = () => {
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                   <Target className="w-4 h-4" />
-                  Topics Covered
+                  {t('coachingSessions.topicsCovered')}
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
                   {viewingSession.topicsCovered}
@@ -600,7 +603,7 @@ const CoachingSessions = () => {
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                   <ListChecks className="w-4 h-4" />
-                  Action Items
+                  {t('coachingSessions.actionItemsLabel')}
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg whitespace-pre-wrap">
                   {viewingSession.actionItems}
@@ -613,7 +616,7 @@ const CoachingSessions = () => {
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  Notes
+                  {t('coachingSessions.notesLabel')}
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg whitespace-pre-wrap">
                   {viewingSession.notes}
@@ -630,10 +633,10 @@ const CoachingSessions = () => {
                   handleEdit(viewingSession);
                 }}
               >
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Session
+                <Edit2 className="w-4 h-4 me-2" />
+                {t('coachingSessions.editSessionBtn')}
               </Button>
-              <Button onClick={() => setViewingSession(null)}>Close</Button>
+              <Button onClick={() => setViewingSession(null)}>{t('coachingSessions.close')}</Button>
             </div>
           </div>
         )}
@@ -643,7 +646,7 @@ const CoachingSessions = () => {
       <Modal
         isOpen={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
-        title="Delete Session"
+        title={t('coachingSessions.deleteSession')}
         size="sm"
       >
         {deleteConfirm && (
@@ -652,17 +655,16 @@ const CoachingSessions = () => {
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-red-800 dark:text-red-300">
-                  Delete this coaching session?
+                  {t('coachingSessions.deleteConfirm')}
                 </p>
                 <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                  This will permanently delete the session scheduled for{' '}
-                  {formatDateTime(deleteConfirm.sessionDate)}. This action cannot be undone.
+                  {t('coachingSessions.deleteDesc', { date: formatDateTime(deleteConfirm.sessionDate) })}
                 </p>
               </div>
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
-                Cancel
+                {t('coachingSessions.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -671,13 +673,13 @@ const CoachingSessions = () => {
               >
                 {deleteMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
+                    <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                    {t('coachingSessions.deleting')}
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
+                    <Trash2 className="w-4 h-4 me-2" />
+                    {t('coachingSessions.deleteAction')}
                   </>
                 )}
               </Button>

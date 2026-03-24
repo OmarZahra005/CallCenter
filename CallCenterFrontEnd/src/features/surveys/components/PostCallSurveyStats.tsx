@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -82,6 +83,7 @@ const StatCard = ({
 
 // Main component
 export function PostCallSurveyStats() {
+  const { t, i18n } = useTranslation();
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
 
   // Calculate date range
@@ -122,12 +124,12 @@ export function PostCallSurveyStats() {
   const stats = report?.overallStats;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Post-Call Survey Analytics</h2>
-          <p className="text-sm text-gray-500">Customer satisfaction ratings (CSAT 1-5)</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('surveyPage.postCallSurveyAnalytics')}</h2>
+          <p className="text-sm text-gray-500">{t('surveyPage.csatRating')}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Date range selector */}
@@ -142,7 +144,7 @@ export function PostCallSurveyStats() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+                {range === '7d' ? t('surveyPage.sevenDays') : range === '30d' ? t('surveyPage.thirtyDays') : t('surveyPage.ninetyDays')}
               </button>
             ))}
           </div>
@@ -153,7 +155,7 @@ export function PostCallSurveyStats() {
             disabled={isFetching}
           >
             <RefreshCw className={`w-4 h-4 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('surveyPage.refresh')}
           </Button>
         </div>
       </div>
@@ -165,33 +167,33 @@ export function PostCallSurveyStats() {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
         <StatCard
-          title="Total Surveys"
+          title={t('surveyPage.totalSurveysLabel')}
           value={stats?.totalSurveys || 0}
-          subtitle={`${stats?.completedCount || 0} completed`}
+          subtitle={t('surveyPage.completed', { count: stats?.completedCount || 0 })}
           icon={MessageSquare}
           color="bg-blue-500"
         />
         <StatCard
-          title="Response Rate"
+          title={t('surveyPage.responseRateLabel')}
           value={`${stats?.responseRate || 0}%`}
-          subtitle="of surveys completed"
+          subtitle={t('surveyPage.ofSurveysCompleted')}
           icon={CheckCircle}
           color="bg-green-500"
           trend={stats?.responseRate && stats.responseRate > 50 ? 'up' : 'down'}
         />
         <StatCard
-          title="Average Rating"
+          title={t('surveyPage.averageRating')}
           value={stats?.averageRating?.toFixed(1) || '0.0'}
-          subtitle="out of 5 stars"
+          subtitle={t('surveyPage.outOfFiveStars')}
           icon={Star}
           color="bg-yellow-500"
           trend={stats?.averageRating && stats.averageRating >= 4 ? 'up' :
                  stats?.averageRating && stats.averageRating < 3 ? 'down' : 'neutral'}
         />
         <StatCard
-          title="Pending/Expired"
+          title={t('surveyPage.pendingExpired')}
           value={`${stats?.pendingCount || 0} / ${stats?.expiredCount || 0}`}
-          subtitle={`${stats?.failedCount || 0} failed`}
+          subtitle={t('surveyPage.failed', { count: stats?.failedCount || 0 })}
           icon={Clock}
           color="bg-orange-500"
         />
@@ -201,7 +203,7 @@ export function PostCallSurveyStats() {
       {stats?.ratingDistribution && Object.keys(stats.ratingDistribution).length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Rating Distribution</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{t('surveyPage.ratingDistribution')}</h3>
             <div className="space-y-3">
               {[5, 4, 3, 2, 1].map((rating) => {
                 const count = stats.ratingDistribution[rating] || 0;
@@ -245,7 +247,7 @@ export function PostCallSurveyStats() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-green-500" />
-                <h3 className="text-lg font-medium text-gray-900">Top Performers</h3>
+                <h3 className="text-lg font-medium text-gray-900">{t('surveyPage.topPerformers')}</h3>
               </div>
               <div className="space-y-3">
                 {report.topAgents.map((agent, index) => (
@@ -261,7 +263,7 @@ export function PostCallSurveyStats() {
                       </span>
                       <div>
                         <p className="font-medium text-gray-900">{agent.agentName}</p>
-                        <p className="text-xs text-gray-500">{agent.completedCount} responses</p>
+                        <p className="text-xs text-gray-500">{t('surveyPage.responsesCount', { count: agent.completedCount })}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -283,14 +285,14 @@ export function PostCallSurveyStats() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingDown className="w-5 h-5 text-red-500" />
-                <h3 className="text-lg font-medium text-gray-900">Needs Improvement</h3>
+                <h3 className="text-lg font-medium text-gray-900">{t('surveyPage.needsImprovement')}</h3>
               </div>
               <div className="space-y-3">
                 {report.bottomAgents.map((agent) => (
                   <div key={agent.agentId} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">{agent.agentName}</p>
-                      <p className="text-xs text-gray-500">{agent.completedCount} responses</p>
+                      <p className="text-xs text-gray-500">{t('surveyPage.responsesCount', { count: agent.completedCount })}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <RatingStars rating={Math.round(agent.averageRating)} />
@@ -310,7 +312,7 @@ export function PostCallSurveyStats() {
       {report?.channelBreakdown && Object.keys(report.channelBreakdown).length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Survey Channels</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{t('surveyPage.surveyChannels')}</h3>
             <div className="flex flex-wrap gap-3">
               {Object.entries(report.channelBreakdown).map(([channel, count]) => (
                 <Badge key={channel} variant="default" className="px-3 py-1.5">

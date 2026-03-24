@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -63,6 +64,8 @@ export const AgentTrendChart = ({
   const [timeRange, setTimeRange] = useState<'7' | '14' | '30' | '60'>('30');
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const [internalSelectedAgent, setInternalSelectedAgent] = useState<string | null>(null);
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === 'ar';
 
   const currentAgentId = selectedAgentId || internalSelectedAgent;
 
@@ -256,9 +259,9 @@ export const AgentTrendChart = ({
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">
-              Agent Performance Trends
+              {t('agentTrendChart.title')}
             </h3>
-            <p className="text-sm text-gray-500">Track progress over time</p>
+            <p className="text-sm text-gray-500">{t('agentTrendChart.subtitle')}</p>
           </div>
         </div>
 
@@ -273,19 +276,19 @@ export const AgentTrendChart = ({
             >
               <span className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                {selectedAgent?.name || 'Select Agent'}
+                {selectedAgent?.name || t('agentTrendChart.selectAgent')}
               </span>
               <ChevronDown className="w-4 h-4" />
             </Button>
 
             {showAgentDropdown && (
-              <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
+              <div className="absolute end-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
                 <div className="py-1">
                   {agents.map((agent) => (
                     <button
                       key={agent.id}
                       onClick={() => handleAgentSelect(agent.id)}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                      className={`w-full px-4 py-2 text-start text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
                         agent.id === currentAgentId
                           ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600'
                           : 'text-gray-700 dark:text-gray-300'
@@ -321,7 +324,7 @@ export const AgentTrendChart = ({
       {!currentAgentId ? (
         <div className="text-center py-12">
           <User className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">Select an agent to view their performance trends</p>
+          <p className="text-gray-500">{t('agentTrendChart.selectAgentPrompt')}</p>
         </div>
       ) : (
         <>
@@ -331,19 +334,19 @@ export const AgentTrendChart = ({
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {overallStats.evaluationCount}
               </p>
-              <p className="text-xs text-gray-500">Evaluations</p>
+              <p className="text-xs text-gray-500">{t('agentTrendChart.evaluations')}</p>
             </div>
             <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
               <p className="text-2xl font-bold text-primary-600">
                 {overallStats.averageScore.toFixed(1)}%
               </p>
-              <p className="text-xs text-gray-500">Avg Score</p>
+              <p className="text-xs text-gray-500">{t('agentTrendChart.avgScore')}</p>
             </div>
             <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
               <p className="text-2xl font-bold text-green-600">
                 {overallStats.passRate.toFixed(0)}%
               </p>
-              <p className="text-xs text-gray-500">Pass Rate</p>
+              <p className="text-xs text-gray-500">{t('agentTrendChart.passRate')}</p>
             </div>
             <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
               <div className="flex items-center justify-center gap-1">
@@ -367,7 +370,7 @@ export const AgentTrendChart = ({
                   {overallStats.compareToTeam.toFixed(1)}
                 </span>
               </div>
-              <p className="text-xs text-gray-500">vs Team Avg</p>
+              <p className="text-xs text-gray-500">{t('agentTrendChart.vsTeamAvg')}</p>
             </div>
           </div>
 
@@ -376,16 +379,16 @@ export const AgentTrendChart = ({
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Score Trend
+                {t('agentTrendChart.scoreTrend')}
               </h4>
               <div className="flex items-center gap-4 text-xs">
                 <span className="flex items-center gap-1">
                   <span className="w-3 h-3 bg-primary-500 rounded-full" />
-                  Agent
+                  {t('agentTrendChart.agent')}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded-full" />
-                  Team Avg
+                  {t('agentTrendChart.teamAvg')}
                 </span>
               </div>
             </div>
@@ -428,7 +431,7 @@ export const AgentTrendChart = ({
 
                     {/* Tooltip */}
                     <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                      <div className="font-medium">{new Date(day.date).toLocaleDateString()}</div>
+                      <div className="font-medium">{new Date(day.date).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US')}</div>
                       {day.score > 0 && <div>Score: {day.score.toFixed(1)}%</div>}
                       {day.teamAverage > 0 && <div>Team: {day.teamAverage.toFixed(1)}%</div>}
                     </div>
@@ -439,8 +442,8 @@ export const AgentTrendChart = ({
 
             {/* X-axis labels */}
             <div className="flex justify-between mt-2 text-xs text-gray-400">
-              <span>{new Date(dailyScores[0]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-              <span>{new Date(dailyScores[dailyScores.length - 1]?.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <span>{new Date(dailyScores[0]?.date).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+              <span>{new Date(dailyScores[dailyScores.length - 1]?.date).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' })}</span>
             </div>
           </div>
 
@@ -449,7 +452,7 @@ export const AgentTrendChart = ({
             <div>
               <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Target className="w-4 h-4" />
-                Criteria Breakdown
+                {t('agentTrendChart.criteriaBreakdown')}
               </h4>
               <div className="space-y-3">
                 {criteriaBreakdown.map((criteria) => (

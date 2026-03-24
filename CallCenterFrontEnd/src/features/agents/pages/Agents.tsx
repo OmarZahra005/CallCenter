@@ -144,10 +144,10 @@ const Agents = () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Agent created successfully', 'success');
+      showToast(t('agentsPage.agentCreated'), 'success');
     },
     onError: () => {
-      showToast('Failed to create agent', 'error');
+      showToast(t('agentsPage.createFailed'), 'error');
     },
   });
 
@@ -169,10 +169,10 @@ const Agents = () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       setIsModalOpen(false);
       resetForm();
-      showToast('Agent updated successfully', 'success');
+      showToast(t('agentsPage.agentUpdated'), 'success');
     },
     onError: () => {
-      showToast('Failed to update agent', 'error');
+      showToast(t('agentsPage.updateFailed'), 'error');
     },
   });
 
@@ -182,10 +182,10 @@ const Agents = () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       setIsDeleteModalOpen(false);
       setSelectedAgent(null);
-      showToast('Agent deleted successfully', 'success');
+      showToast(t('agentsPage.agentDeleted'), 'success');
     },
     onError: () => {
-      showToast('Failed to delete agent', 'error');
+      showToast(t('agentsPage.deleteFailed'), 'error');
     },
   });
 
@@ -288,7 +288,13 @@ const Agents = () => {
       Inactive: 'danger',
       OnLeave: 'warning',
     };
-    return <Badge variant={variants[status] || 'default'}>{status === 'OnLeave' ? 'On Leave' : status}</Badge>;
+    const statusLabels: Record<string, string> = {
+      Active: t('agentsPage.statusActive'),
+      Inactive: t('agentsPage.statusInactive'),
+      OnLeave: t('agentsPage.statusOnLeave'),
+      Terminated: t('agentsPage.statusTerminated'),
+    };
+    return <Badge variant={variants[status] || 'default'}>{statusLabels[status] || status}</Badge>;
   };
 
   const getStateIndicator = (state?: string) => {
@@ -304,30 +310,40 @@ const Agents = () => {
   };
 
   const getStateLabel = (state?: string) => {
-    if (!state) return 'Offline';
+    if (!state) return t('agentsPage.stateOffline');
     const labels: Record<string, string> = {
-      Available: 'Available',
-      Busy: 'On Call',
-      Break: 'On Break',
-      Offline: 'Offline',
-      ACW: 'After Call',
-      Meeting: 'In Meeting',
+      Available: t('agentsPage.stateAvailable'),
+      Busy: t('agentsPage.stateOnCall'),
+      Break: t('agentsPage.stateOnBreak'),
+      Offline: t('agentsPage.stateOffline'),
+      ACW: t('agentsPage.stateAfterCall'),
+      Meeting: t('agentsPage.stateInMeeting'),
     };
     return labels[state] || state;
   };
 
+  const getRoleLabel = (role: string) => {
+    const roleLabels: Record<string, string> = {
+      Agent: t('agentsPage.roleAgent'),
+      Supervisor: t('agentsPage.roleSupervisor'),
+      QaEvaluator: t('agentsPage.roleQaEvaluator'),
+      Admin: t('agentsPage.roleAdmin'),
+    };
+    return roleLabels[role] || role;
+  };
+
   const roleOptions = [
-    { value: 'Agent', label: 'Agent' },
-    { value: 'Supervisor', label: 'Supervisor' },
-    { value: 'QaEvaluator', label: 'QA Evaluator' },
-    { value: 'Admin', label: 'Admin' },
+    { value: 'Agent', label: t('agentsPage.roleAgent') },
+    { value: 'Supervisor', label: t('agentsPage.roleSupervisor') },
+    { value: 'QaEvaluator', label: t('agentsPage.roleQaEvaluator') },
+    { value: 'Admin', label: t('agentsPage.roleAdmin') },
   ];
 
   const statusOptions = [
-    { value: 'Active', label: 'Active' },
-    { value: 'Inactive', label: 'Inactive' },
-    { value: 'OnLeave', label: 'On Leave' },
-    { value: 'Terminated', label: 'Terminated' },
+    { value: 'Active', label: t('agentsPage.statusActive') },
+    { value: 'Inactive', label: t('agentsPage.statusInactive') },
+    { value: 'OnLeave', label: t('agentsPage.statusOnLeave') },
+    { value: 'Terminated', label: t('agentsPage.statusTerminated') },
   ];
 
   const teamOptions = teams.map((team: { id: string; name: string }) => ({
@@ -348,6 +364,15 @@ const Agents = () => {
     return colors[index];
   };
 
+  const getStatusFilterLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      Active: t('agentsPage.statusActive'),
+      Inactive: t('agentsPage.statusInactive'),
+      OnLeave: t('agentsPage.statusOnLeave'),
+    };
+    return labels[status] || status;
+  };
+
   return (
     <motion.div
       className="space-y-6 p-1"
@@ -365,13 +390,13 @@ const Agents = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.agents')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage your call center agents and monitor their status
+            {t('agentsPage.subtitle')}
           </p>
         </div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button onClick={handleOpenCreate} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Agent
+            <Plus className="w-4 h-4 me-2" />
+            {t('agentsPage.addAgent')}
           </Button>
         </motion.div>
       </motion.div>
@@ -386,7 +411,7 @@ const Agents = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Agents</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('agentsPage.totalAgents')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -397,7 +422,7 @@ const Agents = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('agentsPage.active')}</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.active}</p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
@@ -408,7 +433,7 @@ const Agents = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('agentsPage.available')}</p>
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.available}</p>
             </div>
             <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
@@ -419,7 +444,7 @@ const Agents = () => {
         <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">On Break</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('agentsPage.onBreak')}</p>
               <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{stats.onBreak}</p>
             </div>
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl">
@@ -434,13 +459,13 @@ const Agents = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search input */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, or employee ID..."
+              placeholder={t('agentsPage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              className="w-full ps-10 pe-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -452,46 +477,46 @@ const Agents = () => {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
+                <Filter className="w-4 h-4 me-2" />
+                {t('agentsPage.filters')}
                 {(statusFilter !== 'all' || roleFilter !== 'all') && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">
+                  <span className="ms-2 px-1.5 py-0.5 text-xs bg-primary-500 text-white rounded-full">
                     {(statusFilter !== 'all' ? 1 : 0) + (roleFilter !== 'all' ? 1 : 0)}
                   </span>
                 )}
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <ChevronDown className="w-4 h-4 ms-2" />
               </button>
 
               {isFilterOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
+                  className="absolute end-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 p-4 space-y-4"
                 >
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentsPage.statusLabel')}</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => handleFilterChange('status', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="all">All Statuses</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                      <option value="OnLeave">On Leave</option>
+                      <option value="all">{t('agentsPage.allStatuses')}</option>
+                      <option value="Active">{t('agentsPage.statusActive')}</option>
+                      <option value="Inactive">{t('agentsPage.statusInactive')}</option>
+                      <option value="OnLeave">{t('agentsPage.statusOnLeave')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('agentsPage.roleLabel')}</label>
                     <select
                       value={roleFilter}
                       onChange={(e) => handleFilterChange('role', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="all">All Roles</option>
-                      <option value="Agent">Agent</option>
-                      <option value="Supervisor">Supervisor</option>
-                      <option value="Admin">Admin</option>
+                      <option value="all">{t('agentsPage.allRoles')}</option>
+                      <option value="Agent">{t('agentsPage.roleAgent')}</option>
+                      <option value="Supervisor">{t('agentsPage.roleSupervisor')}</option>
+                      <option value="Admin">{t('agentsPage.roleAdmin')}</option>
                     </select>
                   </div>
                   {(statusFilter !== 'all' || roleFilter !== 'all') && (
@@ -502,7 +527,7 @@ const Agents = () => {
                       }}
                       className="w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
                     >
-                      Clear all filters
+                      {t('agentsPage.clearAllFilters')}
                     </button>
                   )}
                 </motion.div>
@@ -527,8 +552,8 @@ const Agents = () => {
 
             {/* Export button */}
             <Button variant="outline" className="hidden sm:inline-flex">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 me-2" />
+              {t('agentsPage.exportBtn')}
             </Button>
           </div>
         </div>
@@ -538,14 +563,14 @@ const Agents = () => {
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             {statusFilter !== 'all' && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Status: {statusFilter === 'OnLeave' ? 'On Leave' : statusFilter}
-                <button onClick={() => setStatusFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">×</button>
+                {t('agentsPage.statusLabel')}: {getStatusFilterLabel(statusFilter)}
+                <button onClick={() => setStatusFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">×</button>
               </span>
             )}
             {roleFilter !== 'all' && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                Role: {roleFilter}
-                <button onClick={() => setRoleFilter('all')} className="ml-2 text-gray-500 hover:text-gray-700">×</button>
+                {t('agentsPage.roleLabel')}: {getRoleLabel(roleFilter)}
+                <button onClick={() => setRoleFilter('all')} className="ms-2 text-gray-500 hover:text-gray-700">×</button>
               </span>
             )}
           </div>
@@ -555,8 +580,8 @@ const Agents = () => {
       {/* Results count */}
       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <span>
-          Showing {paginatedAgents.length} of {filteredAgents.length} agents
-          {filteredAgents.length !== agents.length && ` (filtered from ${agents.length})`}
+          {t('agentsPage.showing')} {paginatedAgents.length} {t('agentsPage.of')} {filteredAgents.length} {t('agentsPage.agentsLabel')}
+          {filteredAgents.length !== agents.length && ` (${t('agentsPage.filteredFrom')} ${agents.length})`}
         </span>
       </div>
 
@@ -570,9 +595,9 @@ const Agents = () => {
           ) : paginatedAgents.length === 0 ? (
             <CardContent>
               <EmptyStateNoData
-                title={filteredAgents.length === 0 && agents.length > 0 ? "No matching agents" : "No agents found"}
-                description={filteredAgents.length === 0 && agents.length > 0 ? "Try adjusting your search or filters" : "Get started by creating your first agent"}
-                actionLabel="Add Agent"
+                title={filteredAgents.length === 0 && agents.length > 0 ? t('agentsPage.noMatchingAgents') : t('agentsPage.noAgentsFound')}
+                description={filteredAgents.length === 0 && agents.length > 0 ? t('agentsPage.adjustFilters') : t('agentsPage.getStarted')}
+                actionLabel={t('agentsPage.addAgent')}
                 onAction={handleOpenCreate}
               />
             </CardContent>
@@ -582,13 +607,13 @@ const Agents = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[250px]">Agent</TableHead>
-                      <TableHead className="hidden md:table-cell">Employee ID</TableHead>
-                      <TableHead className="hidden lg:table-cell">Contact</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden sm:table-cell">State</TableHead>
-                      <TableHead className="text-end w-[100px]">Actions</TableHead>
+                      <TableHead className="w-[250px]">{t('agentsPage.agentColumn')}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t('agentsPage.employeeId')}</TableHead>
+                      <TableHead className="hidden lg:table-cell">{t('agentsPage.contact')}</TableHead>
+                      <TableHead>{t('agentsPage.role')}</TableHead>
+                      <TableHead>{t('agentsPage.status')}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t('agentsPage.state')}</TableHead>
+                      <TableHead className="text-end w-[100px]">{t('agentsPage.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -609,7 +634,7 @@ const Agents = () => {
                                 <div className={`w-10 h-10 rounded-full ${getAvatarColor(agent.name)} flex items-center justify-center text-white font-medium text-sm`}>
                                   {getInitials(agent.name)}
                                 </div>
-                                <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStateIndicator(agent.currentState)}`}></span>
+                                <span className={`absolute bottom-0 end-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStateIndicator(agent.currentState)}`}></span>
                               </div>
                               <div className="min-w-0">
                                 <p className="font-medium text-gray-900 dark:text-white truncate">{agent.name}</p>
@@ -635,7 +660,7 @@ const Agents = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="default" className="whitespace-nowrap">{agent.role}</Badge>
+                            <Badge variant="default" className="whitespace-nowrap">{getRoleLabel(agent.role)}</Badge>
                           </TableCell>
                           <TableCell>{getStatusBadge(agent.status)}</TableCell>
                           <TableCell className="hidden sm:table-cell">
@@ -708,9 +733,9 @@ const Agents = () => {
           ) : paginatedAgents.length === 0 ? (
             <Card className="p-8">
               <EmptyStateNoData
-                title={filteredAgents.length === 0 && agents.length > 0 ? "No matching agents" : "No agents found"}
-                description={filteredAgents.length === 0 && agents.length > 0 ? "Try adjusting your search or filters" : "Get started by creating your first agent"}
-                actionLabel="Add Agent"
+                title={filteredAgents.length === 0 && agents.length > 0 ? t('agentsPage.noMatchingAgents') : t('agentsPage.noAgentsFound')}
+                description={filteredAgents.length === 0 && agents.length > 0 ? t('agentsPage.adjustFilters') : t('agentsPage.getStarted')}
+                actionLabel={t('agentsPage.addAgent')}
                 onAction={handleOpenCreate}
               />
             </Card>
@@ -734,11 +759,11 @@ const Agents = () => {
                               <div className={`w-12 h-12 rounded-full ${getAvatarColor(agent.name)} flex items-center justify-center text-white font-medium`}>
                                 {getInitials(agent.name)}
                               </div>
-                              <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${getStateIndicator(agent.currentState)}`}></span>
+                              <span className={`absolute bottom-0 end-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${getStateIndicator(agent.currentState)}`}></span>
                             </div>
                             <div className="min-w-0">
                               <p className="font-medium text-gray-900 dark:text-white truncate">{agent.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{agent.role}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{getRoleLabel(agent.role)}</p>
                             </div>
                           </div>
                           <div className="relative">
@@ -824,73 +849,70 @@ const Agents = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedAgent ? 'Edit Agent' : 'Add New Agent'}
+        title={selectedAgent ? t('agentsPage.editAgent') : t('agentsPage.addNewAgent')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Employee ID"
+              label={t('agentsPage.employeeId')}
               value={formData.employeeId}
               onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
               placeholder="e.g., EMP001"
               required
             />
             <Input
-              label="Full Name"
+              label={t('agentsPage.fullName')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., John Smith"
               required
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Email Address"
+              label={t('agentsPage.emailAddress')}
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="e.g., john@company.com"
               required
             />
             <Input
-              label="Phone Number"
+              label={t('agentsPage.phoneNumber')}
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="e.g., +1 234 567 8900"
               required
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Select
-              label="Role"
+              label={t('agentsPage.role')}
               options={roleOptions}
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             />
             <Select
-              label="Status"
+              label={t('agentsPage.status')}
               options={statusOptions}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             />
             <Select
-              label="Team"
-              options={[{ value: '', label: 'Select Team' }, ...teamOptions]}
+              label={t('agentsPage.team')}
+              options={[{ value: '', label: t('agentsPage.selectTeam') }, ...teamOptions]}
               value={formData.teamId || ''}
               onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
             />
           </div>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               isLoading={createMutation.isPending || updateMutation.isPending}
               className="w-full sm:w-auto"
             >
-              {selectedAgent ? 'Update Agent' : 'Create Agent'}
+              {selectedAgent ? t('agentsPage.updateAgent') : t('agentsPage.createAgent')}
             </Button>
           </div>
         </form>
@@ -900,7 +922,7 @@ const Agents = () => {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Agent"
+        title={t('agentsPage.deleteAgent')}
         size="sm"
       >
         <div className="space-y-4">
@@ -914,11 +936,11 @@ const Agents = () => {
             </div>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete this agent? This action cannot be undone and all associated data will be permanently removed.
+            {t('agentsPage.deleteConfirmation')}
           </p>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto">
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -926,7 +948,7 @@ const Agents = () => {
               isLoading={deleteMutation.isPending}
               className="w-full sm:w-auto"
             >
-              Delete Agent
+              {t('agentsPage.deleteAgent')}
             </Button>
           </div>
         </div>

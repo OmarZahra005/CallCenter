@@ -21,42 +21,42 @@ const Settings = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.settings')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('settingsPage.title')}</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage your account and application preferences
+          {t('settingsPage.subtitle')}
         </p>
       </div>
 
       {/* Appearance */}
       <Card variant="bordered">
         <CardHeader>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Appearance</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Customize how the app looks</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('settingsPage.appearance')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.appearanceDesc')}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Theme</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Select your preferred theme</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.theme')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.themeDesc')}</p>
               </div>
               <Select
                 value={theme}
                 onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
                 className="w-32"
               >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="system">System</option>
+                <option value="light">{t('settingsPage.light')}</option>
+                <option value="dark">{t('settingsPage.dark')}</option>
+                <option value="system">{t('settingsPage.system')}</option>
               </Select>
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Language</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Select your preferred language</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.language')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.languageDesc')}</p>
               </div>
               <Select
                 value={i18n.language}
@@ -74,15 +74,15 @@ const Settings = () => {
       {/* Regional */}
       <Card variant="bordered">
         <CardHeader>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Regional Settings</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Configure date, time, and regional preferences</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('settingsPage.regionalSettings')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.regionalDesc')}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Timezone</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Your local timezone</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.timezone')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.timezoneDesc')}</p>
               </div>
               <Select
                 value={timezone}
@@ -97,8 +97,8 @@ const Settings = () => {
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Date Format</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">How dates are displayed</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.dateFormat')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.dateFormatDesc')}</p>
               </div>
               <Select
                 value={dateFormat}
@@ -117,15 +117,15 @@ const Settings = () => {
       {/* Notifications */}
       <Card variant="bordered">
         <CardHeader>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Configure notification preferences</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('settingsPage.notifications')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.notificationsDesc')}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Receive notifications via email</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.emailNotifications')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.emailNotificationsDesc')}</p>
               </div>
               <Switch
                 checked={emailNotifications}
@@ -134,8 +134,8 @@ const Settings = () => {
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Receive push notifications in browser</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.pushNotifications')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.pushNotificationsDesc')}</p>
               </div>
               <Switch
                 checked={pushNotifications}
@@ -144,8 +144,8 @@ const Settings = () => {
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Sound Alerts</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Play sound for incoming calls and messages</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.soundAlerts')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.soundAlertsDesc')}</p>
               </div>
               <Switch
                 checked={soundAlerts}
@@ -159,15 +159,15 @@ const Settings = () => {
       {/* Security */}
       <Card variant="bordered">
         <CardHeader>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Security</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Account security settings</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('settingsPage.security')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.securityDesc')}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Two-Factor Authentication</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Add an extra layer of security</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.twoFactorAuth')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.twoFactorAuthDesc')}</p>
               </div>
               <Switch
                 checked={twoFactorAuth}
@@ -176,26 +176,26 @@ const Settings = () => {
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Session Timeout</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Auto logout after inactivity</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.sessionTimeout')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.sessionTimeoutDesc')}</p>
               </div>
               <Select
                 value={sessionTimeout}
                 onChange={(e) => setSessionTimeout(e.target.value)}
                 className="w-40"
               >
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="120">2 hours</option>
+                <option value="15">{t('settingsPage.minutes15')}</option>
+                <option value="30">{t('settingsPage.minutes30')}</option>
+                <option value="60">{t('settingsPage.hour1')}</option>
+                <option value="120">{t('settingsPage.hours2')}</option>
               </Select>
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Change Password</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Update your account password</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.changePassword')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.changePasswordDesc')}</p>
               </div>
-              <Button variant="outline" size="sm">Change</Button>
+              <Button variant="outline" size="sm">{t('settingsPage.change')}</Button>
             </div>
           </div>
         </CardContent>
@@ -204,28 +204,28 @@ const Settings = () => {
       {/* Agent Settings */}
       <Card variant="bordered">
         <CardHeader>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Agent Settings</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Configure agent-specific preferences</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('settingsPage.agentSettings')}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.agentSettingsDesc')}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Auto-Accept Calls</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Automatically answer incoming calls</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.autoAcceptCalls')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.autoAcceptCallsDesc')}</p>
               </div>
               <Switch checked={false} onChange={() => {}} />
             </div>
             <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Wrap-up Time</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Time for after-call work</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.wrapUpTime')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settingsPage.wrapUpTimeDesc')}</p>
               </div>
               <Select className="w-40">
-                <option value="30">30 seconds</option>
-                <option value="60">1 minute</option>
-                <option value="120">2 minutes</option>
-                <option value="300">5 minutes</option>
+                <option value="30">{t('settingsPage.seconds30')}</option>
+                <option value="60">{t('settingsPage.minute1')}</option>
+                <option value="120">{t('settingsPage.minutes2')}</option>
+                <option value="300">{t('settingsPage.minutes5')}</option>
               </Select>
             </div>
           </div>
@@ -235,14 +235,14 @@ const Settings = () => {
       {/* Danger zone */}
       <Card variant="bordered" className="border-red-200 dark:border-red-900">
         <CardHeader>
-          <h3 className="font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
+          <h3 className="font-semibold text-red-600 dark:text-red-400">{t('settingsPage.dangerZone')}</h3>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Delete Account</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('settingsPage.deleteAccount')}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Permanently delete your account and all associated data
+                {t('settingsPage.deleteAccountDesc')}
               </p>
             </div>
             <Button variant="danger" size="sm">{t('common.delete')}</Button>
@@ -252,7 +252,7 @@ const Settings = () => {
 
       {/* Save button */}
       <div className="flex justify-end">
-        <Button>Save Changes</Button>
+        <Button>{t('settingsPage.saveChanges')}</Button>
       </div>
     </div>
   );

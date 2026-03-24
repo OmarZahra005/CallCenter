@@ -64,7 +64,14 @@
       "WebFetch(domain:advisor.redf.gov.sa)",
       "WebFetch(domain:redf.gov.sa)",
       "WebFetch(domain:portal.redf.gov.sa)",
-      "Bash(copy \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\fullLogoColor.34dca471.svg\" \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\CallCenterFrontEnd\\\\public\\\\redf-logo.svg\")"
+      "Bash(copy \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\fullLogoColor.34dca471.svg\" \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\CallCenterFrontEnd\\\\public\\\\redf-logo.svg\")",
+      "Bash(iisreset /stop 2>&1)",
+      "Bash(net stop:*)",
+      "Bash(git commit:*)",
+      "Bash(find \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\CallCenterFrontEnd/src/features\" -type f \\\\\\( -name \"*call*\" -o -name \"*voice*\" \\\\\\) 2>/dev/null | head -20)",
+      "Bash(find /c/MyFiles/Redf/CallCenter/CallCenterFrontEnd/src -type f \\\\\\( -name \"*Sidebar*\" -o -name \"*Navigation*\" -o -name \"*Menu*\" -o -name \"*Layout*\" \\\\\\) 2>/dev/null | head -20)",
+      "Bash(find \"C:\\\\MyFiles\\\\Redf\\\\CallCenter\\\\CallCenterFrontEnd/src/components\" -type f \\\\\\( -name \"*QueueMonitor*\" -o -name \"*AgentStatusGrid*\" -o -name \"*index.ts\" \\\\\\) 2>/dev/null | head -20)",
+      "Bash(cd \"C:/MyFiles/Redf/CallCenter/CallCenterFrontEnd\" && node -e \"\nconst fs = require\\('fs'\\);\nconst content = fs.readFileSync\\('src/features/admin/pages/AlertRules.tsx', 'utf8'\\);\nconst lines = content.split\\('\\\\n'\\);\nconsole.log\\('Total lines:', lines.length\\);\n// Check no old constants outside component\nconst exportLine = lines.findIndex\\(l => l.includes\\('export const AlertRules'\\)\\);\nconsole.log\\('Component starts at line:', exportLine + 1\\);\n// Check for any remaining hardcoded strings in JSX that should be translated\nconst suspicious = lines.filter\\(\\(l, i\\) => {\n  if \\(i < exportLine\\) return false; // skip imports/interfaces\n  // look for quoted strings that look like UI text\n  return \\(/>[\\\\s]*[A-Z][a-z]/.test\\(l\\) && !l.includes\\('className'\\) && !l.includes\\('//'\\) && !l.includes\\('import'\\)\\);\n}\\);\nif \\(suspicious.length > 0\\) {\n  console.log\\('Possibly untranslated lines:'\\);\n  suspicious.forEach\\(l => console.log\\('  ', l.trim\\(\\)\\)\\);\n}\n\")"
     ],
     "deny": [],
     "ask": []

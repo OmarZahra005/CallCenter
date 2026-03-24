@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -60,17 +61,6 @@ interface ScheduledExport {
   createdAt: string;
 }
 
-const DATA_SOURCES = [
-  { value: 'calls', label: 'Call Records', icon: 'phone' },
-  { value: 'tickets', label: 'Support Tickets', icon: 'ticket' },
-  { value: 'agents', label: 'Agent Data', icon: 'users' },
-  { value: 'customers', label: 'Customer Data', icon: 'user' },
-  { value: 'qa_scores', label: 'QA Scores', icon: 'checkmark' },
-  { value: 'recordings', label: 'Recording Metadata', icon: 'mic' },
-  { value: 'surveys', label: 'Survey Responses', icon: 'clipboard' },
-  { value: 'audit_logs', label: 'Audit Logs', icon: 'shield' },
-];
-
 const FORMAT_INFO = {
   csv: { label: 'CSV', icon: FileText, color: 'text-green-500' },
   xlsx: { label: 'Excel', icon: FileSpreadsheet, color: 'text-blue-500' },
@@ -108,6 +98,7 @@ interface ScheduleFormData {
 }
 
 export const DataExports = () => {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'exports' | 'scheduled'>('exports');
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,6 +108,27 @@ export const DataExports = () => {
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduledExport | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [recipientInput, setRecipientInput] = useState('');
+
+  const DATA_SOURCES = [
+    { value: 'calls', label: t('dataExportsPage.callRecords') },
+    { value: 'tickets', label: t('dataExportsPage.supportTickets') },
+    { value: 'agents', label: t('dataExportsPage.agentData') },
+    { value: 'customers', label: t('dataExportsPage.customerData') },
+    { value: 'qa_scores', label: t('dataExportsPage.qaScores') },
+    { value: 'recordings', label: t('dataExportsPage.recordingMetadata') },
+    { value: 'surveys', label: t('dataExportsPage.surveyResponses') },
+    { value: 'audit_logs', label: t('dataExportsPage.auditLogs') },
+  ];
+
+  const DAY_NAMES = [
+    t('dataExportsPage.sunday'),
+    t('dataExportsPage.monday'),
+    t('dataExportsPage.tuesday'),
+    t('dataExportsPage.wednesday'),
+    t('dataExportsPage.thursday'),
+    t('dataExportsPage.friday'),
+    t('dataExportsPage.saturday'),
+  ];
 
   const [exportForm, setExportForm] = useState<ExportFormData>({
     name: '',
@@ -290,7 +302,7 @@ export const DataExports = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    return new Date(dateString).toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -300,10 +312,10 @@ export const DataExports = () => {
 
   const getStatusBadge = (status: DataExport['status']) => {
     const config = {
-      pending: { variant: 'default' as const, icon: Clock, text: 'Pending' },
-      processing: { variant: 'info' as const, icon: Loader2, text: 'Processing' },
-      completed: { variant: 'success' as const, icon: CheckCircle, text: 'Completed' },
-      failed: { variant: 'danger' as const, icon: XCircle, text: 'Failed' },
+      pending: { variant: 'default' as const, icon: Clock, text: t('dataExportsPage.pending') },
+      processing: { variant: 'info' as const, icon: Loader2, text: t('dataExportsPage.processing') },
+      completed: { variant: 'success' as const, icon: CheckCircle, text: t('dataExportsPage.completed') },
+      failed: { variant: 'danger' as const, icon: XCircle, text: t('dataExportsPage.failed') },
     };
     const { variant, icon: Icon, text } = config[status];
     return (
@@ -315,14 +327,13 @@ export const DataExports = () => {
   };
 
   const getScheduleText = (schedule: ScheduledExport) => {
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     switch (schedule.schedule) {
       case 'daily':
-        return `Daily at ${schedule.scheduleTime}`;
+        return t('dataExportsPage.dailyAt', { time: schedule.scheduleTime });
       case 'weekly':
-        return `Every ${dayNames[schedule.scheduleDayOfWeek || 0]} at ${schedule.scheduleTime}`;
+        return t('dataExportsPage.everyDayAt', { day: DAY_NAMES[schedule.scheduleDayOfWeek || 0], time: schedule.scheduleTime });
       case 'monthly':
-        return `Day ${schedule.scheduleDayOfMonth} of month at ${schedule.scheduleTime}`;
+        return t('dataExportsPage.dayOfMonthAt', { day: schedule.scheduleDayOfMonth, time: schedule.scheduleTime });
       default:
         return schedule.schedule;
     }
@@ -333,23 +344,23 @@ export const DataExports = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Data Exports</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dataExportsPage.title')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Export data and manage scheduled exports
+            {t('dataExportsPage.subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsScheduleModalOpen(true)}>
             <Calendar className="w-4 h-4 mr-2" />
-            Schedule Export
+            {t('dataExportsPage.scheduleExport')}
           </Button>
           <Button onClick={() => setIsExportModalOpen(true)}>
             <Download className="w-4 h-4 mr-2" />
-            New Export
+            {t('dataExportsPage.newExport')}
           </Button>
         </div>
       </div>
@@ -363,7 +374,7 @@ export const DataExports = () => {
                 <Archive className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Exports</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dataExportsPage.totalExports')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{exports.length}</p>
               </div>
             </div>
@@ -376,7 +387,7 @@ export const DataExports = () => {
                 <Loader2 className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Processing</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dataExportsPage.processing')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {exports.filter((e) => e.status === 'processing').length}
                 </p>
@@ -391,7 +402,7 @@ export const DataExports = () => {
                 <Calendar className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Active Schedules</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dataExportsPage.activeSchedules')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {scheduled.filter((s) => s.isActive).length}
                 </p>
@@ -406,7 +417,7 @@ export const DataExports = () => {
                 <Download className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Available Downloads</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dataExportsPage.availableDownloads')}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {exports.filter((e) => e.status === 'completed').length}
                 </p>
@@ -427,7 +438,7 @@ export const DataExports = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Export History ({exports.length})
+            {t('dataExportsPage.exportHistory')} ({exports.length})
           </button>
           <button
             onClick={() => setActiveTab('scheduled')}
@@ -437,7 +448,7 @@ export const DataExports = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Scheduled Exports ({scheduled.length})
+            {t('dataExportsPage.scheduledExports')} ({scheduled.length})
           </button>
         </nav>
       </div>
@@ -451,7 +462,7 @@ export const DataExports = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search exports..."
+                  placeholder={t('dataExportsPage.searchExports')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -464,11 +475,11 @@ export const DataExports = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
               >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
+                <option value="all">{t('dataExportsPage.allStatus')}</option>
+                <option value="pending">{t('dataExportsPage.pending')}</option>
+                <option value="processing">{t('dataExportsPage.processing')}</option>
+                <option value="completed">{t('dataExportsPage.completed')}</option>
+                <option value="failed">{t('dataExportsPage.failed')}</option>
               </select>
             )}
           </div>
@@ -486,9 +497,9 @@ export const DataExports = () => {
             <Card variant="bordered">
               <CardContent className="py-12 text-center">
                 <Download className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No exports found</p>
+                <p className="text-gray-500">{t('dataExportsPage.noExportsFound')}</p>
                 <Button className="mt-4" onClick={() => setIsExportModalOpen(true)}>
-                  Create First Export
+                  {t('dataExportsPage.createFirstExport')}
                 </Button>
               </CardContent>
             </Card>
@@ -520,7 +531,7 @@ export const DataExports = () => {
                               {exp.recordCount && (
                                 <>
                                   <span className="text-gray-300">|</span>
-                                  <span>{exp.recordCount.toLocaleString()} records</span>
+                                  <span>{t('dataExportsPage.records', { count: exp.recordCount })}</span>
                                 </>
                               )}
                               {exp.fileSize && (
@@ -539,7 +550,7 @@ export const DataExports = () => {
                                     animate={{ width: `${exp.progress}%` }}
                                   />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">{exp.progress}% complete</p>
+                                <p className="text-xs text-gray-500 mt-1">{t('dataExportsPage.percentComplete', { percent: exp.progress })}</p>
                               </div>
                             )}
                             {exp.status === 'failed' && exp.errorMessage && (
@@ -549,10 +560,10 @@ export const DataExports = () => {
                               </p>
                             )}
                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                              <span>Created: {formatDate(exp.createdAt)}</span>
-                              <span>By: {exp.createdBy}</span>
+                              <span>{t('dataExportsPage.created')}: {formatDate(exp.createdAt)}</span>
+                              <span>{t('dataExportsPage.by')}: {exp.createdBy}</span>
                               {exp.expiresAt && (
-                                <span>Expires: {formatDate(exp.expiresAt)}</span>
+                                <span>{t('dataExportsPage.expires')}: {formatDate(exp.expiresAt)}</span>
                               )}
                             </div>
                           </div>
@@ -561,13 +572,13 @@ export const DataExports = () => {
                           {exp.status === 'completed' && exp.fileUrl && (
                             <Button size="sm">
                               <Download className="w-4 h-4 mr-1" />
-                              Download
+                              {t('dataExportsPage.download')}
                             </Button>
                           )}
                           {exp.status === 'failed' && (
                             <Button size="sm" variant="outline">
                               <RefreshCw className="w-4 h-4 mr-1" />
-                              Retry
+                              {t('dataExportsPage.retry')}
                             </Button>
                           )}
                           <button
@@ -595,9 +606,9 @@ export const DataExports = () => {
             <Card variant="bordered">
               <CardContent className="py-12 text-center">
                 <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No scheduled exports found</p>
+                <p className="text-gray-500">{t('dataExportsPage.noScheduledExports')}</p>
                 <Button className="mt-4" onClick={() => setIsScheduleModalOpen(true)}>
-                  Create First Schedule
+                  {t('dataExportsPage.createFirstSchedule')}
                 </Button>
               </CardContent>
             </Card>
@@ -621,7 +632,7 @@ export const DataExports = () => {
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-gray-900 dark:text-white">{sch.name}</h3>
                               <Badge variant={sch.isActive ? 'success' : 'default'} size="sm">
-                                {sch.isActive ? 'Active' : 'Paused'}
+                                {sch.isActive ? t('dataExportsPage.active') : t('dataExportsPage.paused')}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
@@ -638,11 +649,11 @@ export const DataExports = () => {
                               </span>
                             </div>
                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                              {sch.lastRunAt && <span>Last run: {formatDate(sch.lastRunAt)}</span>}
+                              {sch.lastRunAt && <span>{t('dataExportsPage.lastRun')}: {formatDate(sch.lastRunAt)}</span>}
                               {sch.nextRunAt && sch.isActive && (
-                                <span>Next run: {formatDate(sch.nextRunAt)}</span>
+                                <span>{t('dataExportsPage.nextRun')}: {formatDate(sch.nextRunAt)}</span>
                               )}
-                              <span>Recipients: {sch.recipients.length}</span>
+                              <span>{t('dataExportsPage.recipients')}: {sch.recipients.length}</span>
                             </div>
                           </div>
                         </div>
@@ -650,7 +661,7 @@ export const DataExports = () => {
                           <button
                             onClick={() => toggleScheduleMutation.mutate({ id: sch.id, isActive: !sch.isActive })}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                            title={sch.isActive ? 'Pause schedule' : 'Activate schedule'}
+                            title={sch.isActive ? t('dataExportsPage.pauseSchedule') : t('dataExportsPage.activateSchedule')}
                           >
                             {sch.isActive ? (
                               <Pause className="w-5 h-5 text-yellow-500" />
@@ -678,7 +689,7 @@ export const DataExports = () => {
                                     className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                                   >
                                     <Settings className="w-3 h-3" />
-                                    Edit
+                                    {t('dataExportsPage.edit')}
                                   </button>
                                   <button
                                     onClick={() => {
@@ -688,7 +699,7 @@ export const DataExports = () => {
                                     className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                                   >
                                     <Trash2 className="w-3 h-3" />
-                                    Delete
+                                    {t('dataExportsPage.delete')}
                                   </button>
                                 </motion.div>
                               )}
@@ -709,21 +720,21 @@ export const DataExports = () => {
       <Modal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        title="Create New Export"
+        title={t('dataExportsPage.createNewExport')}
         size="md"
       >
         <form onSubmit={handleExportSubmit} className="space-y-4">
           <Input
-            label="Export Name"
+            label={t('dataExportsPage.exportName')}
             value={exportForm.name}
             onChange={(e) => setExportForm({ ...exportForm, name: e.target.value })}
-            placeholder="e.g., Monthly Call Report"
+            placeholder={t('dataExportsPage.exportNamePlaceholder')}
             required
           />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Data Source
+              {t('dataExportsPage.dataSource')}
             </label>
             <select
               value={exportForm.dataSource}
@@ -740,7 +751,7 @@ export const DataExports = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Format
+              {t('dataExportsPage.format')}
             </label>
             <div className="flex gap-3">
               {Object.entries(FORMAT_INFO).map(([key, info]) => {
@@ -766,13 +777,13 @@ export const DataExports = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="From Date (optional)"
+              label={t('dataExportsPage.fromDate')}
               type="date"
               value={exportForm.dateFrom}
               onChange={(e) => setExportForm({ ...exportForm, dateFrom: e.target.value })}
             />
             <Input
-              label="To Date (optional)"
+              label={t('dataExportsPage.toDate')}
               type="date"
               value={exportForm.dateTo}
               onChange={(e) => setExportForm({ ...exportForm, dateTo: e.target.value })}
@@ -781,11 +792,11 @@ export const DataExports = () => {
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button type="button" variant="outline" onClick={() => setIsExportModalOpen(false)}>
-              Cancel
+              {t('dataExportsPage.cancel')}
             </Button>
             <Button type="submit" isLoading={createExportMutation.isPending}>
               <Download className="w-4 h-4 mr-2" />
-              Start Export
+              {t('dataExportsPage.startExport')}
             </Button>
           </div>
         </form>
@@ -799,22 +810,22 @@ export const DataExports = () => {
           setSelectedSchedule(null);
           resetScheduleForm();
         }}
-        title={selectedSchedule ? 'Edit Scheduled Export' : 'Create Scheduled Export'}
+        title={selectedSchedule ? t('dataExportsPage.editScheduledExport') : t('dataExportsPage.createScheduledExport')}
         size="lg"
       >
         <form onSubmit={handleScheduleSubmit} className="space-y-4">
           <Input
-            label="Schedule Name"
+            label={t('dataExportsPage.scheduleName')}
             value={scheduleForm.name}
             onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
-            placeholder="e.g., Daily Call Summary"
+            placeholder={t('dataExportsPage.scheduleNamePlaceholder')}
             required
           />
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Data Source
+                {t('dataExportsPage.dataSource')}
               </label>
               <select
                 value={scheduleForm.dataSource}
@@ -830,7 +841,7 @@ export const DataExports = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Format
+                {t('dataExportsPage.format')}
               </label>
               <select
                 value={scheduleForm.format}
@@ -849,20 +860,20 @@ export const DataExports = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Frequency
+                {t('dataExportsPage.frequency')}
               </label>
               <select
                 value={scheduleForm.schedule}
                 onChange={(e) => setScheduleForm({ ...scheduleForm, schedule: e.target.value as ScheduleFormData['schedule'] })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{t('dataExportsPage.daily')}</option>
+                <option value="weekly">{t('dataExportsPage.weekly')}</option>
+                <option value="monthly">{t('dataExportsPage.monthly')}</option>
               </select>
             </div>
             <Input
-              label="Time"
+              label={t('dataExportsPage.time')}
               type="time"
               value={scheduleForm.scheduleTime}
               onChange={(e) => setScheduleForm({ ...scheduleForm, scheduleTime: e.target.value })}
@@ -873,14 +884,14 @@ export const DataExports = () => {
           {scheduleForm.schedule === 'weekly' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Day of Week
+                {t('dataExportsPage.dayOfWeek')}
               </label>
               <select
                 value={scheduleForm.scheduleDayOfWeek}
                 onChange={(e) => setScheduleForm({ ...scheduleForm, scheduleDayOfWeek: Number(e.target.value) })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
               >
-                {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
+                {DAY_NAMES.map((day, idx) => (
                   <option key={day} value={idx}>
                     {day}
                   </option>
@@ -892,7 +903,7 @@ export const DataExports = () => {
           {scheduleForm.schedule === 'monthly' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Day of Month
+                {t('dataExportsPage.dayOfMonth')}
               </label>
               <select
                 value={scheduleForm.scheduleDayOfMonth}
@@ -910,14 +921,14 @@ export const DataExports = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email Recipients
+              {t('dataExportsPage.emailRecipients')}
             </label>
             <div className="flex gap-2">
               <input
                 type="email"
                 value={recipientInput}
                 onChange={(e) => setRecipientInput(e.target.value)}
-                placeholder="email@example.com"
+                placeholder={t('dataExportsPage.emailPlaceholder')}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -927,7 +938,7 @@ export const DataExports = () => {
                 }}
               />
               <Button type="button" variant="outline" onClick={handleAddRecipient}>
-                Add
+                {t('dataExportsPage.add')}
               </Button>
             </div>
             {scheduleForm.recipients.length > 0 && (
@@ -953,8 +964,8 @@ export const DataExports = () => {
 
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Enable Schedule</p>
-              <p className="text-sm text-gray-500">Start running exports on schedule</p>
+              <p className="font-medium text-gray-900 dark:text-white">{t('dataExportsPage.enableSchedule')}</p>
+              <p className="text-sm text-gray-500">{t('dataExportsPage.startRunning')}</p>
             </div>
             <button
               type="button"
@@ -978,11 +989,11 @@ export const DataExports = () => {
                 resetScheduleForm();
               }}
             >
-              Cancel
+              {t('dataExportsPage.cancel')}
             </Button>
             <Button type="submit" isLoading={saveScheduleMutation.isPending}>
               <Calendar className="w-4 h-4 mr-2" />
-              {selectedSchedule ? 'Update Schedule' : 'Create Schedule'}
+              {selectedSchedule ? t('dataExportsPage.updateSchedule') : t('dataExportsPage.createSchedule')}
             </Button>
           </div>
         </form>

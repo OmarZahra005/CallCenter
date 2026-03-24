@@ -148,19 +148,19 @@ export function AdherenceTracking() {
       </div>
 
       {/* View Mode Toggle */}
-      <div className="flex space-x-2">
+      <div className="flex gap-2">
         <Button
           variant={viewMode === 'agent' ? 'primary' : 'secondary'}
           onClick={() => setViewMode('agent')}
         >
-          <User className="h-4 w-4 mr-2" />
+          <User className="h-4 w-4 me-2" />
           {t('wfm.agentView', 'Agent View')}
         </Button>
         <Button
           variant={viewMode === 'team' ? 'primary' : 'secondary'}
           onClick={() => setViewMode('team')}
         >
-          <Users className="h-4 w-4 mr-2" />
+          <Users className="h-4 w-4 me-2" />
           {t('wfm.teamView', 'Team View')}
         </Button>
       </div>
@@ -209,7 +209,7 @@ export function AdherenceTracking() {
           {/* Agent Info and Summary */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-4 md:col-span-2">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary-600" />
                 </div>
@@ -224,7 +224,7 @@ export function AdherenceTracking() {
                 <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
                   <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="ml-3">
+                <div className="ms-3">
                   <p className="text-xs text-gray-500">{t('wfm.adherenceToday', 'Adherence Today')}</p>
                   <div className="flex items-center">
                     {agentAdherence ? getAdherenceBadge(agentAdherence.adherencePercentage) : <span className="text-gray-400">-</span>}
@@ -237,7 +237,7 @@ export function AdherenceTracking() {
                 <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                   <CheckCircle className="h-5 w-5 text-blue-600" />
                 </div>
-                <div className="ml-3">
+                <div className="ms-3">
                   <p className="text-xs text-gray-500">{t('wfm.conformance', 'Conformance')}</p>
                   <div className="flex items-center">
                     {agentAdherence ? getAdherenceBadge(agentAdherence.conformancePercentage) : <span className="text-gray-400">-</span>}
@@ -297,12 +297,12 @@ export function AdherenceTracking() {
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.scheduledActivity', 'Scheduled')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.actualActivity', 'Actual')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.scheduledStart', 'Sched. Start')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.actualStart', 'Actual Start')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.duration', 'Duration')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.status', 'Status')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.scheduledActivity', 'Scheduled')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.actualActivity', 'Actual')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.scheduledStart', 'Sched. Start')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.actualStart', 'Actual Start')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.duration', 'Duration')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.status', 'Status')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -367,11 +367,11 @@ export function AdherenceTracking() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('wfm.agent', 'Agent')}</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('wfm.scheduled', 'Scheduled')}</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('wfm.actual', 'Actual')}</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('wfm.adherence', 'Adherence')}</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('wfm.conformance', 'Conformance')}</th>
+                  <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{t('wfm.agent', 'Agent')}</th>
+                  <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 uppercase">{t('wfm.scheduled', 'Scheduled')}</th>
+                  <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 uppercase">{t('wfm.actual', 'Actual')}</th>
+                  <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 uppercase">{t('wfm.adherence', 'Adherence')}</th>
+                  <th className="px-4 py-3 text-end text-xs font-medium text-gray-500 uppercase">{t('wfm.conformance', 'Conformance')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -388,22 +388,22 @@ export function AdherenceTracking() {
                       <tr key={adherence.agentId} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3">
                           <div className="flex items-center">
-                            <User className="h-4 w-4 text-gray-400 mr-2" />
+                            <User className="h-4 w-4 text-gray-400 me-2" />
                             <span className="text-sm font-medium text-gray-900 dark:text-white">
                               {agent?.name || adherence.agentId}
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-400">
+                        <td className="px-4 py-3 text-end text-sm text-gray-600 dark:text-gray-400">
                           {formatTime(adherence.scheduledMinutes)}
                         </td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-400">
+                        <td className="px-4 py-3 text-end text-sm text-gray-600 dark:text-gray-400">
                           {formatTime(adherence.actualMinutes)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-end">
                           {getAdherenceBadge(adherence.adherencePercentage)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-end">
                           {getAdherenceBadge(adherence.conformancePercentage)}
                         </td>
                       </tr>
